@@ -1,0 +1,35 @@
+<div class="schedule-page">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Full Schedule — March 2026</div>
+        <div class="card-sub">Your complete monthly schedule</div>
+      </div>
+      <div class="range-btn">Mar 2026 ▾</div>
+    </div>
+    <div class="timeline-wrap">
+      <div class="tl-hours">
+        <div class="tl-day-col"></div>
+        @for (h of hours; track h) {
+          <div class="tl-hour">{{ h }}</div>
+        }
+      </div>
+      @for (row of rows; track row.day) {
+        <div class="tl-row">
+          <div class="tl-day-col">{{ row.day }}</div>
+          <div class="tl-cells">
+            @for (block of row.blocks; track block.label) {
+              <div class="tl-block"
+                [style.left]="block.left"
+                [style.width]="block.width"
+                [style.background]="block.bg"
+                [style.color]="block.color">
+                {{ block.label }}
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

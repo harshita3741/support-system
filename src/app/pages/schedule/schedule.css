@@ -1,0 +1,15 @@
+.schedule-page { display: flex; flex-direction: column; gap: 16px; }
+.card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; overflow: hidden; }
+.card-header { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; }
+.card-title { font-size: 14px; font-weight: 600; color: #1a1d23; }
+.card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; flex: 1; }
+.range-btn { font-size: 11px; color: #6b7280; background: #f4f6fb; border: 1px solid #eaecf0; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.timeline-wrap { overflow-x: auto; }
+.tl-hours { display: flex; padding: 8px 0 4px; border-bottom: 1px solid #f0f2f5; min-width: 750px; }
+.tl-day-col { width: 70px; flex-shrink: 0; font-size: 11px; color: #9ca3af; padding-left: 18px; font-weight: 500; }
+.tl-hour { min-width: 100px; font-size: 10px; color: #9ca3af; text-align: center; border-left: 1px dashed #f0f2f5; }
+.tl-row { display: flex; align-items: center; min-width: 750px; padding: 6px 0; border-bottom: 1px solid #f9fafb; }
+.tl-row:last-child { border-bottom: none; }
+.tl-cells { flex: 1; position: relative; height: 36px; }
+.tl-block { position: absolute; height: 28px; top: 4px; border-radius: 7px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; cursor: pointer; }
+.tl-block:hover { opacity: 0.85; }

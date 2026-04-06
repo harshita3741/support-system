@@ -1,0 +1,21 @@
+.call-page { display: flex; align-items: center; justify-content: center; padding: 40px; min-height: 60vh; }
+.call-box { background: #0d1f2d; border-radius: 18px; width: 100%; max-width: 400px; padding: 28px; border: 1px solid rgba(255,255,255,0.08); }
+.call-top { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.pulse { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; display: inline-block; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.6; transform:scale(1.4); } }
+.call-tag { font-size: 12px; color: rgba(255,255,255,0.4); }
+.patient-name { font-size: 20px; font-weight: 600; color: #fff; }
+.patient-meta { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 3px; margin-bottom: 16px; }
+.ai-summary { background: rgba(13,110,110,0.15); border: 1px solid rgba(13,110,110,0.3); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.ai-label { font-size: 10px; color: #5dcaa5; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px; }
+.ai-text { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+.tags { display: flex; gap: 7px; margin-bottom: 20px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 3px 10px; border-radius: 6px; font-weight: 500; }
+.tag-red { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+.tag-teal { background: rgba(13,110,110,0.15); color: #5dcaa5; border: 1px solid rgba(13,110,110,0.2); }
+.tag-amber { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+.call-actions { display: flex; gap: 10px; }
+.btn-accept { flex: 1; background: #16a34a; color: #fff; border: none; border-radius: 9px; padding: 11px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; text-align: center; }
+.btn-decline { flex: 1; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 11px; font-size: 13px; cursor: pointer; text-decoration: none; text-align: center; }
+.btn-accept:hover { background: #15803d; }
+.btn-decline:hover { background: rgba(255,255,255,0.1); }
