@@ -1,0 +1,140 @@
+.register-wrapper {
+  min-height: 100vh;
+  background: #0f0c29;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.register-box {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f0c29;
+}
+
+.logo-dot {
+  width: 32px;
+  height: 32px;
+  background: #6c63ff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #12103a;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  color: #9098b0;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.error-msg {
+  background: #fdeee8;
+  color: #d85a30;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.success-msg {
+  background: #e1f5ee;
+  color: #1d9e75;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #12103a;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e4e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #6c63ff;
+}
+
+.btn-register {
+  width: 100%;
+  background: #6c63ff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+
+.btn-register:hover {
+  background: #5a52d5;
+}
+
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.login-link {
+  text-align: center;
+  font-size: 13px;
+  color: #9098b0;
+  margin-top: 16px;
+}
+
+.login-link a {
+  color: #6c63ff;
+  text-decoration: none;
+  font-weight: 500;
+}

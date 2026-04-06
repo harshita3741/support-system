@@ -1,0 +1,139 @@
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-dot">C</div>
+      <span class="logo-text">CareAI</span>
+    </div>
+    <nav class="nav">
+
+    <div class="nav-item active" routerLink="/dashboard">
+        <i data-lucide="layout-dashboard"></i>
+        Dashboard
+      </div>
+
+      <div class="nav-item" routerLink="/appointment">
+        <i data-lucide="calendar"></i>
+        Appointments
+      </div>
+
+      <div class="nav-item" routerLink="/case-history">
+        <i data-lucide="file-text"></i>
+        Case History
+      </div>
+
+      <div class="nav-item" routerLink="/chatbot">
+        <i data-lucide="message-square"></i>
+        Chatbot
+      </div>
+
+      <div class="nav-item" routerLink="/profile">
+        <i data-lucide="user"></i>
+        Profile
+      </div>
+    </nav>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h3>Welcome back, {{ name }}</h3>
+        <p>Here's what's happening today</p>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn-new">+ New</button>
+        <div class="avatar">{{ initials }}</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Banner -->
+      <div class="banner">
+
+        <div class="banner-text">
+          <h2>Your health, simplified</h2>
+          <p>
+            Book appointments, track symptoms,
+            and chat with your AI health assistant.
+          </p>
+          <span class="pill">All in one place</span>
+        </div>
+
+        <!-- ✅ YOUR SVG KEPT -->
+        <div class="banner-illo">
+          <svg width="170" height="130" viewBox="0 0 170 130" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="140" cy="20" r="40" fill="#2a2070" opacity="0.6"/>
+            <circle cx="30" cy="110" r="30" fill="#1e1a5e" opacity="0.5"/>
+            <rect x="52" y="72" width="66" height="58" rx="10" fill="white" opacity="0.95"/>
+            <polygon points="85,72 70,95 85,88" fill="#e8eaf0"/>
+            <polygon points="85,72 100,95 85,88" fill="#e8eaf0"/>
+            <path d="M72 80 Q65 100 72 108 Q80 116 88 108" fill="none" stroke="#6c63ff" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="88" cy="109" r="4" fill="#6c63ff"/>
+            <circle cx="85" cy="55" r="18" fill="#f5c5a3"/>
+            <path d="M67 50 Q68 34 85 34 Q102 34 103 50 Q98 38 85 38 Q72 38 67 50Z" fill="#2c1a0e"/>
+            <circle cx="79" cy="53" r="2" fill="#2c1a0e"/>
+            <circle cx="91" cy="53" r="2" fill="#2c1a0e"/>
+            <path d="M80 61 Q85 65 90 61" fill="none" stroke="#c08060" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="100" y="80" width="26" height="32" rx="4" fill="#eeedfe"/>
+            <rect x="108" y="76" width="10" height="6" rx="2" fill="#6c63ff"/>
+            <line x1="104" y1="90" x2="122" y2="90" stroke="#6c63ff" stroke-width="1.5" opacity="0.5"/>
+            <line x1="104" y1="96" x2="122" y2="96" stroke="#6c63ff" stroke-width="1.5" opacity="0.5"/>
+            <line x1="104" y1="102" x2="116" y2="102" stroke="#6c63ff" stroke-width="1.5" opacity="0.5"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <!-- Quick Actions -->
+      <p class="section-title">Quick Actions</p>
+
+      <div class="cards">
+
+        <!-- ✅ KEEP ICONS (OR REPLACE LATER) -->
+        <div class="card" routerLink="/appointment" style="cursor:pointer;">
+          <div class="card-icon purple">📅</div>
+          <h4>Book Appointment</h4>
+          <p>Schedule a doctor visit</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon teal">🩺</div>
+          <h4>Enter Symptoms</h4>
+          <p>Describe your condition</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon amber">📄</div>
+          <h4>Case History</h4>
+          <p>View past records</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon coral">🤖</div>
+          <h4>Chatbot</h4>
+          <p>Talk to AI assistant</p>
+        </div>
+
+      </div>
+
+      <!-- Appointments -->
+      <p class="section-title">Upcoming Appointments</p>
+
+      <div class="empty-state">
+        <div class="empty-circle">📅</div>
+        <h4>No appointments yet</h4>
+        <p>Keep track of all upcoming and past appointments</p>
+      </div>
+      
+
+    </div>
+
+  </div>
+</div>
