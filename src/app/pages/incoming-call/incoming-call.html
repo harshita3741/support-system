@@ -1,23 +1,202 @@
 <div class="call-page">
-  <div class="call-box">
-    <div class="call-top">
-      <span class="pulse"></span>
-      <span class="call-tag">Incoming patient request</span>
+  @if (callEnded) {
+    <div class="ended-box">
+      <div class="ended-icon">✓</div>
+      <div class="ended-title">Call Ended</div>
+      <div class="ended-sub">Redirecting to queue...</div>
     </div>
-    <div class="patient-name">Rohan Kapoor</div>
-    <div class="patient-meta">34 yrs · Male · 3 previous visits</div>
-    <div class="ai-summary">
-      <div class="ai-label">AI SUMMARY</div>
-      <div class="ai-text">Patient reports chest tightness and shortness of breath for 2 days. Worsens on exertion. History of mild hypertension. Flagged for urgent review.</div>
+  }
+
+  @if (!callEnded && patient) {
+    <div class="call-layout">
+      <div class="patient-panel">
+        <div class="back-btn" (click)="goBack()">← Back to Queue</div>
+
+        <div class="patient-header">
+          <div class="p-avatar">
+            {{ getPatientInitials() }}
+          </div>
+
+          <div>
+            <div class="p-name">{{ patient.patientName }}</div>
+            <div class="p-meta">
+              {{ patient.age || '--' }} yrs · {{ patient.gender || '--' }} · {{ patient.department }}
+            </div>
+            <div class="p-meta">
+              Blood Group: {{ patient.bloodGroup || '--' }}
+            </div>
+          </div>
+
+          <span class="prio-badge">
+            {{ patient.priority || 'Medium' }} Priority
+          </span>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Current Symptoms</div>
+          <div class="symptoms-box">{{ patient.symptoms }}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Known Conditions</div>
+          <div class="tags">
+            @for (c of parseConditions(); track c) {
+              <span class="tag">{{ c }}</span>
+            }
+            @if (!parseConditions().length) {
+              <span class="no-data">No known conditions</span>
+            }
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Previous Visits</div>
+          @if (parseVisits().length > 0) {
+            @for (v of parseVisits(); track v.date + v.diagnosis) {
+              <div class="visit-card">
+                <div class="visit-date">{{ v.date }}</div>
+                <div class="visit-dx">{{ v.diagnosis }}</div>
+                <div class="visit-notes">{{ v.notes }}</div>
+              </div>
+            }
+          } @else {
+            <div class="no-data">No previous visits found</div>
+          }
+        </div>
+      </div>
+
+      <div class="video-panel">
+        @if (!callAccepted) {
+          <div class="incoming-box">
+            <div class="call-top">
+              <span class="pulse"></span>
+              <span class="call-tag">Incoming patient request</span>
+            </div>
+
+            <div class="call-name">{{ patient.patientName }}</div>
+
+            <div class="call-meta">
+              {{ patient.age || '--' }} yrs · {{ patient.gender || '--' }}
+            </div>
+
+            <div class="ai-box">
+              <div class="ai-label">AI SUMMARY</div>
+              <div class="ai-text">
+                Patient reports {{ patient.symptoms }}.
+                Status: {{ patient.status }}.
+                Priority: {{ patient.priority || 'Medium' }}.
+              </div>
+            </div>
+
+            <div class="call-btns">
+              <button class="btn-accept" type="button" (click)="startVideoCall()">
+                Start Video Call
+              </button>
+              <button class="btn-decline" type="button" (click)="goBack()">
+                Decline
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (callAccepted) {
+          <div class="video-active">
+            <div class="video-header">
+              <div class="video-title">Video Call — {{ patient.patientName }}</div>
+              <div class="video-live">
+                <span class="live-dot"></span> Live
+              </div>
+            </div>
+
+            <div class="video-frame">
+              @if (cameraOn) {
+                <video
+                  #localVideo
+                  autoplay
+                  playsinline
+                  muted
+                  class="local-video">
+                </video>
+              } @else {
+                <div class="video-placeholder">
+                  <div class="video-icon">📷</div>
+                  <div class="video-text">Camera is off</div>
+                  <div class="video-sub">{{ patient.patientName }} is connected</div>
+                </div>
+              }
+
+              <div class="doctor-video">
+                <div class="doc-avatar">DS</div>
+                <div class="doc-label">You</div>
+              </div>
+            </div>
+
+            @if (chatOpen) {
+              <div class="chat-panel">
+                <div class="chat-header">Chat with {{ patient.patientName }}</div>
+
+                <div class="chat-messages">
+                  @for (msg of messages; track msg.text + msg.sender + $index) {
+                    <div class="msg" [class.doctor]="msg.sender === 'doctor'" [class.patient]="msg.sender === 'patient'">
+                      {{ msg.text }}
+                    </div>
+                  }
+                </div>
+
+                <div class="chat-input">
+                  <input
+                    type="text"
+                    [(ngModel)]="chatMessage"
+                    placeholder="Type message..."
+                    (keyup.enter)="sendMessage()" />
+                  <button type="button" (click)="sendMessage()">Send</button>
+                </div>
+              </div>
+            }
+
+            <div class="call-controls">
+              <button
+                class="ctrl-btn"
+                type="button"
+                (click)="toggleMic()"
+                [class.active]="micOn">
+                {{ micOn ? '🎤' : '🔇' }}
+              </button>
+
+              <button
+                class="ctrl-btn"
+                type="button"
+                (click)="toggleCamera()"
+                [class.active]="cameraOn">
+                {{ cameraOn ? '📷' : '🚫' }}
+              </button>
+
+              <button
+                class="ctrl-btn"
+                type="button"
+                (click)="toggleChat()"
+                [class.active]="chatOpen">
+                💬
+              </button>
+
+              <button
+                class="ctrl-btn end-call"
+                type="button"
+                (click)="endCall()">
+                End Call
+              </button>
+            </div>
+          </div>
+        }
+      </div>
     </div>
-    <div class="tags">
-      <span class="tag tag-red">High urgency</span>
-      <span class="tag tag-teal">Cardiology</span>
-      <span class="tag tag-amber">3 prior visits</span>
+  }
+
+  @if (!callEnded && !patient) {
+    <div class="no-patient">
+      <div>No active patient selected</div>
+      <button type="button" (click)="goBack()">Go to Queue</button>
     </div>
-    <div class="call-actions">
-      <a routerLink="/dashboard" class="btn-accept">Accept Call</a>
-      <a routerLink="/dashboard" class="btn-decline">Decline</a>
-    </div>
-  </div>
+  }
 </div>
+  

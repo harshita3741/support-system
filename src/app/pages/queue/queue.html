@@ -7,37 +7,65 @@
       </div>
       <span class="waiting-badge">{{ queueItems.length }} waiting</span>
     </div>
-    <table class="queue-table">
-      <thead>
-        <tr>
-          <th>Patient</th>
-          <th>Symptoms</th>
-          <th>Priority</th>
-          <th>Wait Time</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (q of queueItems; track q.name) {
+
+    @if (loading) {
+      <div style="padding: 20px; color: #6b7280;">Loading queue...</div>
+    } @else if (errorMessage) {
+      <div style="padding: 20px; color: #dc2626;">{{ errorMessage }}</div>
+    } @else if (queueItems.length === 0) {
+      <div style="padding: 20px; color: #9ca3af;">No patients in queue</div>
+    } @else {
+      <table class="queue-table">
+        <thead>
           <tr>
-            <td>
-              <div class="name-cell">
-                <div class="avatar" [style.background]="q.bg" [style.color]="q.color">{{ q.initials }}</div>
-                <div>
-                  <div class="p-name">{{ q.name }}</div>
-                  <div class="p-age">{{ q.age }} yrs · {{ q.gender }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="muted">{{ q.symptoms }}</td>
-            <td><span class="prio" [ngClass]="getPriorityClass(q.priority)">{{ q.priority }}</span></td>
-            <td><span [ngClass]="getWaitClass(q.priority)">{{ q.wait }}</span></td>
-            <td>
-              <a routerLink="/call" class="accept-btn">Accept</a>
-            </td>
+            <th>Patient</th>
+            <th>Symptoms</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (q of queueItems; track q.caseId) {
+            <tr>
+              <td>
+                <div class="name-cell">
+                  <div
+                    class="avatar"
+                    [style.background]="getAvatarBg(q.priority)"
+                    [style.color]="getAvatarColor(q.priority)">
+                    {{ getInitials(q.patientName) }}
+                  </div>
+                  <div>
+                    <div class="p-name">{{ q.patientName }}</div>
+                    <div class="p-age">{{ q.age || '--' }} yrs · {{ q.gender || '--' }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <td class="muted">{{ q.symptoms }}</td>
+
+              <td>
+                <span class="prio" [ngClass]="getPriorityClass(q.priority)">
+                  {{ q.priority || 'Medium' }}
+                </span>
+              </td>
+
+              <td>
+                <span [ngClass]="getStatusClass(q.status)">
+                  {{ q.status || 'OPEN' }}
+                </span>
+              </td>
+
+              <td>
+                <button class="accept-btn" (click)="acceptPatient(q)">
+                  Accept
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
   </div>
 </div>

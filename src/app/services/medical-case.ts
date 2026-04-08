@@ -1,16 +1,20 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class MedicalCaseService {
 
-  private baseUrl = 'http://localhost:8080';
+  private baseUrl = 'http://192.168.1.76:8080';
 
   constructor(private http: HttpClient) {}
 
   getCasesByDoctor(doctorId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/cases/doctor/${doctorId}`);
+  }
+
+  getCaseById(caseId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/cases/${caseId}`);
   }
 
   getAllCases(): Observable<any[]> {

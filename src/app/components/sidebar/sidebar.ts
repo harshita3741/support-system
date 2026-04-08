@@ -21,7 +21,7 @@ export class Sidebar implements OnInit {
     { label: 'Patients', icon: '👤', route: '/patients' },
     { label: 'Schedule', icon: '📅', route: '/schedule' },
     { label: 'Patient Monitor', icon: '♥', route: '/monitor' },
-    { label: 'Queue', icon: '≡', route: '/queue', badge: 3 },
+    { label: 'Queue', icon: '≡', route: '/queue'},
     { label: 'Incoming Call', icon: '📞', route: '/call' },
     { label: 'Settings', icon: '⚙', route: '/settings' }
   ];
