@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,63 +11,123 @@ import { HttpClient } from '@angular/common/http';
   templateUrl: './appointment.html',
   styleUrls: ['./appointment.css']
 })
-export class AppointmentComponent {
+export class AppointmentComponent implements OnInit {
 
-  doctors = [
-    { initials: 'RS', name: 'Dr. Adams', spec: 'Neurologist', color: '#6c63ff' },
-    { initials: 'AK', name: 'Dr. Smith', spec: 'Cardiologist', color: '#1d9e75' },
-    { initials: 'PM', name: 'Dr. Lee', spec: 'Orthopedic Surgeon', color: '#d85a30' },
-  ];
-
-  slots = [
-    { time: '9:00 AM', taken: true },
-    { time: '9:30 AM', taken: true },
-    { time: '10:00 AM', taken: false },
-    { time: '10:30 AM', taken: false },
-    { time: '11:00 AM', taken: false },
-    { time: '11:30 AM', taken: true },
-    { time: '2:00 PM', taken: false },
-    { time: '2:30 PM', taken: false },
-    { time: '3:00 PM', taken: false },
-  ];
+  doctors: any[] = [];
+  slots: any[] = [];
 
   selectedDoctor = 0;
-  selectedSlot = '10:00 AM';
+  selectedSlot = '';
   selectedDay = 9;
 
-  days = ['', '', 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
+  days = ['','',1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
 
   constructor(private http: HttpClient) {}
 
-  selectDoctor(i: number) { this.selectedDoctor = i; }
-  selectSlot(slot: any) { if (!slot.taken) this.selectedSlot = slot.time; }
-  selectDay(day: any) { if (day) this.selectedDay = day; }
+  ngOnInit() {
+    this.loadDoctors();
+  }
 
-  confirm() {
-    const caseData = {
-      caseId: Date.now(),
-      patientName: 'ChatUser',
-      symptoms: 'Appointment request - ' + this.doctors[this.selectedDoctor].spec,
-      department: this.getDepartment(),
-      status: 'OPEN'
-    };
-
-    this.http.post('http://localhost:8080/cases/create', caseData)
+  loadDoctors() {
+    this.http.get<any[]>('http://localhost:8080/doctors')
       .subscribe({
-        next: () => {
-          alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} on April ${this.selectedDay} at ${this.selectedSlot}`);
+        next: (res) => {
+          console.log('Doctors loaded:', res);
+          this.doctors = res.map(d => ({
+            id:       d.doctorId,
+            initials: this.getInitials(d.name),
+            name:     d.name,
+            spec:     d.specialty,
+            color:    this.getColor(d.specialty)
+          }));
+          if (this.doctors.length > 0) {
+            this.loadSlots(0);
+          }
+        },
+        error: (err) => console.error('Failed to load doctors', err)
+      });
+  }
+
+  loadSlots(doctorIndex: number) {
+    const doctorId = this.doctors[doctorIndex].id;
+    this.http.get<any[]>(`http://localhost:8080/appointments/slots/${doctorId}`)
+      .subscribe({
+        next: (res) => {
+          console.log('Slots loaded:', res);
+          this.slots = res.map(s => ({
+            id:    s.id,
+            time:  this.formatTime(s.slotTime),
+            raw:   s.slotTime,
+            taken: s.booked
+          }));
+          this.selectedSlot = '';
         },
         error: (err) => {
-          console.error(err);
-          alert('Could not book appointment. Please check if backend is running.');
+          console.error('Failed to load slots', err);
+          this.slots = [];
         }
       });
   }
 
-  getDepartment(): string {
-    const spec = this.doctors[this.selectedDoctor].spec;
-    if (spec === 'Cardiologist') return 'CARDIO';
-    if (spec === 'Dermatologist') return 'ORTHO';
-    return 'NEURO';
+  selectDoctor(i: number) {
+    this.selectedDoctor = i;
+    this.selectedSlot = '';
+    this.loadSlots(i);
+  }
+
+  selectSlot(slot: any) {
+    if (!slot.taken) this.selectedSlot = slot.time;
+  }
+
+  selectDay(day: any) {
+    if (day) this.selectedDay = day;
+  }
+
+  confirm() {
+    if (!this.selectedSlot) {
+      alert('Please select a time slot.');
+      return;
+    }
+
+    const selected = this.slots.find(s => s.time === this.selectedSlot);
+
+    const payload = {
+      patientName:     localStorage.getItem('patientName') || 'Patient',
+      department:      this.doctors[this.selectedDoctor].spec,
+      reason:          'Appointment - ' + this.doctors[this.selectedDoctor].spec,
+      appointmentTime: selected.raw
+    };
+
+    this.http.post('http://localhost:8080/appointments/book', payload)
+      .subscribe({
+        next: () => {
+          if (selected) selected.taken = true;
+          this.selectedSlot = '';
+          alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} at ${selected.time}`);
+        },
+        error: () => alert('Could not book appointment. Please check if backend is running.')
+      });
+  }
+
+  getInitials(name: string): string {
+    return name.split(' ')
+      .map((w: string) => w[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+  }
+
+  formatTime(slotTime: string): string {
+    const date = new Date(slotTime);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+
+  getColor(specialty: string): string {
+    const map: any = {
+      'CARDIO': '#1d9e75',
+      'NEURO':  '#6c63ff',
+      'ORTHO':  '#d85a30'
+    };
+    return map[specialty] || '#888';
   }
 }

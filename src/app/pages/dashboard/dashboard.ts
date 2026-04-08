@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth';
 
 @Component({
@@ -10,23 +10,12 @@ import { AuthService } from '../../core/auth';
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent {
   name = '';
   initials = '';
-
-  constructor(private auth: AuthService, private router: Router) {}
-
-  ngOnInit() {
+  constructor(private auth: AuthService) {
     this.name = this.auth.getPatientName();
-    const parts = this.name.split(' ');
+    const parts = this.name.split('@')[0].split('.');
     this.initials = parts.map((p: string) => p[0]?.toUpperCase()).join('').slice(0, 2);
-  }
-
-  logout() {
-    this.auth.logout();
-  }
-
-  navigate(page: string) {
-    this.router.navigate(['/' + page]);
   }
 }

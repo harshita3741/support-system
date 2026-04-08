@@ -1,72 +1,52 @@
 <div class="layout">
-
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="logo">
       <div class="logo-dot">C</div>
       <span class="logo-text">CareAI</span>
     </div>
     <nav class="nav">
-
-    <div class="nav-item active" routerLink="/dashboard">
-        <i data-lucide="layout-dashboard"></i>
+      <div class="nav-item active" routerLink="/dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         Dashboard
       </div>
-
       <div class="nav-item" routerLink="/appointment">
-        <i data-lucide="calendar"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Appointments
       </div>
-
       <div class="nav-item" routerLink="/case-history">
-        <i data-lucide="file-text"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Case History
       </div>
-
       <div class="nav-item" routerLink="/chatbot">
-        <i data-lucide="message-square"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Chatbot
       </div>
-
       <div class="nav-item" routerLink="/profile">
-        <i data-lucide="user"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Profile
       </div>
     </nav>
   </div>
 
-  <!-- Main -->
   <div class="main">
-
-    <!-- Topbar -->
     <div class="topbar">
       <div class="topbar-left">
         <h3>Welcome back, {{ name }}</h3>
         <p>Here's what's happening today</p>
       </div>
-
       <div class="topbar-right">
         <button class="btn-new">+ New</button>
         <div class="avatar">{{ initials }}</div>
       </div>
     </div>
 
-    <!-- Content -->
     <div class="content">
-
-      <!-- Banner -->
       <div class="banner">
-
         <div class="banner-text">
           <h2>Your health, simplified</h2>
-          <p>
-            Book appointments, track symptoms,
-            and chat with your AI health assistant.
-          </p>
+          <p>Book appointments, track symptoms and chat with your AI health assistant.</p>
           <span class="pill">All in one place</span>
         </div>
-
-        <!-- ✅ YOUR SVG KEPT -->
         <div class="banner-illo">
           <svg width="170" height="130" viewBox="0 0 170 130" xmlns="http://www.w3.org/2000/svg">
             <circle cx="140" cy="20" r="40" fill="#2a2070" opacity="0.6"/>
@@ -88,52 +68,48 @@
             <line x1="104" y1="102" x2="116" y2="102" stroke="#6c63ff" stroke-width="1.5" opacity="0.5"/>
           </svg>
         </div>
-
       </div>
 
-      <!-- Quick Actions -->
       <p class="section-title">Quick Actions</p>
-
       <div class="cards">
-
-        <!-- ✅ KEEP ICONS (OR REPLACE LATER) -->
         <div class="card" routerLink="/appointment" style="cursor:pointer;">
-          <div class="card-icon purple">📅</div>
+          <div class="card-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="20" height="20"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
           <h4>Book Appointment</h4>
           <p>Schedule a doctor visit</p>
         </div>
-
         <div class="card">
-          <div class="card-icon teal">🩺</div>
+          <div class="card-icon teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1d9e75" stroke-width="2" width="20" height="20"><path d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2z"/><path d="M12 14c-7 0-7 3-7 3v1h14v-1s0-3-7-3z"/></svg>
+          </div>
           <h4>Enter Symptoms</h4>
           <p>Describe your condition</p>
         </div>
-
         <div class="card">
-          <div class="card-icon amber">📄</div>
+          <div class="card-icon amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ba7517" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
           <h4>Case History</h4>
           <p>View past records</p>
         </div>
-
-        <div class="card">
-          <div class="card-icon coral">🤖</div>
+        <div class="card" routerLink="/chatbot" style="cursor:pointer;">
+          <div class="card-icon coral">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#d85a30" stroke-width="2" width="20" height="20"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
           <h4>Chatbot</h4>
           <p>Talk to AI assistant</p>
         </div>
-
       </div>
 
-      <!-- Appointments -->
       <p class="section-title">Upcoming Appointments</p>
-
       <div class="empty-state">
-        <div class="empty-circle">📅</div>
+        <div class="empty-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="36" height="36"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
         <h4>No appointments yet</h4>
         <p>Keep track of all upcoming and past appointments</p>
       </div>
-      
-
     </div>
-
   </div>
 </div>
