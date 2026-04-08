@@ -1,1 +1,128 @@
-<p>register works!</p>
+<div class="reg-container">
+  <div class="reg-card">
+    <div class="logo">
+      <div class="logo-dot">C</div>
+      <span class="logo-text">CareAI</span>
+    </div>
+
+    <div class="progress-bar">
+      <div class="step" *ngFor="let s of [1,2,3,4,5]">
+        <div class="step-circle" [class.done]="currentStep > s" [class.active]="currentStep === s" [class.pending]="currentStep < s">
+          <span *ngIf="currentStep > s">v</span>
+          <span *ngIf="currentStep <= s">{{ s }}</span>
+        </div>
+        <div class="step-label" [class.active]="currentStep === s">{{ ["Basic","Health","Lifestyle","History","Docs"][s-1] }}</div>
+      </div>
+    </div>
+
+    <div *ngIf="currentStep === 1">
+      <h2>Basic Information</h2>
+      <p class="step-sub">Step 1 of 5 - Personal details</p>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name</label><input [(ngModel)]="patient.fullName" placeholder="Your full name"/></div>
+        <div class="form-group"><label>Date of Birth</label><input type="date" [(ngModel)]="patient.dob"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Gender</label><select [(ngModel)]="patient.gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="form-group"><label>Phone Number</label><input [(ngModel)]="patient.phone" placeholder="+91 9876543210"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="patient.email" placeholder="you@example.com"/></div>
+        <div class="form-group"><label>Password</label><input type="password" [(ngModel)]="patient.password" placeholder="Min 8 characters"/></div>
+      </div>
+      <div class="form-group"><label>Emergency Contact (Optional)</label><input [(ngModel)]="patient.emergencyContact" placeholder="Name and Phone Number"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>City</label><input [(ngModel)]="patient.city" placeholder="New Delhi"/></div>
+        <div class="form-group"><label>State</label><input [(ngModel)]="patient.state" placeholder="Delhi"/></div>
+      </div>
+      <div class="form-group"><label>PIN Code</label><input [(ngModel)]="patient.pinCode" placeholder="110001"/></div>
+    </div>
+
+    <div *ngIf="currentStep === 2">
+      <h2>Health Basics</h2>
+      <p class="step-sub">Step 2 of 5 - Physical health information</p>
+      <div class="form-row">
+        <div class="form-group"><label>Blood Group</label><select [(ngModel)]="patient.bloodGroup"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
+        <div class="form-group"><label>Height (cm)</label><input type="number" [(ngModel)]="patient.height" (input)="calcBMI()" placeholder="165"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Weight (kg)</label><input type="number" [(ngModel)]="patient.weight" (input)="calcBMI()" placeholder="60"/></div>
+        <div class="form-group"><label>Allergies</label><input [(ngModel)]="patient.allergies" placeholder="e.g. Penicillin (optional)"/></div>
+      </div>
+      <div class="bmi-box" *ngIf="patient.bmi">
+        <span>BMI (auto-calculated)</span>
+        <strong>{{ patient.bmi }} - {{ getBMILabel() }}</strong>
+      </div>
+      <div class="form-group">
+        <label>Chronic Conditions</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item" *ngFor="let c of conditions">
+            <input type="checkbox" [checked]="isSelected(c)" (change)="toggleCondition(c)"/> {{ c }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentStep === 3">
+      <h2>Lifestyle</h2>
+      <p class="step-sub">Step 3 of 5 - Daily habits</p>
+      <div class="form-row">
+        <div class="form-group"><label>Smoking</label><select [(ngModel)]="patient.smokingHabit"><option>Never</option><option>Occasionally</option><option>Regular</option></select></div>
+        <div class="form-group"><label>Alcohol</label><select [(ngModel)]="patient.alcoholConsumption"><option>No</option><option>Social</option><option>Frequent</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Activity Level</label><select [(ngModel)]="patient.activityLevel"><option>Sedentary</option><option>Moderate</option><option>Active</option></select></div>
+        <div class="form-group"><label>Sleep (hours/day)</label><input type="number" [(ngModel)]="patient.sleepHours" placeholder="7"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Diet Type</label><select [(ngModel)]="patient.dietType"><option>Vegetarian</option><option>Non-Vegetarian</option><option>Vegan</option></select></div>
+        <div class="form-group"><label>Water Intake (L/day)</label><input type="number" [(ngModel)]="patient.waterIntake" placeholder="2.5"/></div>
+      </div>
+      <div *ngIf="patient.gender === 'Female'">
+        <div class="form-row">
+          <div class="form-group"><label>Pregnant?</label><select [(ngModel)]="patient.isPregnant"><option [value]="false">No</option><option [value]="true">Yes</option></select></div>
+          <div class="form-group"><label>Last Menstrual (Optional)</label><input type="date" [(ngModel)]="patient.lastMenstrual"/></div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentStep === 4">
+      <h2>Medical History</h2>
+      <p class="step-sub">Step 4 of 5 - Past medical records</p>
+      <div class="form-group"><label>Past Illnesses</label><textarea [(ngModel)]="patient.pastIllness" rows="2" placeholder="e.g. Typhoid in 2018"></textarea></div>
+      <div class="form-group"><label>Previous Surgeries</label><textarea [(ngModel)]="patient.previousSurgeries" rows="2" placeholder="e.g. Appendectomy 2019 (optional)"></textarea></div>
+      <div class="form-group"><label>Family Medical History</label><textarea [(ngModel)]="patient.familyHistory" rows="2" placeholder="e.g. Father - Heart disease"></textarea></div>
+      <div class="form-group"><label>Ongoing Treatments</label><textarea [(ngModel)]="patient.ongoingTreatments" rows="2" placeholder="e.g. Taking Metformin for diabetes"></textarea></div>
+      <div class="form-group"><label>Past Hospitalizations</label><textarea [(ngModel)]="patient.hospitalizations" rows="2" placeholder="e.g. ICU admission 2020 for COVID"></textarea></div>
+    </div>
+
+    <div *ngIf="currentStep === 5">
+      <h2>Upload Documents</h2>
+      <p class="step-sub">Step 5 of 5 - Optional medical files</p>
+      <div class="upload-box">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <p><strong>Upload Medical Reports</strong></p>
+        <p>PDF, JPG, PNG - optional</p>
+        <input type="file" accept=".pdf,.jpg,.png" multiple style="margin-top:8px;"/>
+      </div>
+      <div class="upload-box">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <p><strong>Upload Prescriptions</strong></p>
+        <p>PDF, JPG, PNG - optional</p>
+        <input type="file" accept=".pdf,.jpg,.png" multiple style="margin-top:8px;"/>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-back" *ngIf="currentStep > 1" (click)="prevStep()">Back</button>
+      <button class="btn-next" *ngIf="currentStep < 5" (click)="nextStep()">Next</button>
+      <button class="btn-next" *ngIf="currentStep === 5" (click)="submit()">Complete Registration</button>
+    </div>
+
+    <div class="signin-link">Already have an account? <a routerLink="/login">Sign in with Patient ID</a></div>
+  </div>
+</div>

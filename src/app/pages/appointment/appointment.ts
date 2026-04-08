@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-appointment',
@@ -13,9 +14,9 @@ import { FormsModule } from '@angular/forms';
 export class AppointmentComponent {
 
   doctors = [
-    { initials: 'RS', name: 'Dr. Riya Sharma', spec: 'General Physician', color: '#6c63ff' },
-    { initials: 'AK', name: 'Dr. Arjun Kapoor', spec: 'Cardiologist', color: '#1d9e75' },
-    { initials: 'PM', name: 'Dr. Priya Mehta', spec: 'Dermatologist', color: '#d85a30' },
+    { initials: 'RS', name: 'Dr. Adams', spec: 'Neurologist', color: '#6c63ff' },
+    { initials: 'AK', name: 'Dr. Smith', spec: 'Cardiologist', color: '#1d9e75' },
+    { initials: 'PM', name: 'Dr. Lee', spec: 'Orthopedic Surgeon', color: '#d85a30' },
   ];
 
   slots = [
@@ -36,11 +37,37 @@ export class AppointmentComponent {
 
   days = ['', '', 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
 
+  constructor(private http: HttpClient) {}
+
   selectDoctor(i: number) { this.selectedDoctor = i; }
   selectSlot(slot: any) { if (!slot.taken) this.selectedSlot = slot.time; }
   selectDay(day: any) { if (day) this.selectedDay = day; }
 
   confirm() {
-    alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} on April ${this.selectedDay} at ${this.selectedSlot}`);
+    const caseData = {
+      caseId: Date.now(),
+      patientName: 'ChatUser',
+      symptoms: 'Appointment request - ' + this.doctors[this.selectedDoctor].spec,
+      department: this.getDepartment(),
+      status: 'OPEN'
+    };
+
+    this.http.post('http://localhost:8080/cases/create', caseData)
+      .subscribe({
+        next: () => {
+          alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} on April ${this.selectedDay} at ${this.selectedSlot}`);
+        },
+        error: (err) => {
+          console.error(err);
+          alert('Could not book appointment. Please check if backend is running.');
+        }
+      });
+  }
+
+  getDepartment(): string {
+    const spec = this.doctors[this.selectedDoctor].spec;
+    if (spec === 'Cardiologist') return 'CARDIO';
+    if (spec === 'Dermatologist') return 'ORTHO';
+    return 'NEURO';
   }
 }

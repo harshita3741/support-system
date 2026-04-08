@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { RouterModule } from "@angular/router";
 
 @Component({
-  selector: 'app-landing',
+  selector: "app-landing",
   standalone: true,
-  imports: [CommonModule],
-  template: `<h1>Landing Works ✅</h1>`
+  imports: [CommonModule, RouterModule],
+  templateUrl: "./landing.html",
+  styleUrls: ["./landing.css"]
 })
 export class LandingComponent {}

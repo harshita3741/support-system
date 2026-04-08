@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 interface Message {
   text: string;
@@ -14,7 +14,7 @@ interface Message {
 @Component({
   selector: 'app-chatbot',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './chatbot.html',
   styleUrls: ['./chatbot.css']
 })
@@ -30,6 +30,7 @@ export class ChatbotComponent {
 
   userInput = '';
   isTyping = false;
+
   suggestions = ['I have a headache', 'Chest pain', 'I have fever', 'Bone fracture'];
 
   constructor(private http: HttpClient) {}
@@ -51,7 +52,7 @@ export class ChatbotComponent {
     this.userInput = '';
     this.isTyping = true;
 
-    this.http.post('http://localhost:8080/api/chat',
+    this.http.post('http://localhost:8080/chat',
       { message: text },
       { responseType: 'text' }
     ).subscribe({

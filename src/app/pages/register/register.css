@@ -1,140 +1,38 @@
-.register-wrapper {
-  min-height: 100vh;
-  background: #0f0c29;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.register-box {
-  background: white;
-  border-radius: 16px;
-  padding: 40px;
-  width: 100%;
-  max-width: 520px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 24px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f0c29;
-}
-
-.logo-dot {
-  width: 32px;
-  height: 32px;
-  background: #6c63ff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-}
-
-h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #12103a;
-  margin-bottom: 6px;
-}
-
-.subtitle {
-  color: #9098b0;
-  font-size: 13px;
-  margin-bottom: 24px;
-}
-
-.error-msg {
-  background: #fdeee8;
-  color: #d85a30;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.success-msg {
-  background: #e1f5ee;
-  color: #1d9e75;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #12103a;
-  margin-bottom: 6px;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #e4e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: border 0.2s;
-  background: white;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #6c63ff;
-}
-
-.btn-register {
-  width: 100%;
-  background: #6c63ff;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: background 0.2s;
-}
-
-.btn-register:hover {
-  background: #5a52d5;
-}
-
-.btn-register:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.login-link {
-  text-align: center;
-  font-size: 13px;
-  color: #9098b0;
-  margin-top: 16px;
-}
-
-.login-link a {
-  color: #6c63ff;
-  text-decoration: none;
-  font-weight: 500;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.reg-container { min-height: 100vh; background: #f0f2f8; display: flex; align-items: center; justify-content: center; padding: 24px; font-family: Segoe UI, sans-serif; }
+.reg-card { background: white; border-radius: 18px; padding: 32px; width: 100%; max-width: 580px; border: 1px solid #e4e8f0; }
+.logo { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+.logo-dot { width: 34px; height: 34px; background: #6c63ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 700; }
+.logo-text { font-size: 20px; font-weight: 700; color: #12103a; }
+.progress-bar { display: flex; align-items: flex-start; margin-bottom: 24px; gap: 4px; }
+.step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.step-circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.step-circle.done { background: #6c63ff; color: white; }
+.step-circle.active { background: #6c63ff; color: white; box-shadow: 0 0 0 4px rgba(108,99,255,0.2); }
+.step-circle.pending { background: #f0f2f8; color: #9098b0; border: 1.5px solid #e4e8f0; }
+.step-label { font-size: 10px; color: #9098b0; margin-top: 5px; font-weight: 500; }
+.step-label.active { color: #6c63ff; font-weight: 700; }
+h2 { font-size: 18px; font-weight: 700; color: #12103a; margin-bottom: 4px; }
+.step-sub { font-size: 12px; color: #9098b0; margin-bottom: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 11px; font-weight: 700; color: #12103a; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e4e8f0; border-radius: 8px; font-size: 13px; color: #12103a; outline: none; font-family: Segoe UI, sans-serif; background: white; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #6c63ff; }
+.bmi-box { background: #eeedfe; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.bmi-box span { font-size: 12px; color: #534AB7; font-weight: 600; }
+.bmi-box strong { font-size: 16px; color: #6c63ff; font-weight: 700; }
+.checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+.checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #12103a; cursor: pointer; }
+.checkbox-item input { width: 16px; height: 16px; accent-color: #6c63ff; }
+.upload-box { border: 2px dashed #e4e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 12px; transition: all 0.15s; }
+.upload-box:hover { border-color: #6c63ff; background: #f5f4ff; }
+.upload-icon { width: 40px; height: 40px; background: #eeedfe; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.upload-box p { font-size: 12px; color: #9098b0; margin-bottom: 4px; }
+.upload-box strong { color: #12103a; font-size: 13px; }
+.btn-row { display: flex; gap: 10px; margin-top: 24px; }
+.btn-back { flex: 1; background: white; color: #6c63ff; border: 1.5px solid #6c63ff; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-next { flex: 2; background: #6c63ff; color: white; border: none; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-next:hover { background: #5a52e0; }
+.signin-link { text-align: center; font-size: 12px; color: #9098b0; margin-top: 16px; }
+.signin-link a { color: #6c63ff; font-weight: 600; text-decoration: none; }
