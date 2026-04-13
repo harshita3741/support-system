@@ -5,19 +5,54 @@
       <span class="logo-text">CareAI</span>
     </div>
 
+    <div class="skip-link">
+      <a (click)="quickRegister()">Skip full profile — just create login ID</a>
+    </div>
+
     <div class="progress-bar">
-      <div class="step" *ngFor="let s of [1,2,3,4,5]">
-        <div class="step-circle" [class.done]="currentStep > s" [class.active]="currentStep === s" [class.pending]="currentStep < s">
-          <span *ngIf="currentStep > s">v</span>
-          <span *ngIf="currentStep <= s">{{ s }}</span>
+      <div class="step-wrap">
+        <div class="step-circle" [class.done]="currentStep > 1" [class.active]="currentStep === 1" [class.pending]="currentStep < 1">
+          <span *ngIf="currentStep > 1">v</span><span *ngIf="currentStep <= 1">1</span>
         </div>
-        <div class="step-label" [class.active]="currentStep === s">{{ ["Basic","Health","Lifestyle","History","Docs"][s-1] }}</div>
+        <div class="step-label" [class.active]="currentStep === 1">Basic</div>
       </div>
+      <div class="step-line" [class.done]="currentStep > 1"></div>
+      <div class="step-wrap">
+        <div class="step-circle" [class.done]="currentStep > 2" [class.active]="currentStep === 2" [class.pending]="currentStep < 2">
+          <span *ngIf="currentStep > 2">v</span><span *ngIf="currentStep <= 2">2</span>
+        </div>
+        <div class="step-label" [class.active]="currentStep === 2">Health</div>
+      </div>
+      <div class="step-line" [class.done]="currentStep > 2"></div>
+      <div class="step-wrap">
+        <div class="step-circle" [class.done]="currentStep > 3" [class.active]="currentStep === 3" [class.pending]="currentStep < 3">
+          <span *ngIf="currentStep > 3">v</span><span *ngIf="currentStep <= 3">3</span>
+        </div>
+        <div class="step-label" [class.active]="currentStep === 3">Lifestyle</div>
+      </div>
+      <div class="step-line" [class.done]="currentStep > 3"></div>
+      <div class="step-wrap">
+        <div class="step-circle" [class.done]="currentStep > 4" [class.active]="currentStep === 4" [class.pending]="currentStep < 4">
+          <span *ngIf="currentStep > 4">v</span><span *ngIf="currentStep <= 4">4</span>
+        </div>
+        <div class="step-label" [class.active]="currentStep === 4">History</div>
+      </div>
+      <div class="step-line" [class.done]="currentStep > 4"></div>
+      <div class="step-wrap">
+        <div class="step-circle" [class.done]="currentStep > 5" [class.active]="currentStep === 5" [class.pending]="currentStep < 5">
+          <span *ngIf="currentStep > 5">v</span><span *ngIf="currentStep <= 5">5</span>
+        </div>
+        <div class="step-label" [class.active]="currentStep === 5">Docs</div>
+      </div>
+    </div>
+
+    <div class="quick-note">
+      All steps except Basic Info are optional. You can complete your profile later from the dashboard.
     </div>
 
     <div *ngIf="currentStep === 1">
       <h2>Basic Information</h2>
-      <p class="step-sub">Step 1 of 5 - Personal details</p>
+      <p class="step-sub">Step 1 of 5 — Required to create your account</p>
       <div class="form-row">
         <div class="form-group"><label>Full Name</label><input [(ngModel)]="patient.fullName" placeholder="Your full name"/></div>
         <div class="form-group"><label>Date of Birth</label><input type="date" [(ngModel)]="patient.dob"/></div>
@@ -40,7 +75,7 @@
 
     <div *ngIf="currentStep === 2">
       <h2>Health Basics</h2>
-      <p class="step-sub">Step 2 of 5 - Physical health information</p>
+      <p class="step-sub">Step 2 of 5 — Optional, can be added later</p>
       <div class="form-row">
         <div class="form-group"><label>Blood Group</label><select [(ngModel)]="patient.bloodGroup"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
         <div class="form-group"><label>Height (cm)</label><input type="number" [(ngModel)]="patient.height" (input)="calcBMI()" placeholder="165"/></div>
@@ -65,7 +100,7 @@
 
     <div *ngIf="currentStep === 3">
       <h2>Lifestyle</h2>
-      <p class="step-sub">Step 3 of 5 - Daily habits</p>
+      <p class="step-sub">Step 3 of 5 — Optional, can be added later</p>
       <div class="form-row">
         <div class="form-group"><label>Smoking</label><select [(ngModel)]="patient.smokingHabit"><option>Never</option><option>Occasionally</option><option>Regular</option></select></div>
         <div class="form-group"><label>Alcohol</label><select [(ngModel)]="patient.alcoholConsumption"><option>No</option><option>Social</option><option>Frequent</option></select></div>
@@ -88,7 +123,7 @@
 
     <div *ngIf="currentStep === 4">
       <h2>Medical History</h2>
-      <p class="step-sub">Step 4 of 5 - Past medical records</p>
+      <p class="step-sub">Step 4 of 5 — Optional, can be added later</p>
       <div class="form-group"><label>Past Illnesses</label><textarea [(ngModel)]="patient.pastIllness" rows="2" placeholder="e.g. Typhoid in 2018"></textarea></div>
       <div class="form-group"><label>Previous Surgeries</label><textarea [(ngModel)]="patient.previousSurgeries" rows="2" placeholder="e.g. Appendectomy 2019 (optional)"></textarea></div>
       <div class="form-group"><label>Family Medical History</label><textarea [(ngModel)]="patient.familyHistory" rows="2" placeholder="e.g. Father - Heart disease"></textarea></div>
@@ -98,7 +133,7 @@
 
     <div *ngIf="currentStep === 5">
       <h2>Upload Documents</h2>
-      <p class="step-sub">Step 5 of 5 - Optional medical files</p>
+      <p class="step-sub">Step 5 of 5 — Optional, can be uploaded later from dashboard</p>
       <div class="upload-box">
         <div class="upload-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -119,7 +154,8 @@
 
     <div class="btn-row">
       <button class="btn-back" *ngIf="currentStep > 1" (click)="prevStep()">Back</button>
-      <button class="btn-next" *ngIf="currentStep < 5" (click)="nextStep()">Next</button>
+      <button class="btn-skip" *ngIf="currentStep > 1 && currentStep < 5" (click)="nextStep()">Skip</button>
+      <button class="btn-next" *ngIf="currentStep < 5" (click)="nextStep()">Next ?</button>
       <button class="btn-next" *ngIf="currentStep === 5" (click)="submit()">Complete Registration</button>
     </div>
 
