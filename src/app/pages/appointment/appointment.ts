@@ -41,7 +41,7 @@ export class AppointmentComponent implements OnInit {
   }
 
   loadDoctors() {
-    this.http.get<any[]>("http://localhost:8080/doctors").subscribe({
+    this.http.get<any[]>("http://localhost:8080/api/doctors").subscribe({
       next: (data) => {
         this.doctors = data.map(d => ({
           initials: d.name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase(),
@@ -51,13 +51,10 @@ export class AppointmentComponent implements OnInit {
           id: d.doctorId
         }));
       },
-      error: () => {
-        this.doctors = [
-          { initials: "RS", name: "Dr. Riya Sharma", spec: "General Physician", color: "#6c63ff", id: 1 },
-          { initials: "AK", name: "Dr. Arjun Kapoor", spec: "Cardiologist", color: "#1d9e75", id: 2 },
-          { initials: "PM", name: "Dr. Priya Mehta", spec: "Dermatologist", color: "#d85a30", id: 3 }
-        ];
-      }
+      error: (err) => {
+         console.error("API FAILED:", err);
+      this.doctors = [];
+    }
     });
   }
 
