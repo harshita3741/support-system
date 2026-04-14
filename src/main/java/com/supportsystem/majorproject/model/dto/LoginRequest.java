@@ -4,7 +4,7 @@ public class LoginRequest {
   private String patientId;
   private String password;
   public String getPatientId() { return patientId; }
-  public void setPatientId(String patientId) { this.patientId = patientId; }
+  public void setPatientId(String p) { this.patientId = p; }
   public String getPassword() { return password; }
-  public void setPassword(String password) { this.password = password; }
+  public void setPassword(String p) { this.password = p; }
 }

@@ -1,9 +1,10 @@
 package com.supportsystem.majorproject.controller;
 
 import com.supportsystem.majorproject.model.Patient;
+import com.supportsystem.majorproject.model.dto.LoginRequest;
 import com.supportsystem.majorproject.service.PatientService;
 import org.springframework.web.bind.annotation.*;
-import com.supportsystem.majorproject.model.dto.LoginRequest;
+import java.util.List;
 
 @RestController
 @RequestMapping("/patients")
@@ -23,6 +24,19 @@ public class PatientController {
 
   @PostMapping("/login")
   public Patient login(@RequestBody LoginRequest request) {
-    return patientService.login(request.getPatientId(), request.getPassword());
+    return patientService.login(
+      request.getPatientId(),
+      request.getPassword()
+    );
+  }
+
+  @GetMapping("/all")
+  public List<Patient> getAllPatients() {
+    return patientService.getAllPatients();
+  }
+
+  @GetMapping("/{patientId}")
+  public Patient getPatient(@PathVariable String patientId) {
+    return patientService.getPatientById(patientId);
   }
 }

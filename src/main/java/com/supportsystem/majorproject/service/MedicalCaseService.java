@@ -41,5 +41,6 @@ public class MedicalCaseService {
       return "Accepted";
     }
     return "Case not found";
+
   }
 }

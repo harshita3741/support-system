@@ -8,11 +8,16 @@ public class Doctor {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "doctor_id")
   private Long doctorId;
 
   private String name;
+
   private String specialty;
+
   private boolean available;
+
+  @Column(name = "active_cases")
   private int activeCases;
 
   public Doctor() {}
@@ -24,12 +29,15 @@ public class Doctor {
     this.activeCases = activeCases;
   }
 
-  // getters and setters (same as before, doctorId is now Long with @Id)
   public Long getDoctorId() { return doctorId; }
   public String getName() { return name; }
   public String getSpecialty() { return specialty; }
   public boolean isAvailable() { return available; }
-  public void setAvailable(boolean available) { this.available = available; }
   public int getActiveCases() { return activeCases; }
+
+  public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
+  public void setName(String name) { this.name = name; }
+  public void setSpecialty(String specialty) { this.specialty = specialty; }
+  public void setAvailable(boolean available) { this.available = available; }
   public void setActiveCases(int activeCases) { this.activeCases = activeCases; }
 }

@@ -8,13 +8,13 @@ public class Patient {
 
   @Id
   private String patientId;
-
   private String fullName;
   private String email;
   private String phone;
   private String password;
   private String gender;
   private String dob;
+  private String emergencyContact;
   private String bloodGroup;
   private Double height;
   private Double weight;
@@ -24,8 +24,14 @@ public class Patient {
   private String smokingHabit;
   private String alcoholConsumption;
   private String activityLevel;
+  private String sleepHours;
   private String dietType;
-  private String medicalHistory;
+  private String waterIntake;
+  private String pastIllness;
+  private String previousSurgeries;
+  private String familyHistory;
+  private String ongoingTreatments;
+  private String hospitalizations;
   private String city;
   private String state;
   private String pinCode;
@@ -45,6 +51,8 @@ public class Patient {
   public void setGender(String gender) { this.gender = gender; }
   public String getDob() { return dob; }
   public void setDob(String dob) { this.dob = dob; }
+  public String getEmergencyContact() { return emergencyContact; }
+  public void setEmergencyContact(String e) { this.emergencyContact = e; }
   public String getBloodGroup() { return bloodGroup; }
   public void setBloodGroup(String bloodGroup) { this.bloodGroup = bloodGroup; }
   public Double getHeight() { return height; }
@@ -63,10 +71,22 @@ public class Patient {
   public void setAlcoholConsumption(String a) { this.alcoholConsumption = a; }
   public String getActivityLevel() { return activityLevel; }
   public void setActivityLevel(String a) { this.activityLevel = a; }
+  public String getSleepHours() { return sleepHours; }
+  public void setSleepHours(String s) { this.sleepHours = s; }
   public String getDietType() { return dietType; }
   public void setDietType(String d) { this.dietType = d; }
-  public String getMedicalHistory() { return medicalHistory; }
-  public void setMedicalHistory(String m) { this.medicalHistory = m; }
+  public String getWaterIntake() { return waterIntake; }
+  public void setWaterIntake(String w) { this.waterIntake = w; }
+  public String getPastIllness() { return pastIllness; }
+  public void setPastIllness(String p) { this.pastIllness = p; }
+  public String getPreviousSurgeries() { return previousSurgeries; }
+  public void setPreviousSurgeries(String p) { this.previousSurgeries = p; }
+  public String getFamilyHistory() { return familyHistory; }
+  public void setFamilyHistory(String f) { this.familyHistory = f; }
+  public String getOngoingTreatments() { return ongoingTreatments; }
+  public void setOngoingTreatments(String o) { this.ongoingTreatments = o; }
+  public String getHospitalizations() { return hospitalizations; }
+  public void setHospitalizations(String h) { this.hospitalizations = h; }
   public String getCity() { return city; }
   public void setCity(String city) { this.city = city; }
   public String getState() { return state; }
