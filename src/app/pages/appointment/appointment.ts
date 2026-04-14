@@ -1,6 +1,6 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 
@@ -22,11 +22,17 @@ export class AppointmentComponent implements OnInit {
 
   days = ['','',1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {
+  showAvatarMenu = false;
+
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef, private ngZone: NgZone, private router: Router) {
     const name = localStorage.getItem('patientName') || '';
     this.initials = name.split('@')[0].split('.')
       .map((p: string) => p[0]?.toUpperCase()).join('').slice(0, 2) || 'PT';
   }
+
+  toggleAvatarMenu() { this.showAvatarMenu = !this.showAvatarMenu; }
+  closeMenus() { this.showAvatarMenu = false; }
+  logout() { localStorage.clear(); this.router.navigate(['/login']); }
 
   ngOnInit() {
     this.loadDoctors();
@@ -35,16 +41,17 @@ export class AppointmentComponent implements OnInit {
   loadDoctors() {
     this.http.get<any[]>('http://localhost:8080/doctors').subscribe({
       next: (res) => {
-        console.log('Doctors loaded:', res);
-        this.doctors = res.map(d => ({
-          id:       d.doctorId,
-          initials: d.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase(),
-          name:     d.name,
-          spec:     d.specialty,
-          color:    this.getColor(d.specialty)
-        }));
-        this.cdr.detectChanges();
-        if (this.doctors.length > 0) this.loadSlots(0);
+        this.ngZone.run(() => {
+          console.log('Doctors loaded:', res);
+          this.doctors = res.map(d => ({
+            id:       d.doctorId,
+            initials: d.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase(),
+            name:     d.name,
+            spec:     d.specialty,
+            color:    this.getColor(d.specialty)
+          }));
+          if (this.doctors.length > 0) this.loadSlots(0);
+        });
       },
       error: (err) => console.error('Failed to load doctors:', err)
     });
@@ -54,19 +61,20 @@ export class AppointmentComponent implements OnInit {
     const doctorId = this.doctors[index].id;
     this.http.get<any[]>(`http://localhost:8080/appointments/slots/${doctorId}`).subscribe({
       next: (res) => {
-        console.log('Slots loaded:', res);
-        this.slots = res.map(s => ({
-          id:    s.id,
-          time:  this.formatTime(s.slotTime),
-          raw:   s.slotTime,
-          taken: s.booked
-        }));
-        this.selectedSlot = '';
-        this.cdr.detectChanges();
+        this.ngZone.run(() => {
+          console.log('Slots loaded:', res);
+          this.slots = res.map(s => ({
+            id:    s.id,
+            time:  this.formatTime(s.slotTime),
+            raw:   s.slotTime,
+            taken: s.booked
+          }));
+          this.selectedSlot = '';
+        });
       },
       error: (err) => {
         console.error('Failed to load slots:', err);
-        this.slots = [];
+        this.ngZone.run(() => { this.slots = []; });
       }
     });
   }
@@ -94,10 +102,11 @@ export class AppointmentComponent implements OnInit {
 
     this.http.post('http://localhost:8080/appointments/book', payload).subscribe({
       next: () => {
-        selected.taken = true;
-        this.selectedSlot = '';
-        this.cdr.detectChanges();
-        alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} at ${selected.time}`);
+        this.ngZone.run(() => {
+          selected.taken = true;
+          this.selectedSlot = '';
+          alert(`Appointment confirmed with ${this.doctors[this.selectedDoctor].name} at ${selected.time}`);
+        });
       },
       error: () => alert('Could not book appointment.')
     });

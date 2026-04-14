@@ -99,3 +99,11 @@
 .confirm-btn { background: #6c63ff; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 14px; }
 
 .confirm-btn:hover { background: #5a52e0; }
+
+.avatar-wrap { position: relative; }
+.dropdown-menu { position: absolute; top: calc(100% + 8px); right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); min-width: 180px; z-index: 100; overflow: hidden; }
+.dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; color: #12103a; cursor: pointer; transition: background 0.15s; }
+.dropdown-item:hover { background: #f5f4ff; }
+.dropdown-item.logout { color: #e53e3e; }
+.dropdown-item.logout:hover { background: #fff5f5; }
+.dropdown-divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
