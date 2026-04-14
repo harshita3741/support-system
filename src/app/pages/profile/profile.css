@@ -39,3 +39,9 @@
 .logout-section { display: flex; justify-content: center; margin-top: 8px; }
 .btn-logout-full { display: flex; align-items: center; gap: 8px; background: #fdeee8; color: #d85a30; border: 1px solid #f0997b; padding: 10px 24px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-logout-full:hover { background: #f5c4b3; }
+.no-profile-state { background: white; border-radius: 14px; padding: 52px; text-align: center; border: 1px solid #e4e8f0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.no-profile-icon { width: 80px; height: 80px; background: #eeedfe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+.no-profile-state h3 { font-size: 17px; font-weight: 700; color: #12103a; }
+.no-profile-state p { font-size: 13px; color: #9098b0; }
+.btn-complete { background: #6c63ff; color: white; border: none; padding: 11px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.btn-logout-sm { background: white; color: #d85a30; border: 1px solid #f0997b; padding: 9px 24px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }

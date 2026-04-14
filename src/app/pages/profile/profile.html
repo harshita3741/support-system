@@ -36,18 +36,28 @@
       </div>
       <div class="topbar-right">
         <button class="btn-logout" (click)="logout()">Logout</button>
-        <div class="avatar">{{ initials }}</div>
+        <div class="avatar">{{ initials || "?" }}</div>
       </div>
     </div>
 
     <div class="content">
+
       <div class="loading" *ngIf="loading">
         <div class="spinner"></div>
         <p>Loading profile...</p>
       </div>
 
-      <div *ngIf="!loading && patient">
+      <div class="no-profile-state" *ngIf="!loading && noProfile">
+        <div class="no-profile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="40" height="40"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h3>Profile not set up yet</h3>
+        <p>Complete your registration to see your health profile here</p>
+        <button class="btn-complete" routerLink="/register">Complete Profile</button>
+        <button class="btn-logout-sm" (click)="logout()">Logout</button>
+      </div>
 
+      <div *ngIf="!loading && patient">
         <div class="profile-header">
           <div class="profile-avatar">{{ initials }}</div>
           <div class="profile-info">
@@ -59,7 +69,6 @@
         </div>
 
         <div class="sections-grid">
-
           <div class="section-card">
             <div class="section-title">Personal Info</div>
             <div class="info-row"><span class="info-label">Gender</span><span class="info-value">{{ patient.gender || "Not set" }}</span></div>
@@ -97,7 +106,6 @@
             <div class="info-row"><span class="info-label">Family History</span><span class="info-value">{{ patient.familyHistory || "None" }}</span></div>
             <div class="info-row"><span class="info-label">Ongoing Treatment</span><span class="info-value">{{ patient.ongoingTreatments || "None" }}</span></div>
           </div>
-
         </div>
 
         <div class="logout-section">
@@ -106,7 +114,6 @@
             Logout
           </button>
         </div>
-
       </div>
     </div>
   </div>

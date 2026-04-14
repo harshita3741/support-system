@@ -14,12 +14,17 @@ export class ProfileComponent implements OnInit {
   patient: any = null;
   loading = true;
   initials = "";
+  noProfile = false;
 
   constructor(private http: HttpClient, private router: Router) {}
 
   ngOnInit() {
     const patientId = localStorage.getItem("patientId");
-    if (!patientId) { this.router.navigate(["/login"]); return; }
+    if (!patientId) {
+      this.loading = false;
+      this.noProfile = true;
+      return;
+    }
     this.http.get<any>("http://localhost:8080/patients/" + patientId).subscribe({
       next: (data) => {
         this.patient = data;
@@ -27,7 +32,10 @@ export class ProfileComponent implements OnInit {
         const name = data.fullName || "";
         this.initials = name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase();
       },
-      error: () => { this.loading = false; }
+      error: () => {
+        this.loading = false;
+        this.noProfile = true;
+      }
     });
   }
 

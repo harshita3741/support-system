@@ -40,20 +40,34 @@
     </div>
 
     <div class="content">
+
       <div class="loading" *ngIf="loading">
         <div class="spinner"></div>
         <p>Loading cases...</p>
       </div>
 
-      <div class="empty-state" *ngIf="!loading && cases.length === 0">
+      <div class="empty-state" *ngIf="!loading && error">
+        <div class="empty-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d85a30" stroke-width="1.5" width="36" height="36"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h4>Backend not connected</h4>
+        <p>Make sure Spring Boot is running on localhost:8080</p>
+        <button class="retry-btn" (click)="loadCases()">Retry</button>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && !error && cases.length === 0">
         <div class="empty-circle">
           <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="36" height="36"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </div>
         <h4>No cases yet</h4>
-        <p>Your medical cases will appear here after chatbot or appointment interactions</p>
+        <p>Cases appear here after chatbot or appointment interactions</p>
+        <div class="quick-actions">
+          <button class="action-btn" routerLink="/chatbot">Start Chatbot</button>
+          <button class="action-btn outline" routerLink="/appointment">Book Appointment</button>
+        </div>
       </div>
 
-      <div class="cases-list" *ngIf="!loading && cases.length > 0">
+      <div class="cases-list" *ngIf="!loading && !error && cases.length > 0">
         <div class="case-card" *ngFor="let c of cases">
           <div class="case-header">
             <div class="case-id">Case #{{ c.caseId }}</div>
@@ -69,6 +83,16 @@
           <div class="case-field" style="margin-top:10px;">
             <span class="field-label">Symptoms</span>
             <span class="field-value">{{ c.symptoms }}</span>
+          </div>
+          <div class="video-call-section" *ngIf="c.status === 'ACCEPTED'">
+            <div class="doctor-accepted">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#0f6e56" stroke-width="2" width="16" height="16"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.39 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16z"/></svg>
+              Doctor {{ c.doctorName || "assigned" }} accepted your case!
+            </div>
+            <button class="video-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              Join Video Call
+            </button>
           </div>
         </div>
       </div>

@@ -14,6 +14,7 @@ export class CaseHistoryComponent implements OnInit {
   cases: any[] = [];
   loading = true;
   patientName = "";
+  error = false;
 
   constructor(private http: HttpClient) {}
 
@@ -25,7 +26,7 @@ export class CaseHistoryComponent implements OnInit {
   loadCases() {
     this.http.get<any[]>("http://localhost:8080/cases/all").subscribe({
       next: (data) => { this.cases = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.error = true; }
     });
   }
 
