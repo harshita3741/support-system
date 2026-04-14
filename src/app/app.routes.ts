@@ -7,6 +7,7 @@ import { ChatbotComponent } from "./pages/chatbot/chatbot";
 import { RegisterComponent } from "./pages/register/register";
 import { CaseHistoryComponent } from "./pages/case-history/case-history";
 import { ProfileComponent } from "./pages/profile/profile";
+import { VideoCallComponent } from "./pages/video-call/video-call";
 
 export const routes: Routes = [
   { path: "", component: LandingComponent },
@@ -16,5 +17,6 @@ export const routes: Routes = [
   { path: "appointment", component: AppointmentComponent },
   { path: "chatbot", component: ChatbotComponent },
   { path: "case-history", component: CaseHistoryComponent },
-  { path: "profile", component: ProfileComponent }
+  { path: "profile", component: ProfileComponent },
+  { path: "video-call", component: VideoCallComponent }
 ];

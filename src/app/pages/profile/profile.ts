@@ -2,6 +2,7 @@ import { Component, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterModule, Router } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
+import { AuthService } from "../../core/auth";
 
 @Component({
   selector: "app-profile",
@@ -13,12 +14,13 @@ import { HttpClient } from "@angular/common/http";
 export class ProfileComponent implements OnInit {
   patient: any = null;
   loading = true;
-  initials = "";
   noProfile = false;
+  initials = "";
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private auth: AuthService) {}
 
   ngOnInit() {
+    this.initials = this.auth.getInitials();
     const patientId = localStorage.getItem("patientId");
     if (!patientId) {
       this.loading = false;
@@ -30,7 +32,7 @@ export class ProfileComponent implements OnInit {
         this.patient = data;
         this.loading = false;
         const name = data.fullName || "";
-        this.initials = name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase();
+        this.initials = name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase() || this.auth.getInitials();
       },
       error: () => {
         this.loading = false;

@@ -21,30 +21,24 @@
           <p>Online</p>
         </div>
       </div>
-      <div class="avatar">HM</div>
+      <div class="avatar">{{ initials }}</div>
     </div>
-    <div class="chat-area" #chatArea>
+    <div class="chat-area">
       <ng-container *ngFor="let msg of messages">
         <div class="bubble-row" [class.user]="msg.sender === 'user'">
           <div class="bubble-avatar" [class.bot]="msg.sender === 'bot'" [class.user]="msg.sender === 'user'">
             <span *ngIf="msg.sender === 'bot'">AI</span>
-            <span *ngIf="msg.sender === 'user'">H</span>
+            <span *ngIf="msg.sender === 'user'">{{ initials[0] }}</span>
           </div>
           <div class="bubble" [class.bot]="msg.sender === 'bot'" [class.user]="msg.sender === 'user'">
             <span>{{ msg.text }}</span>
             <div class="case-badge" *ngIf="msg.caseBadge">{{ msg.caseBadge }}</div>
-            <div class="queue-section" *ngIf="msg.inQueue">
-              <div class="queue-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                You are in queue — waiting for doctor
-              </div>
-              <div class="doctor-info" *ngIf="msg.doctorName">
-                Doctor: {{ msg.doctorName }}
-              </div>
-              <button class="video-btn" *ngIf="msg.callReady">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="14" height="14"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                Join Video Call with {{ msg.doctorName }}
-              </button>
+            <div class="queue-section" *ngIf="msg.inQueue && !msg.callReady">
+              <div class="queue-info">Waiting for {{ msg.doctorName }} to accept...</div>
+            </div>
+            <div class="call-ready-section" *ngIf="msg.callReady">
+              <div class="call-ready-info">{{ msg.doctorName }} is ready!</div>
+              <button class="video-btn" routerLink="/video-call">Join Video Call with {{ msg.doctorName }}</button>
             </div>
             <div class="time">{{ msg.time }}</div>
           </div>
@@ -53,9 +47,7 @@
       <div class="bubble-row" *ngIf="isTyping">
         <div class="bubble-avatar bot">AI</div>
         <div class="typing">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
         </div>
       </div>
     </div>
@@ -63,11 +55,7 @@
       <div class="suggestion" *ngFor="let s of suggestions" (click)="sendSuggestion(s)">{{ s }}</div>
     </div>
     <div class="input-area">
-      <input class="chat-input"
-             [(ngModel)]="userInput"
-             (keydown.enter)="send()"
-             placeholder="Describe your symptoms..."
-             [disabled]="isTyping"/>
+      <input class="chat-input" [(ngModel)]="userInput" (keydown.enter)="send()" placeholder="Describe your symptoms..." [disabled]="isTyping"/>
       <button class="send-btn" (click)="send()" [disabled]="isTyping">Send</button>
     </div>
   </div>

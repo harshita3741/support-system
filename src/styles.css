@@ -1,4 +1,2 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; width: 100%; }
-body { overflow-y: auto; }
-app-root { display: block; height: 100%; }
+html, body { height: 100%; font-family: Segoe UI, sans-serif; }

@@ -3,6 +3,7 @@ import { CommonModule } from "@angular/common";
 import { RouterModule } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { HttpClient } from "@angular/common/http";
+import { AuthService } from "../../core/auth";
 
 @Component({
   selector: "app-appointment",
@@ -12,7 +13,6 @@ import { HttpClient } from "@angular/common/http";
   styleUrls: ["./appointment.css"]
 })
 export class AppointmentComponent implements OnInit {
-
   doctors: any[] = [];
   slots = [
     { time: "9:00 AM", taken: true },
@@ -25,23 +25,23 @@ export class AppointmentComponent implements OnInit {
     { time: "2:30 PM", taken: false },
     { time: "3:00 PM", taken: false },
   ];
-
   selectedDoctor = 0;
   selectedSlot = "10:00 AM";
   selectedDay = 9;
   patientName = "";
+  initials = "";
+  days = ["","",1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
 
-  days = ["", "", 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auth: AuthService) {}
 
   ngOnInit() {
-    this.patientName = localStorage.getItem("patientName") || "Patient";
+    this.patientName = this.auth.getPatientName();
+    this.initials = this.auth.getInitials();
     this.loadDoctors();
   }
 
   loadDoctors() {
-    this.http.get<any[]>("http://localhost:8080/api/doctors").subscribe({
+    this.http.get<any[]>("http://localhost:8080/doctors").subscribe({
       next: (data) => {
         this.doctors = data.map(d => ({
           initials: d.name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase(),
@@ -51,17 +51,20 @@ export class AppointmentComponent implements OnInit {
           id: d.doctorId
         }));
       },
-      error: (err) => {
-         console.error("API FAILED:", err);
-      this.doctors = [];
-    }
+      error: () => {
+        this.doctors = [
+          { initials: "RS", name: "Dr. Riya Sharma", spec: "General Physician", color: "#6c63ff", id: 1 },
+          { initials: "AK", name: "Dr. Arjun Kapoor", spec: "Cardiologist", color: "#1d9e75", id: 2 },
+          { initials: "PM", name: "Dr. Priya Mehta", spec: "Dermatologist", color: "#d85a30", id: 3 }
+        ];
+      }
     });
   }
 
-  getColor(specialty: string): string {
-    if (specialty === "CARDIO" || specialty === "Cardiologist") return "#1d9e75";
-    if (specialty === "NEURO") return "#6c63ff";
-    if (specialty === "ORTHO") return "#d85a30";
+  getColor(s: string): string {
+    if (s === "CARDIO" || s === "Cardiologist") return "#1d9e75";
+    if (s === "NEURO") return "#6c63ff";
+    if (s === "ORTHO") return "#d85a30";
     return "#6c63ff";
   }
 
@@ -70,7 +73,6 @@ export class AppointmentComponent implements OnInit {
   selectDay(day: any) { if (day) this.selectedDay = day; }
 
   getDepartment(): string {
-    if (!this.doctors.length) return "GENERAL";
     const spec = this.doctors[this.selectedDoctor]?.spec || "";
     if (spec === "Cardiologist" || spec === "CARDIO") return "CARDIO";
     if (spec === "NEURO") return "NEURO";
