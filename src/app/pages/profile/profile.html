@@ -1,9 +1,6 @@
 <div class="layout">
   <div class="sidebar">
-    <div class="logo">
-      <div class="logo-dot">C</div>
-      <span class="logo-text">CareAI</span>
-    </div>
+    <div class="logo"><div class="logo-dot">C</div><span class="logo-text">CareAI</span></div>
     <nav class="nav">
       <div class="nav-item" routerLink="/dashboard">
         <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -21,7 +18,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Chatbot
       </div>
-      <div class="nav-item active">
+      <div class="nav-item active" routerLink="/profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Profile
       </div>
@@ -30,89 +27,78 @@
 
   <div class="main">
     <div class="topbar">
-      <div class="topbar-left">
-        <h3>My Profile</h3>
-        <p>Your health information</p>
-      </div>
+      <div class="topbar-left"><h3>My Profile</h3><p>Your personal health information</p></div>
       <div class="topbar-right">
-        <button class="btn-logout" (click)="logout()">Logout</button>
-        <div class="avatar">{{ initials || "?" }}</div>
+        <div class="avatar" (click)="logout()" style="cursor:pointer;" title="Logout">{{ initials }}</div>
       </div>
     </div>
 
     <div class="content">
 
-      <div class="loading" *ngIf="loading">
-        <div class="spinner"></div>
-        <p>Loading profile...</p>
+      <!-- LOADING -->
+      <div *ngIf="loading" class="empty-state">
+        <p>Loading your profile...</p>
       </div>
 
-      <div class="no-profile-state" *ngIf="!loading && noProfile">
-        <div class="no-profile-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="40" height="40"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <!-- NO PROFILE -->
+      <div *ngIf="!loading && !patient" class="empty-state">
+        <div class="empty-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="36" height="36"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
-        <h3>Profile not set up yet</h3>
-        <p>Complete your registration to see your health profile here</p>
-        <button class="btn-complete" routerLink="/register">Complete Profile</button>
-        <button class="btn-logout-sm" (click)="logout()">Logout</button>
+        <h4>No profile found</h4>
+        <p>Complete your registration to see your profile here</p>
+        <a routerLink="/register" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">Complete Registration</a>
       </div>
 
+      <!-- PROFILE DATA -->
       <div *ngIf="!loading && patient">
-        <div class="profile-header">
+
+        <div class="profile-header-card">
           <div class="profile-avatar">{{ initials }}</div>
-          <div class="profile-info">
+          <div>
             <h2>{{ patient.fullName }}</h2>
-            <div class="patient-id-badge">{{ patient.patientId }}</div>
-            <p>{{ patient.email }} � {{ patient.phone }}</p>
+            <p>{{ patient.email }}</p>
+            <span class="patient-id-badge">{{ patient.patientId }}</span>
           </div>
-          <div class="edit-btn" routerLink="/register">Edit Profile</div>
+          <a routerLink="/register" class="edit-btn">Edit Profile</a>
         </div>
 
-        <div class="sections-grid">
-          <div class="section-card">
-            <div class="section-title">Personal Info</div>
-            <div class="info-row"><span class="info-label">Gender</span><span class="info-value">{{ patient.gender || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-value">{{ patient.dob || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">City</span><span class="info-value">{{ patient.city || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">State</span><span class="info-value">{{ patient.state || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">PIN Code</span><span class="info-value">{{ patient.pinCode || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Emergency Contact</span><span class="info-value">{{ patient.emergencyContact || "Not set" }}</span></div>
+        <div class="info-grid">
+
+          <div class="info-card">
+            <div class="info-card-title">Personal Information</div>
+            <div class="info-row"><span>Date of Birth</span><strong>{{ patient.dob || '—' }}</strong></div>
+            <div class="info-row"><span>Gender</span><strong>{{ patient.gender || '—' }}</strong></div>
+            <div class="info-row"><span>Phone</span><strong>{{ patient.phone || '—' }}</strong></div>
+            <div class="info-row"><span>City</span><strong>{{ patient.city || '—' }}</strong></div>
+            <div class="info-row"><span>State</span><strong>{{ patient.state || '—' }}</strong></div>
+            <div class="info-row"><span>PIN Code</span><strong>{{ patient.pinCode || '—' }}</strong></div>
           </div>
 
-          <div class="section-card">
-            <div class="section-title">Health Basics</div>
-            <div class="info-row"><span class="info-label">Blood Group</span><span class="info-value blood">{{ patient.bloodGroup || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Height</span><span class="info-value">{{ patient.height ? patient.height + " cm" : "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Weight</span><span class="info-value">{{ patient.weight ? patient.weight + " kg" : "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">BMI</span><span class="info-value">{{ patient.bmi || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Allergies</span><span class="info-value">{{ patient.allergies || "None" }}</span></div>
-            <div class="info-row"><span class="info-label">Conditions</span><span class="info-value">{{ patient.chronicConditions || "None" }}</span></div>
+          <div class="info-card">
+            <div class="info-card-title">Health Information</div>
+            <div class="info-row"><span>Blood Group</span><strong>{{ patient.bloodGroup || '—' }}</strong></div>
+            <div class="info-row"><span>Height</span><strong>{{ patient.height ? patient.height + ' cm' : '—' }}</strong></div>
+            <div class="info-row"><span>Weight</span><strong>{{ patient.weight ? patient.weight + ' kg' : '—' }}</strong></div>
+            <div class="info-row"><span>BMI</span><strong>{{ patient.bmi || '—' }}</strong></div>
+            <div class="info-row"><span>Allergies</span><strong>{{ patient.allergies || 'None' }}</strong></div>
+            <div class="info-row"><span>Chronic Conditions</span><strong>{{ patient.chronicConditions || 'None' }}</strong></div>
           </div>
 
-          <div class="section-card">
-            <div class="section-title">Lifestyle</div>
-            <div class="info-row"><span class="info-label">Smoking</span><span class="info-value">{{ patient.smokingHabit || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Alcohol</span><span class="info-value">{{ patient.alcoholConsumption || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Activity</span><span class="info-value">{{ patient.activityLevel || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Sleep</span><span class="info-value">{{ patient.sleepHours ? patient.sleepHours + " hrs" : "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Diet</span><span class="info-value">{{ patient.dietType || "Not set" }}</span></div>
-            <div class="info-row"><span class="info-label">Water Intake</span><span class="info-value">{{ patient.waterIntake ? patient.waterIntake + " L/day" : "Not set" }}</span></div>
+          <div class="info-card">
+            <div class="info-card-title">Lifestyle</div>
+            <div class="info-row"><span>Smoking</span><strong>{{ patient.smokingHabit || '—' }}</strong></div>
+            <div class="info-row"><span>Alcohol</span><strong>{{ patient.alcoholConsumption || '—' }}</strong></div>
+            <div class="info-row"><span>Activity Level</span><strong>{{ patient.activityLevel || '—' }}</strong></div>
+            <div class="info-row"><span>Diet Type</span><strong>{{ patient.dietType || '—' }}</strong></div>
           </div>
 
-          <div class="section-card">
-            <div class="section-title">Medical History</div>
-            <div class="info-row"><span class="info-label">Past Illnesses</span><span class="info-value">{{ patient.pastIllness || "None" }}</span></div>
-            <div class="info-row"><span class="info-label">Surgeries</span><span class="info-value">{{ patient.previousSurgeries || "None" }}</span></div>
-            <div class="info-row"><span class="info-label">Family History</span><span class="info-value">{{ patient.familyHistory || "None" }}</span></div>
-            <div class="info-row"><span class="info-label">Ongoing Treatment</span><span class="info-value">{{ patient.ongoingTreatments || "None" }}</span></div>
+          <div class="info-card">
+            <div class="info-card-title">Medical History</div>
+            <div class="info-row"><span>Past Illnesses</span><strong>{{ patient.medicalHistory || 'None' }}</strong></div>
+            <div class="info-row"><span>Registration Date</span><strong>{{ patient.registrationDate || '—' }}</strong></div>
           </div>
-        </div>
 
-        <div class="logout-section">
-          <button class="btn-logout-full" (click)="logout()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Logout
-          </button>
         </div>
       </div>
     </div>

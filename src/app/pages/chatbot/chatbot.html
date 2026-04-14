@@ -5,13 +5,29 @@
       <span class="logo-text">CareAI</span>
     </div>
     <nav class="nav">
-      <div class="nav-item" routerLink="/dashboard">Dashboard</div>
-      <div class="nav-item" routerLink="/appointment">Appointments</div>
-      <div class="nav-item" routerLink="/case-history">Case History</div>
-      <div class="nav-item active">Chatbot</div>
-      <div class="nav-item" routerLink="/profile">Profile</div>
+      <div class="nav-item" routerLink="/dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" routerLink="/appointment">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Appointments
+      </div>
+      <div class="nav-item" routerLink="/case-history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Case History
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chatbot
+      </div>
+      <div class="nav-item" routerLink="/profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </div>
     </nav>
   </div>
+
   <div class="main">
     <div class="topbar">
       <div class="topbar-info">
@@ -21,41 +37,72 @@
           <p>Online</p>
         </div>
       </div>
-      <div class="avatar">{{ initials }}</div>
+      <div class="avatar" (click)="logout()" title="Logout">{{ initials }}</div>
     </div>
+
     <div class="chat-area">
       <ng-container *ngFor="let msg of messages">
         <div class="bubble-row" [class.user]="msg.sender === 'user'">
-          <div class="bubble-avatar" [class.bot]="msg.sender === 'bot'" [class.user]="msg.sender === 'user'">
+          <div class="bubble-avatar"
+               [class.bot]="msg.sender === 'bot'"
+               [class.user]="msg.sender === 'user'">
             <span *ngIf="msg.sender === 'bot'">AI</span>
-            <span *ngIf="msg.sender === 'user'">{{ initials[0] }}</span>
+            <span *ngIf="msg.sender === 'user'">{{ initials }}</span>
           </div>
-          <div class="bubble" [class.bot]="msg.sender === 'bot'" [class.user]="msg.sender === 'user'">
+          <div class="bubble"
+               [class.bot]="msg.sender === 'bot'"
+               [class.user]="msg.sender === 'user'">
             <span>{{ msg.text }}</span>
-            <div class="case-badge" *ngIf="msg.caseBadge">{{ msg.caseBadge }}</div>
-            <div class="queue-section" *ngIf="msg.inQueue && !msg.callReady">
-              <div class="queue-info">Waiting for {{ msg.doctorName }} to accept...</div>
+
+            <div class="case-badge" *ngIf="msg.caseBadge">
+              {{ msg.caseBadge }}
             </div>
-            <div class="call-ready-section" *ngIf="msg.callReady">
-              <div class="call-ready-info">{{ msg.doctorName }} is ready!</div>
-              <button class="video-btn" routerLink="/video-call">Join Video Call with {{ msg.doctorName }}</button>
+
+            <!-- VIDEO CALL BOX -->
+            <div class="video-call-box" *ngIf="msg.showVideoCall">
+              <div class="video-call-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1d9e75" stroke-width="2" width="16" height="16">
+                  <path d="M23 7l-7 5 7 5V7z"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2"/>
+                </svg>
+                <span>{{ msg.doctorName }} is available</span>
+              </div>
+              <button class="video-call-btn" (click)="joinVideoCall(msg.doctorName || '')">
+                Join Video Call
+              </button>
             </div>
+
             <div class="time">{{ msg.time }}</div>
           </div>
         </div>
       </ng-container>
+
+      <!-- TYPING INDICATOR -->
       <div class="bubble-row" *ngIf="isTyping">
         <div class="bubble-avatar bot">AI</div>
         <div class="typing">
-          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
         </div>
       </div>
     </div>
+
+    <!-- SUGGESTIONS -->
     <div class="suggestions">
-      <div class="suggestion" *ngFor="let s of suggestions" (click)="sendSuggestion(s)">{{ s }}</div>
+      <div class="suggestion" *ngFor="let s of suggestions" (click)="sendSuggestion(s)">
+        {{ s }}
+      </div>
     </div>
+
+    <!-- INPUT -->
     <div class="input-area">
-      <input class="chat-input" [(ngModel)]="userInput" (keydown.enter)="send()" placeholder="Describe your symptoms..." [disabled]="isTyping"/>
+      <input
+        class="chat-input"
+        [(ngModel)]="userInput"
+        (keyup)="onEnter($event)"
+        placeholder="Describe your symptoms..."
+        [disabled]="isTyping"/>
       <button class="send-btn" (click)="send()" [disabled]="isTyping">Send</button>
     </div>
   </div>

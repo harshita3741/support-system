@@ -1,54 +1,38 @@
-import { Component, OnInit } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterModule } from "@angular/router";
-import { HttpClient } from "@angular/common/http";
-import { AuthService } from "../../core/auth";
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
-  selector: "app-case-history",
+  selector: 'app-case-history',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: "./case-history.html",
-  styleUrls: ["./case-history.css"]
+  templateUrl: './case-history.html',
+  styleUrls: ['./case-history.css']
 })
 export class CaseHistoryComponent implements OnInit {
+
   cases: any[] = [];
   loading = true;
-  error = false;
-  initials = "";
+  initials = '';
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   ngOnInit() {
-    this.initials = this.auth.getInitials();
-    this.loadCases();
-  }
+    const name = localStorage.getItem('patientName') || '';
+    this.initials = name.split('@')[0].split('.')
+      .map((p: string) => p[0]?.toUpperCase()).join('').slice(0, 2) || 'PT';
 
-  loadCases() {
-    this.loading = true;
-    this.error = false;
-    this.http.get<any[]>("http://localhost:8080/cases/all").subscribe({
-      next: (data) => { this.cases = data; this.loading = false; },
-      error: () => { this.loading = false; this.error = true; }
+    this.http.get<any[]>('http://localhost:8080/cases/queue').subscribe({
+      next: (res) => { this.cases = res; this.loading = false; },
+      error: () => { this.loading = false; }
     });
   }
 
-  getStatusColor(s: string): string {
-    if (s === "OPEN") return "#e1f5ee";
-    if (s === "CLOSED") return "#fdeee8";
-    return "#eeedfe";
+  getDeptColor(dept: string): string {
+    const map: any = { 'CARDIO': '#1d9e75', 'NEURO': '#6c63ff', 'ORTHO': '#d85a30' };
+    return map[dept] || '#888';
   }
 
-  getStatusText(s: string): string {
-    if (s === "OPEN") return "#0f6e56";
-    if (s === "CLOSED") return "#d85a30";
-    return "#6c63ff";
-  }
-
-  getDeptColor(d: string): string {
-    if (d === "CARDIO") return "#fdeee8";
-    if (d === "NEURO") return "#eeedfe";
-    if (d === "ORTHO") return "#fef3e2";
-    return "#e1f5ee";
-  }
+  logout() { localStorage.clear(); this.router.navigate(['/login']); }
 }

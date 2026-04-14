@@ -33,8 +33,10 @@
     <div class="topbar">
       <h3>Book Appointment</h3>
       <div class="topbar-right">
-        <button class="btn-new">+ New</button>
-        <div class="avatar">HM</div>
+        <button class="btn-new" routerLink="/dashboard">+ New</button>
+        <div class="avatar" style="cursor:pointer;" title="Go to Dashboard" routerLink="/dashboard">
+          {{ initials }}
+        </div>
       </div>
     </div>
 
