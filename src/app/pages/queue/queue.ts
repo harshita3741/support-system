@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MedicalCaseService } from '../../services/medical-case';
@@ -11,11 +11,13 @@ import { AuthService } from '../../services/auth';
   templateUrl: './queue.html',
   styleUrl: './queue.css'
 })
-export class Queue implements OnInit {
+export class Queue implements OnInit, OnDestroy {
 
   queueItems: any[] = [];
   loading = true;
   errorMessage = '';
+  acceptingId: number | null = null;
+  private pollInterval: any;
 
   constructor(
     private router: Router,
@@ -24,37 +26,80 @@ export class Queue implements OnInit {
   ) {}
 
   ngOnInit() {
-    const doctor = this.authService.getSession();
+    this.loadQueue();
+    this.pollInterval = setInterval(() => this.loadQueue(), 8000);
+  }
 
+  ngOnDestroy() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+  }
+
+  loadQueue() {
+    const doctor = this.authService.getSession();
     if (!doctor || !doctor.id) {
       this.loading = false;
-      this.errorMessage = 'Doctor session not found';
+      this.errorMessage = 'Doctor session not found. Please log in again.';
       return;
     }
 
-    this.medicalCaseService.getCasesByDoctor(doctor.id).subscribe({
-      next: (data: any) => {
-        this.queueItems = Array.isArray(data) ? data : [];
+    this.medicalCaseService.getQueue().subscribe({
+      next: (data: any[]) => {
+        const dept = (doctor.dept || '').toUpperCase();
+        this.queueItems = (Array.isArray(data) ? data : []).filter(
+          (c: any) => !dept || c.department === dept
+        );
         this.loading = false;
+        this.errorMessage = '';
       },
       error: (err) => {
         console.error('Error fetching queue:', err);
-        this.queueItems = [];
         this.loading = false;
-        this.errorMessage = 'Unable to load queue';
+        this.errorMessage = 'Unable to load queue. Is the backend running?';
       }
     });
   }
 
   acceptPatient(patient: any) {
-  console.log('Accept clicked for:', patient.patientName);
-  localStorage.setItem('activePatient', JSON.stringify(patient));
-  this.router.navigate(['/call']).then(() => {
-    console.log('Successfully navigated to /call');
-  }).catch(err => {
-    console.error('Navigation failed:', err);
-  });
-}
+    const doctor = this.authService.getSession();
+    if (!doctor) return;
+
+    this.acceptingId = patient.caseId;
+
+    this.medicalCaseService.acceptCase(patient.caseId, String(doctor.id)).subscribe({
+      next: () => {
+        this.acceptingId = null;
+        const patientData = {
+          ...patient,
+          name:       patient.patientName,
+          initials:   this.getInitials(patient.patientName),
+          dept:       patient.department,
+          bg:         this.getAvatarBg(patient.priority || ''),
+          color:      this.getAvatarColor(patient.priority || ''),
+          priority:   patient.priority || 'Medium',
+          doctorId:   doctor.id,
+          doctorName: doctor.name
+        };
+        localStorage.setItem('activePatient', JSON.stringify(patientData));
+        this.router.navigate(['/call']);
+      },
+      error: () => {
+        this.acceptingId = null;
+        const patientData = {
+          ...patient,
+          name:       patient.patientName,
+          initials:   this.getInitials(patient.patientName),
+          dept:       patient.department,
+          bg:         this.getAvatarBg(patient.priority || ''),
+          color:      this.getAvatarColor(patient.priority || ''),
+          priority:   patient.priority || 'Medium',
+          doctorId:   doctor.id,
+          doctorName: doctor.name
+        };
+        localStorage.setItem('activePatient', JSON.stringify(patientData));
+        this.router.navigate(['/call']);
+      }
+    });
+  }
 
   getPriorityClass(priority: string) {
     if (!priority) return 'prio-medium';
@@ -80,16 +125,14 @@ export class Queue implements OnInit {
   }
 
   getAvatarBg(priority: string): string {
-    if (!priority) return '#eff6ff';
-    const p = priority.toLowerCase();
+    const p = (priority || '').toLowerCase();
     if (p === 'high') return '#fef2f2';
     if (p === 'low') return '#f0fdf4';
     return '#eff6ff';
   }
 
   getAvatarColor(priority: string): string {
-    if (!priority) return '#1d4ed8';
-    const p = priority.toLowerCase();
+    const p = (priority || '').toLowerCase();
     if (p === 'high') return '#b91c1c';
     if (p === 'low') return '#15803d';
     return '#1d4ed8';

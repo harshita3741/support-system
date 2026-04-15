@@ -30,8 +30,7 @@
             <tr>
               <td>
                 <div class="name-cell">
-                  <div
-                    class="avatar"
+                  <div class="avatar"
                     [style.background]="getAvatarBg(q.priority)"
                     [style.color]="getAvatarColor(q.priority)">
                     {{ getInitials(q.patientName) }}
@@ -42,25 +41,19 @@
                   </div>
                 </div>
               </td>
-
               <td class="muted">{{ q.symptoms }}</td>
-
               <td>
                 <span class="prio" [ngClass]="getPriorityClass(q.priority)">
                   {{ q.priority || 'Medium' }}
                 </span>
               </td>
-
               <td>
                 <span [ngClass]="getStatusClass(q.status)">
                   {{ q.status || 'OPEN' }}
                 </span>
               </td>
-
               <td>
-                <button class="accept-btn" (click)="acceptPatient(q)">
-                  Accept
-                </button>
+                <button class="accept-btn" (click)="acceptPatient(q)">Accept</button>
               </td>
             </tr>
           }

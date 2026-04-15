@@ -236,10 +236,6 @@
 }
 
 /* ===== CALENDAR ===== */
-.cal-container {
-  /* uses .card base */
-}
-
 .cal-header {
   padding: 16px 18px 12px;
   border-bottom: 1px solid #f1f5f9;
@@ -384,7 +380,36 @@
   background: rgba(255, 255, 255, 0.8);
 }
 
-/* ===== APPOINTMENTS SECTION (below calendar) ===== */
+/* ===== MONTH PICKER ===== */
+.month-picker {
+  margin: 12px 16px 0;
+  padding: 10px;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.month-option {
+  border: 1px solid #eaecf0;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #344054;
+  cursor: pointer;
+}
+
+.month-option.active {
+  background: #0d6e6e;
+  color: #fff;
+  border-color: #0d6e6e;
+}
+
+/* ===== APPOINTMENTS SECTION ===== */
 .appt-section {
   margin-top: 16px;
 }
@@ -451,14 +476,107 @@
   margin-top: 1px;
 }
 
-/* ===== SCHEDULE TIMELINE (on Dashboard) ===== */
-.tl-block {
-  cursor: pointer;
-  transition: opacity 0.2s;
+.empty-appointments,
+.empty-table {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #98a2b3;
 }
 
-.tl-block:hover {
-  opacity: 0.8;
+/* ===== SCHEDULE TIMELINE ===== */
+.timeline-card {
+  margin-top: 4px;
+}
+
+.timeline-wrap {
+  padding: 14px 18px 18px;
+}
+
+.timeline-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #98a2b3;
+  padding-left: 72px;
+  padding-right: 8px;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  align-items: start;
+  min-height: 96px;
+}
+
+.timeline-day {
+  padding-top: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #344054;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.timeline-lane {
+  position: relative;
+  min-height: 92px;
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  background:
+    linear-gradient(to right, transparent 0%, transparent 16.666%, rgba(234, 236, 240, 0.55) 16.666%, rgba(234, 236, 240, 0.55) 16.9%, transparent 16.9%) repeat-x;
+  background-size: calc(100% / 6) 100%;
+  overflow: hidden;
+}
+
+.timeline-grid-lines {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  pointer-events: none;
+}
+
+.timeline-line {
+  border-left: 1px dashed #eef2f6;
+}
+
+.timeline-block {
+  position: absolute;
+  top: 14px;
+  min-height: 60px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.06);
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  overflow: hidden;
+}
+
+.tb-time {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.tb-label {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.tb-type {
+  font-size: 11px;
+  opacity: 0.78;
+}
+
+.timeline-empty {
+  padding: 18px 0 4px;
+  color: #98a2b3;
+  font-size: 13px;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -474,6 +592,22 @@
 
 @media (max-width: 640px) {
   .stat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-row {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-day {
+    padding-top: 0;
+  }
+
+  .timeline-scale {
+    padding-left: 0;
+  }
+
+  .month-picker {
     grid-template-columns: 1fr;
   }
 }

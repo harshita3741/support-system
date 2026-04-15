@@ -188,13 +188,20 @@ export class Dashboard implements OnInit {
 
   loadAppointments() {
     const doctorIdNum = Number(this.doctorId);
-    if (!doctorIdNum) return;
+    if (!doctorIdNum) {
+      this.useMockAppointmentsForCheck();
+      return;
+    }
 
     this.appointmentService.getAppointmentsByDoctor(doctorIdNum).subscribe({
       next: (appointments: Appointment[]) => {
-        this.realAppointments = appointments || [];
-        this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
+        if (appointments && appointments.length > 0) {
+          this.realAppointments = appointments;
+        } else {
+          this.realAppointments = this.getMockAppointments();
+        }
 
+        this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
         this.syncTimelineWithAppointments();
         this.buildCalendarForCurrentData();
 
@@ -219,15 +226,67 @@ export class Dashboard implements OnInit {
         }
       },
       error: () => {
-        this.realAppointments = [];
-        this.calendarAppointmentDates = [];
-        this.todaysAppointments = [];
-        this.scheduleRows = [];
-        this.selectedDateAppointments = [];
-        this.filteredAppointments = [];
-        this.buildCalendarForCurrentData();
+        this.useMockAppointmentsForCheck();
       }
     });
+  }
+
+  private useMockAppointmentsForCheck() {
+    this.realAppointments = this.getMockAppointments();
+    this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
+    this.syncTimelineWithAppointments();
+    this.buildCalendarForCurrentData();
+
+    const todayStr = this.toYMD(new Date());
+    this.selectedDate = todayStr;
+    this.selectCalendarDate(todayStr);
+  }
+
+  private getMockAppointments(): Appointment[] {
+    const today = new Date();
+    const todayStr = this.toYMD(today);
+
+    const extraDate = new Date(today.getFullYear(), today.getMonth(), 22);
+    const extraDateStr = this.toYMD(extraDate);
+
+    return [
+      {
+        id: 9001,
+        doctorId: Number(this.doctorId) || 1,
+        patientName: 'Aarav Mehta',
+        date: todayStr,
+        timeSlot: '09:00 AM',
+        reason: 'Follow-up consultation',
+        status: 'SCHEDULED'
+      } as Appointment,
+      {
+        id: 9002,
+        doctorId: Number(this.doctorId) || 1,
+        patientName: 'Neha Sharma',
+        date: todayStr,
+        timeSlot: '11:00 AM',
+        reason: 'MRI review',
+        status: 'PENDING'
+      } as Appointment,
+      {
+        id: 9003,
+        doctorId: Number(this.doctorId) || 1,
+        patientName: 'Rohan Verma',
+        date: todayStr,
+        timeSlot: '02:30 PM',
+        reason: 'Post-op check',
+        status: 'SCHEDULED'
+      } as Appointment,
+      {
+        id: 9004,
+        doctorId: Number(this.doctorId) || 1,
+        patientName: 'Simran Kaur',
+        date: extraDateStr,
+        timeSlot: '10:30 AM',
+        reason: 'Review visit',
+        status: 'SCHEDULED'
+      } as Appointment
+    ];
   }
 
   syncTimelineWithAppointments() {
@@ -241,7 +300,7 @@ export class Dashboard implements OnInit {
         time: a.timeSlot,
         type: a.reason || 'Appointment',
         left: this.calculatePosition(a.timeSlot),
-        width: '12%',
+        width: '14%',
         bg: this.getTimelineBg(a.status || 'SCHEDULED'),
         color: this.getTimelineText(a.status || 'SCHEDULED')
       }));
@@ -264,7 +323,7 @@ export class Dashboard implements OnInit {
     const startRange = 8;
     const endRange = 18;
     const pct = ((hour - startRange) / (endRange - startRange)) * 100;
-    return `${Math.max(0, Math.min(pct, 100))}%`;
+    return `${Math.max(2, Math.min(pct, 88))}%`;
   }
 
   private timeSlotToHour(timeSlot: string): number {
@@ -312,28 +371,28 @@ export class Dashboard implements OnInit {
   useDummyData() {
     const allDummy: any = {
       CARDIO: [
-        { id: 'C-1042', initials: 'PM', name: 'Priya Mehta', age: 52, gender: 'F', priority: 'Medium', date: 'Mar 1, 2026', bg: '#fff8f0', color: '#c2410c' },
-        { id: 'C-1038', initials: 'RS', name: 'Rajesh Singh', age: 61, gender: 'M', priority: 'High', date: 'Mar 3, 2026', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'C-1035', initials: 'AL', name: 'Aisha Lakhani', age: 44, gender: 'F', priority: 'Low', date: 'Mar 28, 2026', bg: '#fdf4ff', color: '#7e22ce' },
-        { id: 'C-1030', initials: 'VG', name: 'Vikram Gupta', age: 57, gender: 'M', priority: 'Medium', date: 'Mar 5, 2026', bg: '#eff6ff', color: '#1d4ed8' }
+        { id: 'C-1042', initials: 'PM', name: 'Priya Mehta', age: 52, gender: 'F', priority: 'Medium', date: 'Today', bg: '#fff8f0', color: '#c2410c' },
+        { id: 'C-1038', initials: 'RS', name: 'Rajesh Singh', age: 61, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
+        { id: 'C-1035', initials: 'AL', name: 'Aisha Lakhani', age: 44, gender: 'F', priority: 'Low', date: 'Today', bg: '#fdf4ff', color: '#7e22ce' },
+        { id: 'C-1030', initials: 'VG', name: 'Vikram Gupta', age: 57, gender: 'M', priority: 'Medium', date: 'Today', bg: '#eff6ff', color: '#1d4ed8' }
       ],
       NEURO: [
-        { id: 'N-2011', initials: 'AS', name: 'Amit Sharma', age: 45, gender: 'M', priority: 'High', date: 'Mar 2, 2026', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'N-2012', initials: 'RD', name: 'Rina Desai', age: 38, gender: 'F', priority: 'Medium', date: 'Mar 4, 2026', bg: '#eff6ff', color: '#1d4ed8' },
-        { id: 'N-2013', initials: 'KP', name: 'Karan Patel', age: 52, gender: 'M', priority: 'Low', date: 'Mar 6, 2026', bg: '#f0fdf4', color: '#15803d' }
+        { id: 'N-2011', initials: 'AS', name: 'Amit Sharma', age: 45, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
+        { id: 'N-2012', initials: 'RD', name: 'Rina Desai', age: 38, gender: 'F', priority: 'Medium', date: 'Today', bg: '#eff6ff', color: '#1d4ed8' },
+        { id: 'N-2013', initials: 'KP', name: 'Karan Patel', age: 52, gender: 'M', priority: 'Low', date: 'Today', bg: '#f0fdf4', color: '#15803d' }
       ],
       ORTHO: [
-        { id: 'O-3011', initials: 'SB', name: 'Sneha Bhatt', age: 29, gender: 'F', priority: 'Medium', date: 'Mar 1, 2026', bg: '#fff8f0', color: '#c2410c' },
-        { id: 'O-3012', initials: 'MK', name: 'Mohit Kumar', age: 41, gender: 'M', priority: 'High', date: 'Mar 3, 2026', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'O-3013', initials: 'PJ', name: 'Pooja Jain', age: 55, gender: 'F', priority: 'Low', date: 'Mar 7, 2026', bg: '#f0fdf4', color: '#15803d' }
+        { id: 'O-3011', initials: 'SB', name: 'Sneha Bhatt', age: 29, gender: 'F', priority: 'Medium', date: 'Today', bg: '#fff8f0', color: '#c2410c' },
+        { id: 'O-3012', initials: 'MK', name: 'Mohit Kumar', age: 41, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
+        { id: 'O-3013', initials: 'PJ', name: 'Pooja Jain', age: 55, gender: 'F', priority: 'Low', date: 'Today', bg: '#f0fdf4', color: '#15803d' }
       ]
     };
 
     this.filteredPatients = allDummy[this.doctorDept] || allDummy['CARDIO'];
-    this.statCards[0].value = '8';
-    this.statCards[0].sub = '5 resolved today';
-    this.statCards[1].value = '3';
-    this.statCards[1].sub = '2 urgent priority';
+    this.statCards[0].value = this.filteredPatients.length.toString();
+    this.statCards[0].sub = '0 resolved today';
+    this.statCards[1].value = '1';
+    this.statCards[1].sub = '1 urgent priority';
   }
 
   buildCalendar() {

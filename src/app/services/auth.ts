@@ -21,82 +21,26 @@ export class AuthService {
     const doctor = this.mockDoctors.find(
       d => d.username === username && d.password === password
     );
-
     if (doctor) {
-      return of({
-        success: true,
-        id: doctor.id,
-        name: doctor.name,
-        dept: doctor.dept,
-        username: doctor.username,
-        role: doctor.role
-      });
+      return of({ success: true, id: doctor.id, name: doctor.name, dept: doctor.dept, username: doctor.username, role: doctor.role });
     }
-
-    return of({
-      success: false,
-      message: 'Invalid username or password'
-    });
+    return of({ success: false, message: 'Invalid username or password' });
   }
 
-  saveSession(doctor: any) {
-    localStorage.setItem('doctor', JSON.stringify(doctor));
-  }
-
-  getSession() {
-    const d = localStorage.getItem('doctor');
-    return d ? JSON.parse(d) : null;
-  }
-
-  getRole(): string {
-    const session = this.getSession();
-    return session ? session.role || '' : '';
-  }
-
-  isNurse(): boolean {
-    return this.getRole() === 'NURSE';
-  }
-
-  isDoctor(): boolean {
-    return this.getRole() === 'DOCTOR';
-  }
-
-  getDoctorId(): number {
-    const session = this.getSession();
-    return session?.id ? Number(session.id) : 0;
-  }
-
-  getDoctorName(): string {
-    const session = this.getSession();
-    return session?.name || '';
-  }
-
-  getUsername(): string {
-    const session = this.getSession();
-    return session?.username || '';
-  }
-
-  getDepartment(): string {
-    const session = this.getSession();
-    return session?.dept || '';
-  }
-
+  saveSession(doctor: any) { localStorage.setItem('doctor', JSON.stringify(doctor)); }
+  getSession() { const d = localStorage.getItem('doctor'); return d ? JSON.parse(d) : null; }
+  getRole(): string { const s = this.getSession(); return s ? s.role || '' : ''; }
+  isNurse(): boolean { return this.getRole() === 'NURSE'; }
+  isDoctor(): boolean { return this.getRole() === 'DOCTOR'; }
+  getDoctorId(): number { const s = this.getSession(); return s?.id ? Number(s.id) : 0; }
+  getDoctorName(): string { const s = this.getSession(); return s?.name || ''; }
+  getUsername(): string { const s = this.getSession(); return s?.username || ''; }
+  getDepartment(): string { const s = this.getSession(); return s?.dept || ''; }
   getInitials(): string {
     const name = this.getDoctorName();
     if (!name) return '';
-    return name
-      .split(' ')
-      .map((n: string) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+    return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   }
-
-  isLoggedIn(): boolean {
-    return !!localStorage.getItem('doctor');
-  }
-
-  logout() {
-    localStorage.removeItem('doctor');
-  }
-} 
+  isLoggedIn(): boolean { return !!localStorage.getItem('doctor'); }
+  logout() { localStorage.removeItem('doctor'); }
+}
