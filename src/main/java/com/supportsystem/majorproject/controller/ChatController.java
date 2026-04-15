@@ -1,6 +1,7 @@
 package com.supportsystem.majorproject.controller;
 
 import com.supportsystem.majorproject.model.dto.ChatRequest;
+import com.supportsystem.majorproject.model.dto.ChatResponse;
 import com.supportsystem.majorproject.service.ChatService;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,14 +10,15 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin("*")
 public class ChatController {
 
-    private final ChatService chatService;
+  private final ChatService chatService;
 
-    public ChatController(ChatService chatService) {
-        this.chatService = chatService;
-    }
+  public ChatController(ChatService chatService) {
+    this.chatService = chatService;
+  }
 
-    @PostMapping
-    public String chat(@RequestBody ChatRequest request) {
-        return chatService.getResponse(request.getMessage());
-    }
+  @PostMapping
+  public ChatResponse chat(@RequestBody ChatRequest request) {
+    return chatService.getChatResponse(request.getMessage(), request.getPatientName());
+  }
 }
+

@@ -32,15 +32,21 @@ public class MedicalCaseService {
     return repository.findByStatus("OPEN");
   }
 
+  public MedicalCase findById(Long caseId) {
+    return repository.findById(caseId).orElse(null);
+  }
+
   public String acceptCase(Long caseId, String doctorId) {
     MedicalCase mc = repository.findById(caseId).orElse(null);
     if (mc != null) {
       mc.setStatus("ACCEPTED");
-      mc.setAssignedDoctorId(Long.parseLong(doctorId));
+      if (doctorId != null && !doctorId.isEmpty()) {
+        mc.setAssignedDoctorId(Long.parseLong(doctorId));
+      }
       repository.save(mc);
       return "Accepted";
     }
     return "Case not found";
-
   }
 }
+

@@ -3,6 +3,7 @@ package com.supportsystem.majorproject.controller;
 import com.supportsystem.majorproject.model.MedicalCase;
 import com.supportsystem.majorproject.service.MedicalCaseService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,8 +35,23 @@ public class MedicalCaseController {
     return medicalCaseService.getQueueCases();
   }
 
+  @GetMapping("/{caseId}/status")
+  public ResponseEntity<Map<String, String>> getCaseStatus(@PathVariable Long caseId) {
+    MedicalCase mc = medicalCaseService.findById(caseId);
+    if (mc == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(Map.of("status", mc.getStatus(), "caseId", String.valueOf(caseId)));
+  }
+
+  @GetMapping("/{caseId}")
+  public ResponseEntity<MedicalCase> getCase(@PathVariable Long caseId) {
+    MedicalCase mc = medicalCaseService.findById(caseId);
+    if (mc == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(mc);
+  }
+
   @PatchMapping("/{caseId}/accept")
   public String acceptCase(@PathVariable Long caseId, @RequestBody Map<String, String> body) {
     return medicalCaseService.acceptCase(caseId, body.get("doctorId"));
   }
 }
+
