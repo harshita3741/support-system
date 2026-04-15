@@ -4,17 +4,15 @@ import { Observable, of } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-
-  
   private baseUrl = 'http://192.168.1.76:8080';
 
   private mockDoctors = [
-  { username: 'dr.smith', password: '1234', name: 'Dr. Smith', dept: 'CARDIO', id: '1', role: 'DOCTOR' },
-  { username: 'dr.adams', password: '1234', name: 'Dr. Adams', dept: 'NEURO', id: '2', role: 'DOCTOR' },
-  { username: 'dr.lee', password: '1234', name: 'Dr. Lee', dept: 'ORTHO', id: '3', role: 'DOCTOR' },
-  { username: 'nurse.cardio', password: '1234', name: 'Nurse Priya', dept: 'CARDIO', id: '4', role: 'NURSE' },
-  { username: 'nurse.neuro', password: '1234', name: 'Nurse Rahul', dept: 'NEURO', id: '5', role: 'NURSE' },
-  { username: 'nurse.ortho', password: '1234', name: 'Nurse Sneha', dept: 'ORTHO', id: '6', role: 'NURSE' }
+    { username: 'dr.smith', password: '1234', name: 'Dr. Smith', dept: 'CARDIO', id: '1', role: 'DOCTOR' },
+    { username: 'dr.adams', password: '1234', name: 'Dr. Adams', dept: 'NEURO', id: '2', role: 'DOCTOR' },
+    { username: 'dr.lee', password: '1234', name: 'Dr. Lee', dept: 'ORTHO', id: '3', role: 'DOCTOR' },
+    { username: 'nurse.cardio', password: '1234', name: 'Nurse Priya', dept: 'CARDIO', id: '4', role: 'NURSE' },
+    { username: 'nurse.neuro', password: '1234', name: 'Nurse Rahul', dept: 'NEURO', id: '5', role: 'NURSE' },
+    { username: 'nurse.ortho', password: '1234', name: 'Nurse Sneha', dept: 'ORTHO', id: '6', role: 'NURSE' }
   ];
 
   constructor(private http: HttpClient) {}
@@ -30,7 +28,8 @@ export class AuthService {
         id: doctor.id,
         name: doctor.name,
         dept: doctor.dept,
-        username: doctor.username
+        username: doctor.username,
+        role: doctor.role
       });
     }
 
@@ -48,18 +47,50 @@ export class AuthService {
     const d = localStorage.getItem('doctor');
     return d ? JSON.parse(d) : null;
   }
+
   getRole(): string {
-  const session = this.getSession();
-  return session ? session.role : '';
-}
+    const session = this.getSession();
+    return session ? session.role || '' : '';
+  }
 
-isNurse(): boolean {
-  return this.getRole() === 'NURSE';
-}
+  isNurse(): boolean {
+    return this.getRole() === 'NURSE';
+  }
 
-isDoctor(): boolean {
-  return this.getRole() === 'DOCTOR';
-}
+  isDoctor(): boolean {
+    return this.getRole() === 'DOCTOR';
+  }
+
+  getDoctorId(): number {
+    const session = this.getSession();
+    return session?.id ? Number(session.id) : 0;
+  }
+
+  getDoctorName(): string {
+    const session = this.getSession();
+    return session?.name || '';
+  }
+
+  getUsername(): string {
+    const session = this.getSession();
+    return session?.username || '';
+  }
+
+  getDepartment(): string {
+    const session = this.getSession();
+    return session?.dept || '';
+  }
+
+  getInitials(): string {
+    const name = this.getDoctorName();
+    if (!name) return '';
+    return name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
 
   isLoggedIn(): boolean {
     return !!localStorage.getItem('doctor');
@@ -68,4 +99,4 @@ isDoctor(): boolean {
   logout() {
     localStorage.removeItem('doctor');
   }
-}
+} 

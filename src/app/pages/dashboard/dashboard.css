@@ -1,78 +1,479 @@
-.dashboard { display: flex; flex-direction: column; gap: 16px; }
+/* ===== DASHBOARD ===== */
+.dashboard {
+  padding: 28px;
+  background: #f5f7fb;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100%;
+  font-family: 'Inter', sans-serif;
+}
 
-.greeting-title { font-size: 18px; font-weight: 700; color: #1a1d23; }
-.greeting-sub { font-size: 12px; color: #9ca3af; margin-top: 3px; }
+.greeting-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #101828;
+}
 
-.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.stat-card { background: #fff; border-radius: 14px; padding: 16px 18px; border: 1px solid #eaecf0; }
-.stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.stat-label { font-size: 13px; color: #6b7280; font-weight: 500; }
-.stat-arrow { color: #9ca3af; cursor: pointer; }
-.stat-value { font-size: 28px; font-weight: 700; color: #1a1d23; }
-.stat-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-.stat-bars { display: flex; align-items: flex-end; gap: 3px; height: 30px; margin-top: 10px; }
-.bar { width: 14px; border-radius: 3px 3px 0 0; }
+.greeting-sub {
+  font-size: 14px;
+  color: #667085;
+  margin-top: 4px;
+}
 
-.mid-row { display: grid; grid-template-columns: 1fr 280px; gap: 14px; }
-.card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; overflow: hidden; }
-.card-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f2f5; }
-.card-title { font-size: 14px; font-weight: 600; color: #1a1d23; }
-.card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-.card-action { font-size: 12px; color: #0d6e6e; cursor: pointer; font-weight: 500; text-decoration: none; margin-left: auto; }
-.sort-btn { font-size: 11px; color: #6b7280; background: #f4f6fb; border: 1px solid #eaecf0; border-radius: 6px; padding: 4px 9px; cursor: pointer; margin-left: auto; }
+/* ===== STAT CARDS ===== */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
 
-.patient-table { width: 100%; border-collapse: collapse; }
-.patient-table th { font-size: 11px; color: #9ca3af; font-weight: 500; padding: 9px 16px; text-align: left; border-bottom: 1px solid #f0f2f5; }
-.patient-table td { font-size: 12px; color: #374151; padding: 9px 16px; border-bottom: 1px solid #f9fafb; vertical-align: middle; }
-.patient-table tr:last-child td { border-bottom: none; }
-.patient-table tbody tr:hover td { background: #f9fbff; }
-.patient-name-cell { display: flex; align-items: center; gap: 8px; }
-.p-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
-.p-name { font-size: 12px; font-weight: 500; color: #1a1d23; }
-.p-age { font-size: 10px; color: #9ca3af; }
-.muted { color: #9ca3af !important; }
-.prio { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-.prio-high { background: #fef2f2; color: #b91c1c; }
-.prio-medium { background: #eff6ff; color: #1d4ed8; }
-.prio-low { background: #f0fdf4; color: #15803d; }
+.stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  border: 1px solid #eaecf0;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-.cal-header { padding: 12px 16px; border-bottom: 1px solid #f0f2f5; }
-.cal-nav { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-.cal-month { font-size: 13px; font-weight: 600; color: #1a1d23; flex: 1; }
-.cal-btn { font-size: 13px; color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-.cal-btn:hover { background: #f4f6fb; }
-.cal-legend { display: flex; gap: 10px; }
-.leg { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #6b7280; }
-.leg-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.cal-body { padding: 10px 14px; }
-.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
-.cal-day-header { font-size: 10px; color: #9ca3af; text-align: center; padding: 2px 0; font-weight: 500; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.cal-day { font-size: 11px; color: #6b7280; text-align: center; padding: 5px 2px; border-radius: 6px; cursor: pointer; min-height: 28px; }
-.cal-day:hover { background: #f4f6fb; }
-.cal-day.today { background: #0d6e6e; color: #fff; font-weight: 600; }
-.cal-day.has-appt { color: #1a1d23; font-weight: 600; }
-.cal-day.empty { opacity: 0; pointer-events: none; }
-.dot-row { display: flex; justify-content: center; gap: 2px; margin-top: 1px; }
-.cdot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; }
+.stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-.appt-list { border-top: 1px solid #f0f2f5; }
-.appt-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid #f9fafb; }
-.appt-item:last-child { border-bottom: none; }
-.appt-time { font-size: 11px; color: #9ca3af; min-width: 38px; }
-.appt-bar { width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0; }
-.appt-name { font-size: 12px; font-weight: 500; color: #1a1d23; }
-.appt-type { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+.stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
 
-.schedule-card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; overflow: hidden; }
-.schedule-header { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; }
-.range-btn { font-size: 11px; color: #6b7280; background: #f4f6fb; border: 1px solid #eaecf0; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.stat-arrow {
+  font-size: 16px;
+  color: #98a2b3;
+}
 
-.timeline-wrap { overflow-x: auto; }
-.tl-hours { display: flex; padding: 8px 0 4px; border-bottom: 1px solid #f0f2f5; min-width: 700px; }
-.tl-day-label { width: 64px; flex-shrink: 0; font-size: 11px; color: #9ca3af; padding-left: 18px; font-weight: 500; }
-.tl-hour { min-width: 100px; font-size: 10px; color: #9ca3af; text-align: center; border-left: 1px dashed #f0f2f5; }
-.tl-row { display: flex; align-items: center; min-width: 700px; padding: 5px 0; border-bottom: 1px solid #f9fafb; }
-.tl-row:last-child { border-bottom: none; }
-.tl-cells { flex: 1; position: relative; height: 34px; }
-.tl-block { position: absolute; height: 26px; top: 4px; border-radius: 7px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; }
+.stat-value {
+  font-size: 34px;
+  font-weight: 700;
+  color: #101828;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.stat-sub {
+  font-size: 13px;
+  color: #667085;
+  margin-bottom: 12px;
+}
+
+.stat-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 44px;
+  margin-top: auto;
+}
+
+.bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.3s ease;
+}
+
+/* ===== MID ROW ===== */
+.mid-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ===== CARD BASE ===== */
+.card {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.06);
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.card-sub {
+  font-size: 13px;
+  color: #667085;
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-btn {
+  font-size: 13px;
+  color: #344054;
+  background: #f9fafb;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.card-action {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d6e6e;
+  text-decoration: none;
+}
+
+/* ===== PATIENT TABLE ===== */
+.patient-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.patient-table th {
+  text-align: left;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #667085;
+  background: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.patient-table td {
+  padding: 13px 20px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #344054;
+}
+
+.patient-table tr:hover td {
+  background: #fafbfc;
+}
+
+.patient-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.p-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.p-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.p-age {
+  font-size: 12px;
+  color: #98a2b3;
+  margin-top: 2px;
+}
+
+.muted {
+  color: #98a2b3;
+  font-size: 13px;
+}
+
+/* ===== PRIORITY BADGES ===== */
+.prio {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.prio-high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.prio-medium {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.prio-low {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+/* ===== CALENDAR ===== */
+.cal-container {
+  /* uses .card base */
+}
+
+.cal-header {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal-month {
+  font-size: 15px;
+  font-weight: 700;
+  color: #101828;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.cal-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #344054;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.cal-btn:hover {
+  background: #f9fafb;
+}
+
+.cal-legend {
+  display: flex;
+  gap: 14px;
+}
+
+.leg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.leg-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.leg-dot.sched {
+  background: #0d6e6e;
+}
+
+.leg-dot.pend {
+  background: #f59e0b;
+}
+
+.cal-body {
+  padding: 12px 16px 16px;
+}
+
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.cal-day-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #98a2b3;
+  text-transform: uppercase;
+  padding: 4px 0;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #344054;
+  cursor: pointer;
+  border-radius: 8px;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.cal-day:hover:not(.empty) {
+  background: #f1f5f9;
+}
+
+.cal-day.empty {
+  cursor: default;
+  color: transparent;
+}
+
+.cal-day.today {
+  background: #0d6e6e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.cal-day.selected:not(.today) {
+  background: #e0f2f1;
+  color: #0d6e6e;
+  font-weight: 700;
+}
+
+.cdot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #0d6e6e;
+  margin-top: 1px;
+}
+
+.cal-day.today .cdot {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== APPOINTMENTS SECTION (below calendar) ===== */
+.appt-section {
+  margin-top: 16px;
+}
+
+.appt-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.appt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.appt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.appt-row:last-child {
+  border-bottom: none;
+}
+
+.appt-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: #667085;
+  min-width: 40px;
+}
+
+.appt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.appt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.appt-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #101828;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appt-type {
+  font-size: 12px;
+  color: #98a2b3;
+  margin-top: 1px;
+}
+
+/* ===== SCHEDULE TIMELINE (on Dashboard) ===== */
+.tl-block {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.tl-block:hover {
+  opacity: 0.8;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+  .mid-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+}

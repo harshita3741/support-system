@@ -1,16 +1,25 @@
-import { TestBed } from '@angular/core/testing';
+// src/app/services/appointment.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-import { MedicalCase } from './medical-case';
+export interface Appointment {
+  id?: number;
+  patientName: string;
+  timeSlot: string; // "10:00 AM"
+  date: string;     // "2026-04-14"
+  type: 'video' | 'hospital' | 'home' | 'audio' | 'in-person';
+  status: 'pending' | 'completed' | 'cancelled';
+  priority: 'urgent' | 'normal' | 'low';
+}
 
-describe('MedicalCase', () => {
-  let service: MedicalCase;
+@Injectable({ providedIn: 'root' })
+export class AppointmentService {
+  private baseUrl = 'http://192.168.1.76:8080/api/appointments';
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(MedicalCase);
-  });
+  constructor(private http: HttpClient) {}
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
+  getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
+    return this.http.get<Appointment[]>(`${this.baseUrl}/doctor/${doctorId}`);
+  }
+}
