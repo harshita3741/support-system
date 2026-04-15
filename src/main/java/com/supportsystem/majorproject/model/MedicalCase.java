@@ -16,6 +16,9 @@ public class MedicalCase {
   @Column(name = "patient_name")
   private String patientName;
 
+  @Column(name = "patient_id")
+  private String patientId;
+
   private String department;
   private String symptoms;
   private String status;
@@ -28,6 +31,9 @@ public class MedicalCase {
 
   public String getPatientName() { return patientName; }
   public void setPatientName(String patientName) { this.patientName = patientName; }
+
+  public String getPatientId() { return patientId; }
+  public void setPatientId(String patientId) { this.patientId = patientId; }
 
   public String getDepartment() { return department; }
   public void setDepartment(String department) { this.department = department; }

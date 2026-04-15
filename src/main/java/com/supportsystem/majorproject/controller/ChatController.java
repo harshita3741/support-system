@@ -18,7 +18,10 @@ public class ChatController {
 
   @PostMapping
   public ChatResponse chat(@RequestBody ChatRequest request) {
-    return chatService.getChatResponse(request.getMessage(), request.getPatientName());
+    return chatService.getChatResponse(
+      request.getMessage(),
+      request.getPatientName(),
+      request.getPatientId()
+    );
   }
 }
-

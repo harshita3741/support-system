@@ -2,7 +2,9 @@ package com.supportsystem.majorproject.service;
 
 import com.supportsystem.majorproject.model.Patient;
 import com.supportsystem.majorproject.repository.PatientRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,9 +32,11 @@ public class PatientService {
 
   public Patient login(String patientId, String password) {
     Patient patient = repository.findById(patientId)
-      .orElseThrow(() -> new RuntimeException("Patient not found"));
+      .orElseThrow(() -> new ResponseStatusException(
+        HttpStatus.UNAUTHORIZED, "Invalid Patient ID or password"));
     if (!patient.getPassword().equals(password))
-      throw new RuntimeException("Invalid password");
+      throw new ResponseStatusException(
+        HttpStatus.UNAUTHORIZED, "Invalid Patient ID or password");
     return patient;
   }
 
