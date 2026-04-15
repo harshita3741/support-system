@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, ChangeDetectorRef, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterModule, Router } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
@@ -18,7 +18,7 @@ export class DashboardComponent implements OnInit {
   showAvatarMenu = false;
   showProfileAlert = false;
 
-  constructor(private auth: AuthService, private http: HttpClient, private router: Router) {}
+  constructor(private auth: AuthService, private http: HttpClient, private router: Router, private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.name = this.auth.getPatientName();
@@ -29,9 +29,14 @@ export class DashboardComponent implements OnInit {
 
   checkProfile() {
     const patientId = localStorage.getItem("patientId");
-    if (!patientId) return;
+    if (!patientId) { this.showProfileAlert = true; return; }
     this.http.get<any>("http://localhost:8080/patients/" + patientId).subscribe({
-      next: (p) => { this.showProfileAlert = !(p.bloodGroup && p.height && p.city); },
+      next: (p) => {
+        this.ngZone.run(() => {
+          this.showProfileAlert = !(p.bloodGroup && p.height && p.city);
+          this.cdr.detectChanges();
+        });
+      },
       error: () => {}
     });
   }
@@ -44,5 +49,5 @@ export class DashboardComponent implements OnInit {
     localStorage.clear();
     this.router.navigate(["/login"]);
   }
-  dismissAlert() { this.showProfileAlert = true; }
+  dismissAlert() { this.showProfileAlert = false; }
 }
