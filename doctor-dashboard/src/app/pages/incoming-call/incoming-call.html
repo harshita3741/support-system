@@ -1,0 +1,180 @@
+<div class="call-page">
+
+  @if (callEnded) {
+    <div class="ended-box">
+      <div class="ended-icon">✓</div>
+      <div class="ended-title">Call Ended</div>
+      <div class="ended-sub">Redirecting to queue...</div>
+    </div>
+  }
+
+  @if (!callEnded && patient) {
+    <div class="call-layout">
+
+      <!-- LEFT PANEL: patient info -->
+      <div class="patient-panel">
+        <div class="back-btn" (click)="goBack()">← Back to Queue</div>
+        <div class="patient-header">
+          <div class="p-avatar" [style.background]="patient.bg" [style.color]="patient.color">
+            {{ patient.initials || getPatientInitials() }}
+          </div>
+          <div>
+            <div class="p-name">{{ patient.name || patient.patientName }}</div>
+            <div class="p-meta">{{ patient.dept || patient.department }}</div>
+          </div>
+          <span class="prio-badge" [class.high]="(patient.priority || '').toLowerCase() === 'high'">
+            {{ patient.priority || 'Medium' }} Priority
+          </span>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Current Symptoms</div>
+          <div class="symptoms-box">{{ patient.symptoms }}</div>
+        </div>
+
+        @if (callAccepted && webrtcStatus === 'connected') {
+          <div class="call-timer-panel">
+            <span class="live-dot"></span>
+            <span>{{ getCallTime() }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- RIGHT PANEL: video area -->
+      <div class="video-panel">
+
+        <!-- PRE-CALL: Accept / Decline -->
+        @if (!callAccepted) {
+          <div class="incoming-box">
+            <div class="call-top">
+              <span class="pulse"></span>
+              <span class="call-tag">Incoming patient request</span>
+            </div>
+
+            <div class="call-name">{{ patient.name || patient.patientName }}</div>
+            <div class="call-meta">
+              {{ patient.dept || patient.department }} · {{ parseVisits().length }} previous visits
+            </div>
+
+            <div class="ai-box">
+              <div class="ai-label">AI SUMMARY</div>
+              <div class="ai-text">
+                Patient reports {{ patient.symptoms }}.
+                Known conditions: {{ parseConditions().join(', ') || 'None' }}.
+              </div>
+            </div>
+
+            <div class="call-tags">
+              <span class="ctag ctag-r">{{ patient.priority || 'Medium' }} urgency</span>
+              <span class="ctag ctag-b">{{ patient.dept || patient.department }}</span>
+            </div>
+
+            <div class="call-btns">
+              <button class="btn-accept" (click)="startVideoCall()">Start Video Call</button>
+              <button class="btn-decline" (click)="goBack()">Decline</button>
+            </div>
+          </div>
+        }
+
+        <!-- ACTIVE CALL -->
+        @if (callAccepted) {
+          <div class="video-active">
+            <div class="video-header">
+              <div class="video-title">Video Call — {{ patient.name || patient.patientName }}</div>
+              @if (webrtcStatus === 'connected') {
+                <div class="video-live"><span class="live-dot"></span> Live</div>
+              }
+            </div>
+
+            <div class="video-frame">
+
+              <!-- Remote video (patient) — full frame -->
+              <div class="remote-video-wrap">
+                <video #remoteVideo autoplay playsinline class="remote-video"
+                       [class.hidden]="webrtcStatus !== 'connected'"></video>
+
+                <!-- Overlay while waiting for patient's stream -->
+                @if (webrtcStatus !== 'connected') {
+                  <div class="webrtc-overlay">
+                    @if (webrtcStatus === 'error') {
+                      <div class="overlay-icon error-icon">⚠</div>
+                      <div class="overlay-msg">{{ webrtcStatusMsg }}</div>
+                    } @else {
+                      <div class="overlay-spinner"></div>
+                      <div class="overlay-msg">{{ webrtcStatusMsg || 'Waiting for patient...' }}</div>
+                    }
+                  </div>
+                }
+
+                @if (webrtcStatus === 'connected') {
+                  <div class="remote-label">
+                    <span class="pulse-dot"></span>
+                    {{ patient.name || patient.patientName }}
+                  </div>
+                }
+              </div>
+
+              <!-- Local video (doctor) — PiP -->
+              <div class="local-video-wrap">
+                @if (cameraOn) {
+                  <video #localVideo autoplay playsinline muted class="local-video"></video>
+                } @else {
+                  <div class="video-placeholder">
+                    <div class="video-icon">📷</div>
+                    <div class="video-text">Camera off</div>
+                  </div>
+                }
+                <span class="you-label">You (Doctor)</span>
+              </div>
+            </div>
+
+            <!-- Prescription panel -->
+            @if (prescriptionOpen) {
+              <div class="prescription-card">
+                <div class="prescription-body">
+                  <div class="rx-form expanded-form">
+                    <input type="text" [(ngModel)]="prescription.diagnosis" placeholder="Diagnosis" class="full-width-input"/>
+
+                    @for (med of medicines; track $index) {
+                      <div class="medicine-row-improved">
+                        <input type="text" [(ngModel)]="med.name"      placeholder="Medicine" />
+                        <input type="text" [(ngModel)]="med.dosage"    placeholder="Dose" />
+                        <input type="text" [(ngModel)]="med.frequency" placeholder="Freq" />
+                        <input type="text" [(ngModel)]="med.duration"  placeholder="Dur" />
+                        <button class="remove-med-btn" (click)="removeMedicine($index)">×</button>
+                      </div>
+                    }
+
+                    <button class="add-med-btn" (click)="addMedicine()">+ Add Medicine</button>
+                    <textarea [(ngModel)]="prescription.advice" placeholder="Advice / Notes"></textarea>
+                    <button class="save-rx-btn theme-teal" (click)="savePrescription()">💾 Save & Download PDF</button>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Call controls -->
+            <div class="call-controls">
+              <button class="ctrl-btn" type="button" (click)="toggleMic()" [title]="micOn ? 'Mute' : 'Unmute'">
+                <span>{{ micOn ? '🎤' : '🔇' }}</span>
+              </button>
+
+              <button class="ctrl-btn" type="button" (click)="toggleCamera()" [title]="cameraOn ? 'Stop Video' : 'Start Video'">
+                <span>{{ cameraOn ? '📷' : '🚫' }}</span>
+              </button>
+
+              <button class="ctrl-btn" type="button" (click)="togglePrescription()" style="width:auto;border-radius:24px;padding:0 16px;gap:8px;">
+                <span>🧾</span>
+                <span style="font-size:13px;font-weight:500;">Prescription</span>
+              </button>
+
+              <button class="ctrl-btn end-call" type="button" (click)="endCall()">
+                End Call
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

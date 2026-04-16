@@ -1,9 +1,12 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-symptoms',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule, RouterModule],
   templateUrl: './symptoms.html',
-  styleUrl: './symptoms.css',
+  styleUrls: ['./symptoms.css']
 })
-export class Symptoms {}
+export class SymptomsComponent {}

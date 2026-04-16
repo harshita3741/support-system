@@ -1,0 +1,90 @@
+.patients-page { display: flex; flex-direction: column; gap: 16px; }
+.card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; overflow: hidden; }
+.card-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f2f5; }
+.card-title { font-size: 14px; font-weight: 600; color: #1a1d23; }
+.card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.sort-btn { font-size: 11px; color: #6b7280; background: #f4f6fb; border: 1px solid #eaecf0; border-radius: 6px; padding: 4px 9px; cursor: pointer; margin-left: auto; }
+.patient-table { width: 100%; border-collapse: collapse; }
+.patient-table th { font-size: 11px; color: #9ca3af; font-weight: 500; padding: 9px 16px; text-align: left; border-bottom: 1px solid #f0f2f5; }
+.patient-table td { font-size: 12px; color: #374151; padding: 10px 16px; border-bottom: 1px solid #f9fafb; vertical-align: middle; }
+.patient-table tr:last-child td { border-bottom: none; }
+.patient-table tbody tr:hover td { background: #f9fbff; }
+.name-cell { display: flex; align-items: center; gap: 8px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.p-name { font-size: 12px; font-weight: 500; color: #1a1d23; }
+.p-age { font-size: 10px; color: #9ca3af; }
+.muted { color: #9ca3af !important; font-size: 12px; }
+.prio { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.prio-high { background: #fef2f2; color: #b91c1c; }
+.prio-medium { background: #eff6ff; color: #1d4ed8; }
+.prio-low { background: #f0fdf4; color: #15803d; }
+.status-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.status-open { background: #eff6ff; color: #1d4ed8; }
+.status-urgent { background: #fef2f2; color: #b91c1c; }
+.status-done { background: #f0fdf4; color: #15803d; }
+.nurse-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-left: auto;
+}
+.doctor-badge {
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-left: auto;
+}
+.edit-btn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.edit-btn:hover { background: #dbeafe; }
+.save-btn {
+  background: #0d6e6e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 4px;
+  font-weight: 500;
+}
+.cancel-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.edit-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #eaecf0;
+  font-size: 12px;
+  color: #1a1d23;
+  outline: none;
+}
+.edit-input {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #eaecf0;
+  font-size: 12px;
+  color: #1a1d23;
+  outline: none;
+  width: 140px;
+}

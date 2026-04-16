@@ -1,1 +1,50 @@
-<p>login works!</p>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-dot">C</div>
+      <span class="logo-text">CareAI</span>
+    </div>
+
+    <h2 class="login-title">Welcome back</h2>
+    <p class="login-sub">Sign in with your Patient ID and password</p>
+
+    <div class="error-msg" *ngIf="errorMsg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ errorMsg }}
+    </div>
+
+    <div class="form-group">
+      <label>Patient ID</label>
+      <input
+        type="text"
+        class="form-input"
+        [(ngModel)]="patientId"
+        placeholder="Enter your Patient ID"
+        (keyup.enter)="login()"
+        autocomplete="username" />
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input
+        type="password"
+        class="form-input"
+        [(ngModel)]="password"
+        placeholder="••••••••"
+        (keyup.enter)="login()"
+        autocomplete="current-password" />
+    </div>
+
+    <button class="btn-login" (click)="login()" [disabled]="loading">
+      <span *ngIf="!loading">Sign In</span>
+      <span *ngIf="loading" class="spinner"></span>
+    </button>
+
+    <div class="login-footer">
+      Don't have an account?
+      <a routerLink="/register">Register here</a>
+    </div>
+  </div>
+</div>

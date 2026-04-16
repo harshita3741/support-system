@@ -1,0 +1,36 @@
+<div class="sidebar">
+  <div class="brand">
+    <div class="logo">M</div>
+    <span class="brand-name">MediQueue</span>
+  </div>
+
+  <nav class="nav">
+    @for (item of navItems; track item.route) {
+      <a class="nav-item"
+         [routerLink]="item.route"
+         routerLinkActive="active">
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="status-row" (click)="toggleStatus()">
+      <div class="status-dot"
+           [class.online]="isOnline"
+           [class.offline]="!isOnline">
+      </div>
+      <div class="doc-info">
+        <div class="doc-name">{{ doctorName }}</div>
+        <div class="doc-dept">{{ doctorDept }}</div>
+      </div>
+      <span class="status-badge"
+            [class.on]="isOnline"
+            [class.off]="!isOnline">
+        {{ isOnline ? 'Online' : 'Offline' }}
+      </span>
+    </div>
+    <div class="logout-row" (click)="logout()">Sign out</div>
+  </div>
+</div>

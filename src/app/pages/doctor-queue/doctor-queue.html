@@ -1,0 +1,113 @@
+<div class="layout">
+
+  <!-- DOCTOR LOGIN / SELECTION -->
+  <div class="login-screen" *ngIf="!selectedDoctor">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-dot">C</div>
+        <span>CareAI</span>
+      </div>
+      <h2>Doctor Portal</h2>
+      <p>Select your name to access your case queue</p>
+      <div class="doctor-list">
+        <div class="doctor-option" *ngFor="let doc of doctors" (click)="selectDoctor(doc)">
+          <div class="doc-avatar-sm">{{ doc.name[0] }}</div>
+          <div>
+            <div class="doc-name">{{ doc.name }}</div>
+            <div class="doc-spec">{{ doc.specialty }}</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN QUEUE VIEW -->
+  <div class="queue-layout" *ngIf="selectedDoctor">
+
+    <div class="sidebar">
+      <div class="logo"><div class="logo-dot">C</div><span class="logo-text">CareAI</span></div>
+      <div class="doctor-profile">
+        <div class="doc-avatar-lg">{{ selectedDoctor.name[0] }}</div>
+        <div class="doc-name-lg">{{ selectedDoctor.name }}</div>
+        <div class="doc-spec-lg">{{ selectedDoctor.specialty }}</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Patient Queue
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="logout-btn" (click)="logout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Switch Doctor
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h3>Patient Queue</h3>
+          <p>Cases waiting for your review</p>
+        </div>
+        <div class="queue-count">
+          <span>{{ cases.length }}</span> pending
+        </div>
+      </div>
+
+      <div class="content">
+
+        <div class="empty-state" *ngIf="cases.length === 0">
+          <div class="empty-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="36" height="36"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <h4>No patients in queue</h4>
+          <p>New cases will appear here automatically</p>
+        </div>
+
+        <div class="case-cards">
+          <div class="case-card" *ngFor="let c of cases">
+            <div class="case-header">
+              <div class="patient-avatar">{{ c.patientName ? c.patientName[0].toUpperCase() : 'P' }}</div>
+              <div class="case-info">
+                <div class="patient-name">{{ c.patientName || 'Patient' }}</div>
+                <div class="case-id">Case #{{ c.caseId }}</div>
+              </div>
+              <div class="dept-badge" [style.background]="getDeptColor(c.department)" [style.color]="getDeptTextColor(c.department)">
+                {{ c.department }}
+              </div>
+            </div>
+
+            <div class="case-body">
+              <div class="symptoms-label">Symptoms</div>
+              <div class="symptoms-text">{{ c.symptoms }}</div>
+            </div>
+
+            <div class="case-footer">
+              <!-- OPEN — show Accept button -->
+              <button class="btn-accept" *ngIf="c.status === 'OPEN'" (click)="acceptCase(c)" [disabled]="acceptingId === c.caseId">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+                {{ acceptingId === c.caseId ? 'Accepting...' : 'Accept Case' }}
+              </button>
+
+              <!-- ACCEPTED — show Start Call button -->
+              <div class="accepted-row" *ngIf="c.status === 'ACCEPTED'">
+                <span class="accepted-tag">✓ Accepted</span>
+                <button class="btn-call" (click)="startCall(c.caseId)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="14" height="14">
+                    <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                  </svg>
+                  Start Video Call
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

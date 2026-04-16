@@ -1,0 +1,95 @@
+<div class="patients-page">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">All Patients</div>
+        <div class="card-sub">
+          @if (isNurse) {
+            Nurse view — you can edit patient status and notes
+          } @else {
+            Doctor view — read only
+          }
+        </div>
+      </div>
+      @if (isNurse) {
+        <div class="nurse-badge">Nurse Access</div>
+      } @else {
+        <div class="doctor-badge">Doctor View</div>
+      }
+    </div>
+    <table class="patient-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Case ID</th>
+          <th>Symptoms</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Notes</th>
+          @if (isNurse) {
+            <th>Action</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of filteredPatients; track p.id) {
+          <tr>
+            <td>
+              <div class="name-cell">
+                <div class="avatar"
+                  [style.background]="p.bg"
+                  [style.color]="p.color">
+                  {{ p.initials }}
+                </div>
+                <div>
+                  <div class="p-name">{{ p.name }}</div>
+                  <div class="p-age">{{ p.age }} yrs · {{ p.gender }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="muted">{{ p.id }}</td>
+            <td class="muted">{{ p.symptoms }}</td>
+            <td>
+              <span class="prio" [ngClass]="getPriorityClass(p.priority)">
+                {{ p.priority }}
+              </span>
+            </td>
+            <td>
+              @if (isNurse && editingId === p.id) {
+                <select [(ngModel)]="editStatus" class="edit-select">
+                  <option>Open</option>
+                  <option>Urgent</option>
+                  <option>Resolved</option>
+                </select>
+              } @else {
+                <span class="status-badge" [ngClass]="getStatusClass(p.status)">
+                  {{ p.status }}
+                </span>
+              }
+            </td>
+            <td>
+              @if (isNurse && editingId === p.id) {
+                <input
+                  [(ngModel)]="editNotes"
+                  class="edit-input"
+                  placeholder="Add notes..." />
+              } @else {
+                <span class="muted">{{ p.notes || '—' }}</span>
+              }
+            </td>
+            @if (isNurse) {
+              <td>
+                @if (editingId === p.id) {
+                  <button class="save-btn" (click)="saveEdit(p)">Save</button>
+                  <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
+                } @else {
+                  <button class="edit-btn" (click)="startEdit(p)">Edit</button>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

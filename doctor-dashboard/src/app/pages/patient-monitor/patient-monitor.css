@@ -1,0 +1,163 @@
+.monitor-page { display: flex; flex-direction: column; gap: 16px; }
+.back-btn { font-size: 13px; color: #0d6e6e; cursor: pointer; font-weight: 500; padding: 4px 0; }
+.back-btn:hover { text-decoration: underline; }
+.section-title { font-size: 16px; font-weight: 700; }
+.orange { color: #ef6c3e; }
+
+.vitals-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.vital-card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; padding: 14px 16px; }
+.vital-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.vital-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.vital-name { font-size: 13px; font-weight: 600; color: #1a1d23; }
+.vital-value { font-size: 22px; font-weight: 700; color: #1a1d23; }
+.vital-unit { font-size: 11px; color: #9ca3af; margin-left: 3px; font-weight: 400; }
+.vital-badge { display: inline-block; font-size: 10px; padding: 3px 10px; border-radius: 12px; margin-top: 6px; font-weight: 500; }
+.vital-badge.normal { background: #f0fdf4; color: #15803d; }
+.vital-badge.warning { background: #fef3c7; color: #d97706; }
+
+.three-col { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 14px; }
+.card { background: #fff; border-radius: 14px; border: 1px solid #eaecf0; overflow: hidden; }
+.card-header { padding: 13px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; }
+.card-title { font-size: 14px; font-weight: 600; flex: 1; }
+.card-action { font-size: 12px; color: #0d6e6e; cursor: pointer; font-weight: 500; }
+
+.profile-body { padding: 20px 16px; text-align: center; }
+.prof-avatar { width: 64px; height: 64px; border-radius: 50%; background: #e0e7ff; color: #4361ee; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; margin: 0 auto 10px; }
+.prof-name { font-size: 14px; font-weight: 700; color: #1a1d23; }
+.prof-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.prof-info { margin-top: 14px; text-align: left; }
+.info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f9fafb; }
+.info-row.last { border-bottom: none; }
+.ik { font-size: 11px; color: #9ca3af; }
+.iv { font-size: 11px; font-weight: 500; color: #374151; }
+
+.report-filter { font-size: 11px; color: #6b7280; padding: 6px 18px; border-bottom: 1px solid #f0f2f5; cursor: pointer; }
+.report-item { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid #f9fafb; }
+.report-item:last-child { border-bottom: none; }
+.rep-icon { width: 30px; height: 30px; background: #f0f6ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.rep-info { flex: 1; }
+.rep-name { font-size: 12px; font-weight: 500; color: #1a1d23; }
+.rep-size { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+.rep-actions { display: flex; gap: 8px; }
+.rep-btn { font-size: 13px; color: #9ca3af; cursor: pointer; }
+.rep-btn.green { color: #16a34a; }
+.rep-btn:hover { color: #0d6e6e; }
+
+.hist-item { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid #f9fafb; }
+.hist-item:last-child { border-bottom: none; }
+.hist-icon { width: 30px; height: 30px; border-radius: 50%; background: #f4f6fb; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.hist-dx { font-size: 12px; font-weight: 500; color: #1a1d23; }
+.hist-dr { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+
+.tests-row { display: grid; grid-template-columns: repeat(4, 1fr); border-top: none; }
+.test-item { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-right: 1px solid #f0f2f5; }
+.test-item:last-child { border-right: none; }
+.test-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.test-info { flex: 1; }
+.test-name { font-size: 12px; font-weight: 500; color: #1a1d23; }
+.test-freq { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+.test-date { font-size: 11px; font-weight: 500; color: #0d6e6e; white-space: nowrap; }
+
+.visit-item { padding: 12px 18px; border-bottom: 1px solid #f9fafb; }
+.visit-item:last-child { border-bottom: none; }
+.visit-date { font-size: 10px; color: #9ca3af; margin-bottom: 3px; }
+.visit-dx { font-size: 13px; font-weight: 500; color: #1a1d23; }
+.visit-notes { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.vitals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.edit-btn {
+  background: #0d6e6e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.edit-btn:hover { background: #0a5a5a; }
+.edit-actions { display: flex; gap: 8px; }
+.save-btn {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cancel-btn {
+  background: #f4f6fb;
+  color: #6b7280;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.vitals-edit-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #eaecf0;
+  padding: 18px;
+}
+.edit-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1d23;
+  margin-bottom: 16px;
+}
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.edit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid #eaecf0;
+}
+.edit-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.edit-info { flex: 1; }
+.edit-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1d23;
+}
+.edit-unit {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+.edit-input {
+  width: 80px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #0d6e6e;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0d6e6e;
+  outline: none;
+  text-align: center;
+}
+.vital-badge.abnormal {
+  background: #fef2f2;
+  color: #b91c1c;
+}

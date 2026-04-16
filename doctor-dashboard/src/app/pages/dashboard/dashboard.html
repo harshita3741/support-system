@@ -1,0 +1,230 @@
+<div class="dashboard">
+
+  <div class="greeting">
+    <div class="greeting-title">{{ greeting }}, {{ doctorName }}!</div>
+    <div class="greeting-sub">{{ doctorDept }} Department — Live overview for today</div>
+  </div>
+
+  <div class="stat-row">
+    @for (card of statCards; track card.label) {
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label">{{ card.label }}</span>
+          <span class="stat-arrow">→</span>
+        </div>
+        <div class="stat-value">{{ card.value }}</div>
+        <div class="stat-sub">{{ card.sub }}</div>
+        <div class="stat-bars">
+          @for (bar of card.bars; track $index) {
+            <div
+              class="bar"
+              [style.height.px]="bar"
+              [style.background]="$index === card.bars.length - 1 ? card.barColor : card.lightColor">
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="mid-row">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Patients</div>
+          <div class="card-sub">Your latest patient list</div>
+        </div>
+
+        <div class="header-actions">
+          <button class="sort-btn" type="button">Sort: A–Z ▾</button>
+          <a routerLink="/patients" class="card-action">See All</a>
+        </div>
+      </div>
+
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Case ID</th>
+            <th>Priority</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (p of filteredPatients; track p.id) {
+            <tr routerLink="/monitor" style="cursor: pointer;">
+              <td>
+                <div class="patient-name-cell">
+                  <div class="p-avatar" [style.background]="p.bg" [style.color]="p.color">
+                    {{ p.initials }}
+                  </div>
+                  <div>
+                    <div class="p-name">{{ p.name }}</div>
+                    <div class="p-age">{{ p.age }} yrs · {{ p.gender }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <td class="muted">{{ p.id }}</td>
+
+              <td>
+                <span class="prio" [ngClass]="getPriorityClass(p.priority)">
+                  {{ p.priority }}
+                </span>
+              </td>
+
+              <td class="muted">{{ p.date }}</td>
+              <td class="muted">—</td>
+            </tr>
+          }
+
+          @if (filteredPatients.length === 0) {
+            <tr>
+              <td colspan="5" class="empty-table">No patient records found</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card cal-container">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <div class="cal-month" (click)="toggleMonthPicker($event)">
+            {{ currentMonthLabel }} ▾
+          </div>
+
+          <div class="nav-controls">
+            <button class="cal-btn" type="button" (click)="changeMonth(-1)">‹</button>
+            <button class="cal-btn" type="button" (click)="changeMonth(1)">›</button>
+          </div>
+        </div>
+
+        <div class="cal-legend">
+          <span class="leg"><span class="leg-dot sched"></span>Scheduled</span>
+          <span class="leg"><span class="leg-dot pend"></span>Pending</span>
+        </div>
+      </div>
+
+      @if (monthPickerOpen) {
+        <div class="month-picker" (click)="$event.stopPropagation()">
+          @for (m of monthOptions; track m.index) {
+            <button
+              type="button"
+              class="month-option"
+              [class.active]="m.index === currentMonthIndex"
+              (click)="selectMonth(m.index, $event)">
+              {{ m.label }}
+            </button>
+          }
+        </div>
+      }
+
+      <div class="cal-body">
+        <div class="cal-days">
+          @for (d of weekDays; track d) {
+            <div class="cal-day-header">{{ d }}</div>
+          }
+        </div>
+
+        <div class="cal-grid">
+          @for (d of calendarDays; track $index) {
+            <div
+              class="cal-day"
+              [class.today]="d.isToday"
+              [class.empty]="!d.day"
+              [class.selected]="d.fullDate === selectedDate"
+              (click)="d.fullDate ? selectCalendarDate(d.fullDate) : null">
+
+              {{ d.day }}
+
+              @if (d.hasAppt) {
+                <div class="cdot"></div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="appt-section">
+          <div class="appt-section-title">
+            {{ selectedDate ? ('Appointments · ' + selectedDate) : "Today's Appointments" }}
+          </div>
+
+          @if (filteredAppointments.length > 0) {
+            <div class="appt-list">
+              @for (a of filteredAppointments; track $index) {
+                <div class="appt-row">
+                  <span class="appt-time">{{ a.time }}</span>
+                  <div class="appt-dot" [style.background]="a.color"></div>
+                  <div class="appt-info">
+                    <div class="appt-name">{{ a.name }}</div>
+                    <div class="appt-type">{{ a.type }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-appointments">
+              No appointments on this date
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card timeline-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Today's Schedule</div>
+        <div class="card-sub">Real backend appointments for {{ doctorName }}</div>
+      </div>
+      <a routerLink="/schedule" class="card-action">Open Schedule</a>
+    </div>
+
+    <div class="timeline-wrap">
+      <div class="timeline-scale">
+        @for (h of timelineHours; track h) {
+          <div class="timeline-hour">{{ h }}</div>
+        }
+      </div>
+
+      @if (scheduleRows.length > 0) {
+        @for (row of scheduleRows; track row.day) {
+          <div class="timeline-row">
+            <div class="timeline-day">{{ row.day }}</div>
+
+            <div class="timeline-lane">
+              <div class="timeline-grid-lines">
+                @for (h of timelineHours; track h) {
+                  <div class="timeline-line"></div>
+                }
+              </div>
+
+              @for (block of row.blocks; track $index) {
+                <div
+                  class="timeline-block"
+                  [style.left]="block.left"
+                  [style.width]="block.width"
+                  [style.background]="block.bg"
+                  [style.color]="block.color">
+                  <div class="tb-time">{{ block.time }}</div>
+                  <div class="tb-label">{{ block.label }}</div>
+                  <div class="tb-type">{{ block.type }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="timeline-empty">
+          No appointments scheduled for today
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

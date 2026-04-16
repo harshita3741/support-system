@@ -1,0 +1,545 @@
+/* ─── BASE LAYOUT ────────────────────────────────────── */
+.call-page { 
+    min-height: 80vh; 
+}
+
+.ended-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 12px;
+}
+
+.ended-icon {
+    width: 60px; height: 60px;
+    background: #f0fdf4;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: #16a34a;
+}
+
+.ended-title { font-size: 20px; font-weight: 700; color: #1a1d23; }
+.ended-sub { font-size: 13px; color: #9ca3af; }
+
+.call-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+/* ─── LEFT PANEL (Patient Info) ──────────────────────── */
+.patient-panel {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eaecf0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.back-btn {
+    font-size: 12px;
+    color: #0d6e6e;
+    cursor: pointer;
+    font-weight: 500;
+}
+.back-btn:hover { text-decoration: underline; }
+
+.patient-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.p-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    flex-shrink: 0;
+}
+
+.p-name { font-size: 15px; font-weight: 700; color: #1a1d23; }
+.p-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+.prio-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+.prio-badge.high { background: #fef2f2; color: #b91c1c; }
+.prio-badge.medium { background: #eff6ff; color: #1d4ed8; }
+.prio-badge.low { background: #f0fdf4; color: #15803d; }
+
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.symptoms-box {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #374151;
+    border: 1px solid #f0f2f5;
+}
+
+.tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: #f0f6ff;
+    color: #1d4ed8;
+    border-radius: 6px;
+    border: 1px solid #dbeafe;
+}
+
+.visit-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid #f0f2f5;
+}
+.visit-date { font-size: 10px; color: #9ca3af; margin-bottom: 3px; }
+.visit-dx { font-size: 13px; font-weight: 500; color: #1a1d23; }
+.visit-notes { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+/* ─── RIGHT PANEL (Video & Incoming Call) ────────────── */
+.video-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.incoming-box {
+    background: #0d1f2d !important;
+    color: #ffffff !important;
+    padding: 32px !important;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.call-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pulse {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .6; transform: scale(1.4); }
+}
+
+.call-tag { font-size: 12px; color: #22c55e !important; font-weight: 500; }
+.call-name { font-size: 28px !important; font-weight: 700; color: #fff !important; }
+
+.call-meta {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7) !important;
+    margin-top: -8px;
+}
+
+.ai-box {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.ai-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #5eead4;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.ai-text {
+    font-size: 13px;
+    color: #e2e8f0 !important;
+    line-height: 1.6;
+}
+
+.call-tags { display: flex; gap: 8px; }
+.ctag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+.ctag-r { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+.ctag-b { background: rgba(13, 110, 110, 0.2); color: #5eead4; border: 1px solid rgba(13, 110, 110, 0.4); }
+
+.call-btns { display: flex; gap: 12px; margin-top: 8px; }
+
+.btn-accept {
+    flex: 1;
+    background: #0d6e6e !important;
+    color: white !important;
+    border: none !important;
+    padding: 14px 24px !important;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-accept:hover { background: #0a5a5a !important; }
+
+.btn-decline {
+    flex: 1;
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    padding: 14px 24px !important;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ─── VIDEO ACTIVE FRAME ───────────────────────────── */
+.video-active {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eaecf0;
+    overflow: hidden;
+}
+
+.video-frame {
+    background: #1a1d23;
+    height: 380px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Remote video (patient) fills the frame */
+.remote-video-wrap {
+    width: 100%; height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remote-video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.remote-video.hidden { display: none; }
+
+/* WebRTC connecting overlay */
+.webrtc-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #1a1d23;
+}
+
+.overlay-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: #0d6e6e;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.overlay-msg {
+    font-size: 14px;
+    color: rgba(255,255,255,0.65);
+}
+
+.overlay-icon { font-size: 28px; }
+.error-icon { color: #f87171; }
+
+.remote-label {
+    position: absolute;
+    bottom: 124px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.pulse-dot {
+    width: 7px; height: 7px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 1.2s infinite;
+}
+
+/* Local video (doctor) — PiP bottom-right */
+.local-video-wrap {
+    position: absolute;
+    bottom: 80px;
+    right: 12px;
+    width: 130px;
+    height: 96px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: #374151;
+}
+
+.local-video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.video-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    gap: 4px;
+    font-size: 11px;
+}
+
+.you-label {
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.4);
+    padding: 2px 0;
+}
+
+/* Call timer in patient panel */
+.call-timer-panel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #15803d;
+}
+
+/* Video header */
+.video-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.video-title { font-size: 14px; font-weight: 600; color: #1a1d23; }
+
+.video-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+/* ─── IMPROVED CALL CONTROLS ─────────────────────────── */
+.call-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    background: #f8fafc;
+    border-top: 1px solid #eaecf0;
+}
+
+.ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: #fff !important;
+    color: #1a1d23 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.ctrl-btn:hover {
+    background: #f1f5f9 !important;
+    transform: translateY(-2px);
+}
+
+.ctrl-btn.end-call {
+    width: auto;
+    border-radius: 24px;
+    padding: 0 24px;
+    background: #ef4444 !important;
+    color: #fff !important;
+    border: none !important;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ctrl-btn.end-call:hover {
+    background: #dc2626 !important;
+}
+
+/* ─── PRESCRIPTION PANEL ─────────────────────────────── */
+.prescription-card {
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+}
+
+.rx-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    max-height: none !important;
+    overflow-y: visible !important;
+}
+
+.medicine-row,
+.medicine-row-improved {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.medicine-row input,
+.medicine-row-improved input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+}
+
+.medicine-row input:focus,
+.medicine-row-improved input:focus { border-color: #0d6e6e; }
+
+.full-width-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+    box-sizing: border-box;
+}
+.full-width-input:focus { border-color: #0d6e6e; }
+
+.remove-med-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid #fecaca;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+.add-med-btn {
+    padding: 8px 14px;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.prescription-body {
+    padding: 0;
+}
+
+.expanded-form textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.expanded-form textarea:focus { border-color: #0d6e6e; }
+
+.save-rx-btn {
+    padding: 14px;
+    background: #0d6e6e !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+}
+.save-rx-btn:hover { background: #0a5a5a !important; }
+
+.rx-preview {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.rxp-line { border-bottom: 2px solid #0d6e6e !important; margin: 12px 0; }
+.rxp-rx { font-size: 24px; font-weight: bold; color: #0d6e6e; font-family: Georgia, serif; }

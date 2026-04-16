@@ -117,9 +117,13 @@
           </div>
 
           <!-- MEDICAL HISTORY — only show if at least one field is filled -->
-          <div class="info-card" *ngIf="patient.medicalHistory || patient.registrationDate">
+          <div class="info-card" *ngIf="patient.pastIllness || patient.previousSurgeries || patient.familyHistory || patient.ongoingTreatments || patient.hospitalizations || patient.registrationDate">
             <div class="info-card-title">Medical History</div>
-            <div class="info-row" *ngIf="patient.medicalHistory"><span>Past Illnesses</span><strong>{{ patient.medicalHistory }}</strong></div>
+            <div class="info-row" *ngIf="patient.pastIllness"><span>Past Illnesses</span><strong>{{ patient.pastIllness }}</strong></div>
+            <div class="info-row" *ngIf="patient.previousSurgeries"><span>Previous Surgeries</span><strong>{{ patient.previousSurgeries }}</strong></div>
+            <div class="info-row" *ngIf="patient.familyHistory"><span>Family History</span><strong>{{ patient.familyHistory }}</strong></div>
+            <div class="info-row" *ngIf="patient.ongoingTreatments"><span>Ongoing Treatments</span><strong>{{ patient.ongoingTreatments }}</strong></div>
+            <div class="info-row" *ngIf="patient.hospitalizations"><span>Hospitalizations</span><strong>{{ patient.hospitalizations }}</strong></div>
             <div class="info-row" *ngIf="patient.registrationDate"><span>Registration Date</span><strong>{{ patient.registrationDate }}</strong></div>
           </div>
 

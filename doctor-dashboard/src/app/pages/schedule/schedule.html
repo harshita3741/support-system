@@ -1,0 +1,147 @@
+<div class="schedule-page">
+  <div class="sch-card">
+
+    <div class="sch-header">
+      <div class="sch-header-left">
+        <div>
+          <h2 class="sch-title">Doctor Schedule</h2>
+          <p class="sch-subtitle">Real appointments from backend, grouped by doctor and date</p>
+        </div>
+      </div>
+
+      <div class="sch-header-center">
+        <div class="view-toggle">
+          <button class="vt-btn" [class.active]="viewMode === 'week'" (click)="setView('week')">Week</button>
+          <button class="vt-btn" [class.active]="viewMode === 'month'" (click)="setView('month')">Month</button>
+        </div>
+
+        <button class="nav-btn" (click)="prevWeek()">‹</button>
+        <span class="week-label">{{ viewMode === 'week' ? weekLabel : monthLabel }}</span>
+        <button class="nav-btn" (click)="nextWeek()">›</button>
+      </div>
+    </div>
+
+    @if (viewMode === 'week') {
+      <div class="grid-wrap">
+        <div class="grid-head">
+          <div class="time-gutter-head">
+            <span class="week-num">{{ weekNumber }}</span>
+          </div>
+
+          @for (day of days; track day.fullDate) {
+            <button
+              class="day-head selectable-day"
+              [class.today]="day.isToday"
+              [class.selected-day]="day.isSelected"
+              (click)="selectDay(day.fullDate)">
+              <span class="day-short">{{ day.short }}</span>
+              <span class="day-num" [class.today-circle]="day.isToday">{{ day.date }}</span>
+            </button>
+          }
+        </div>
+
+        <div class="grid-body">
+          <div class="grid-time-col">
+            @for (h of hours; track h) {
+              <div class="time-label">{{ h }}</div>
+            }
+          </div>
+
+          <div class="grid-events-area">
+            @for (h of hours; track h; let i = $index) {
+              <div class="hour-line" [style.top.px]="i * rowHeight"></div>
+            }
+
+            @if (showTimeLine) {
+              <div class="time-now-line" [style.top.%]="currentTimePct">
+                <span class="time-now-label">{{ currentTimeLabel }}</span>
+              </div>
+            }
+
+            @for (day of days; track day.fullDate; let di = $index) {
+              <div
+                class="event-col"
+                [class.today-col]="day.isToday"
+                [class.weekend-col]="di >= 5"
+                (dblclick)="addLeave(day.fullDate)"
+              >
+                @for (event of day.events; track event.id) {
+                  <div
+                    class="event-card"
+                    [class.leave-card]="event.type === 'leave'"
+                    [class.backend-card]="event.source === 'backend'"
+                    [style.top]="getEventTop(event)"
+                    [style.height]="getEventHeight(event)"
+                    [style.background]="getEventBg(event.type)"
+                    [style.color]="getEventColor(event.type)"
+                    [style.border-color]="getEventBorder(event.type)"
+                  >
+                    @if (canDeleteEvent(event)) {
+                      <button
+                        class="delete-evt"
+                        type="button"
+                        title="Delete leave block"
+                        (click)="deleteEvent(event.id, $event)">
+                        ×
+                      </button>
+                    }
+
+                    <div class="event-time">{{ formatHour(event.startHour) }}</div>
+                    <div class="event-title">{{ event.title }}</div>
+
+                    @if (event.patientName) {
+                      <div class="event-patient">{{ event.patientName }}</div>
+                    }
+
+                    <div class="event-badge">
+                      <span>{{ getEventIcon(event.type) }}</span>
+                      <span>{{ event.type }}</span>
+                    </div>
+
+                    <div class="event-source" [class.leave-source]="event.source === 'leave'">
+                      {{ event.source === 'leave' ? 'Doctor block' : 'Booked from patient side' }}
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (viewMode === 'month') {
+      <div class="month-wrap">
+        <div class="month-weekdays">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+
+        <div class="month-grid">
+          @for (day of monthDays; track day.fullDate) {
+            <button
+              class="month-cell"
+              [class.muted]="!day.isCurrentMonth"
+              [class.month-today]="day.isToday"
+              [class.month-selected]="day.isSelected"
+              (click)="selectDay(day.fullDate)"
+              (dblclick)="addLeave(day.fullDate)"
+            >
+              <span class="month-day-num">{{ day.day }}</span>
+              @if (day.eventCount > 0) {
+                <span class="month-dot"></span>
+                <span class="month-count">{{ day.eventCount }} items</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

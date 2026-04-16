@@ -34,7 +34,7 @@ export class ProfileComponent implements OnInit {
           this.ngZone.run(() => {
             this.patient = res;
             this.loading = false;
-            this.isProfileIncomplete = !(res.bloodGroup && res.height && res.weight && res.city && res.phone);
+            this.isProfileIncomplete = !(res.bloodGroup && res.height && res.weight && res.city && res.phone && res.dob);
             this.cdr.detectChanges();
           });
         },
