@@ -15,16 +15,14 @@ public class VideoSessionController {
   @Autowired
   private VideoSessionService videoSessionService;
 
-  // Patient posts SDP offer
   @PostMapping("/{caseId}/offer")
-  public ResponseEntity<String> postOffer(
+  public ResponseEntity<Map<String, String>> postOffer(
     @PathVariable Long caseId,
     @RequestBody Map<String, String> body) {
     videoSessionService.postOffer(caseId, body.get("sdp"));
-    return ResponseEntity.ok("ok");
+    return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
-  // Doctor gets patient's SDP offer
   @GetMapping("/{caseId}/offer")
   public ResponseEntity<Map<String, String>> getOffer(@PathVariable Long caseId) {
     String sdp = videoSessionService.getOffer(caseId);
@@ -32,16 +30,14 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("sdp", sdp));
   }
 
-  // Doctor posts SDP answer
   @PostMapping("/{caseId}/answer")
-  public ResponseEntity<String> postAnswer(
+  public ResponseEntity<Map<String, String>> postAnswer(
     @PathVariable Long caseId,
     @RequestBody Map<String, String> body) {
     videoSessionService.postAnswer(caseId, body.get("sdp"));
-    return ResponseEntity.ok("ok");
+    return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
-  // Patient gets doctor's SDP answer
   @GetMapping("/{caseId}/answer")
   public ResponseEntity<Map<String, String>> getAnswer(@PathVariable Long caseId) {
     String sdp = videoSessionService.getAnswer(caseId);
@@ -49,19 +45,15 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("sdp", sdp));
   }
 
-  // Either side posts an ICE candidate
-  // role = "patient" | "doctor"
   @PostMapping("/{caseId}/candidate/{role}")
-  public ResponseEntity<String> addCandidate(
+  public ResponseEntity<Map<String, String>> addCandidate(
     @PathVariable Long caseId,
     @PathVariable String role,
     @RequestBody Map<String, String> body) {
     videoSessionService.addCandidate(caseId, role, body.get("candidate"));
-    return ResponseEntity.ok("ok");
+    return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
-  // Either side fetches the OTHER side's candidates
-  // role = "patient" (doctor fetches patient's) | "doctor" (patient fetches doctor's)
   @GetMapping("/{caseId}/candidates/{role}")
   public ResponseEntity<String> getCandidates(
     @PathVariable Long caseId,

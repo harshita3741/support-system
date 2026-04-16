@@ -16,7 +16,7 @@ public class MedicalCase {
   @Column(name = "patient_name")
   private String patientName;
 
-  @Column(name = "patient_id")
+  @Column(name = "patient_id", insertable = false, updatable = false)
   private String patientId;
 
   private String department;
