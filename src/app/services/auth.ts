@@ -4,7 +4,7 @@ import { Observable, of } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private baseUrl = 'http://192.168.1.5:8080';
+  private baseUrl = 'http://192.168.1.76:8080';
 
   private mockDoctors = [
     { username: 'dr.smith', password: '1234', name: 'Dr. Smith', dept: 'CARDIO', id: '1', role: 'DOCTOR' },

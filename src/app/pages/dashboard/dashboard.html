@@ -1,230 +1,254 @@
-<div class="dashboard">
+<div class="dashboard-page" [class.loading]="isLoading">
 
-  <div class="greeting">
-    <div class="greeting-title">{{ greeting }}, {{ doctorName }}!</div>
-    <div class="greeting-sub">{{ doctorDept }} Department — Live overview for today</div>
+  <!-- Loading overlay -->
+  @if (isLoading) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+  }
+
+  <!-- Hero -->
+  <div class="hero-head">
+    <div class="hero-text">
+      <h1>{{ greeting }}, {{ doctorName }}!</h1>
+      <p>
+        <span class="dept-badge">{{ doctorDepartment }}</span>
+        <span class="dept-live">
+          <span class="live-dot"></span> Live overview for today
+        </span>
+      </p>
+    </div>
+    <div class="hero-date">{{ selectedDate | date: 'EEEE, MMMM d' }}</div>
   </div>
 
-  <div class="stat-row">
-    @for (card of statCards; track card.label) {
-      <div class="stat-card">
-        <div class="stat-top">
-          <span class="stat-label">{{ card.label }}</span>
-          <span class="stat-arrow">→</span>
-        </div>
-        <div class="stat-value">{{ card.value }}</div>
-        <div class="stat-sub">{{ card.sub }}</div>
-        <div class="stat-bars">
-          @for (bar of card.bars; track $index) {
-            <div
-              class="bar"
-              [style.height.px]="bar"
-              [style.background]="$index === card.bars.length - 1 ? card.barColor : card.lightColor">
-            </div>
-          }
-        </div>
+  <!-- Stats row -->
+  <div class="stats-grid">
+    <div class="stat-card stat-cases">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
       </div>
-    }
-  </div>
-
-  <div class="mid-row">
-
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Patients</div>
-          <div class="card-sub">Your latest patient list</div>
-        </div>
-
-        <div class="header-actions">
-          <button class="sort-btn" type="button">Sort: A–Z ▾</button>
-          <a routerLink="/patients" class="card-action">See All</a>
-        </div>
+      <div class="stat-body">
+        <div class="stat-title">TODAY'S CASES</div>
+        <div class="stat-value">{{ totalCases }}</div>
+        <div class="stat-sub">{{ resolvedCases }} resolved today</div>
       </div>
-
-      <table class="patient-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Case ID</th>
-            <th>Priority</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          @for (p of filteredPatients; track p.id) {
-            <tr routerLink="/monitor" style="cursor: pointer;">
-              <td>
-                <div class="patient-name-cell">
-                  <div class="p-avatar" [style.background]="p.bg" [style.color]="p.color">
-                    {{ p.initials }}
-                  </div>
-                  <div>
-                    <div class="p-name">{{ p.name }}</div>
-                    <div class="p-age">{{ p.age }} yrs · {{ p.gender }}</div>
-                  </div>
-                </div>
-              </td>
-
-              <td class="muted">{{ p.id }}</td>
-
-              <td>
-                <span class="prio" [ngClass]="getPriorityClass(p.priority)">
-                  {{ p.priority }}
-                </span>
-              </td>
-
-              <td class="muted">{{ p.date }}</td>
-              <td class="muted">—</td>
-            </tr>
-          }
-
-          @if (filteredPatients.length === 0) {
-            <tr>
-              <td colspan="5" class="empty-table">No patient records found</td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <div class="stat-sparkline cases-bar"></div>
     </div>
 
-    <div class="card cal-container">
-      <div class="cal-header">
-        <div class="cal-nav">
-          <div class="cal-month" (click)="toggleMonthPicker($event)">
-            {{ currentMonthLabel }} ▾
-          </div>
+    <div class="stat-card stat-queue">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-title">IN QUEUE</div>
+        <div class="stat-value">{{ inQueue }}</div>
+        <div class="stat-sub">{{ urgentCount }} urgent priority</div>
+      </div>
+      <div class="stat-sparkline queue-bar"></div>
+    </div>
 
-          <div class="nav-controls">
-            <button class="cal-btn" type="button" (click)="changeMonth(-1)">‹</button>
-            <button class="cal-btn" type="button" (click)="changeMonth(1)">›</button>
+    <div class="stat-card stat-response">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-title">AVG. RESPONSE</div>
+        <div class="stat-value">{{ avgResponse }}</div>
+        <div class="stat-sub">Target: 15 mins</div>
+      </div>
+      <div class="stat-sparkline response-bar"></div>
+    </div>
+  </div>
+
+  <!-- Main layout -->
+  <div class="dashboard-main-grid">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+      <!-- Patients table -->
+      <div class="card patients-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">Patients</div>
+            <div class="card-sub">Your latest patient list</div>
+          </div>
+          <div class="card-actions">
+            <span class="sort-label">Sort: A–Z</span>
+            <button class="see-all-btn" type="button" [routerLink]="['/patients']">See All</button>
           </div>
         </div>
 
-        <div class="cal-legend">
-          <span class="leg"><span class="leg-dot sched"></span>Scheduled</span>
-          <span class="leg"><span class="leg-dot pend"></span>Pending</span>
-        </div>
+        @if (patientRows.length === 0 && !isLoading) {
+          <div class="empty-state">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+            <p>No patient records found</p>
+          </div>
+        }
+
+        @if (patientRows.length > 0) {
+          <table class="patients-table">
+            <thead>
+              <tr>
+                <th>NAME</th>
+                <th>CASE ID</th>
+                <th>PRIORITY</th>
+                <th>START DATE</th>
+                <th>END DATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (patient of patientRows; track patient.id) {
+                <tr class="patient-row" (click)="openPatient(patient.id)">
+                  <td>
+                    <div class="patient-cell">
+                      <div class="avatar" [class]="'avatar-' + priorityClass(patient.priority)">
+                        {{ patient.initials }}
+                      </div>
+                      <div>
+                        <div class="patient-name">{{ patient.name }}</div>
+                        <div class="patient-meta">{{ patient.age }} yrs · {{ patient.gender }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="case-id-cell">{{ patient.caseId }}</td>
+                  <td>
+                    <span class="priority-badge" [class]="'priority-' + priorityClass(patient.priority)">
+                      {{ patient.priority }}
+                    </span>
+                  </td>
+                  <td>{{ patient.startDate }}</td>
+                  <td>{{ patient.endDate }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
       </div>
 
-      @if (monthPickerOpen) {
-        <div class="month-picker" (click)="$event.stopPropagation()">
-          @for (m of monthOptions; track m.index) {
+      <!-- Schedule timeline -->
+      <div class="card schedule-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">Today's Schedule</div>
+            <div class="card-sub">Today's appointments overview</div>
+          </div>
+          <button class="open-schedule-btn" type="button" (click)="goToSchedule()">Open Schedule →</button>
+        </div>
+
+        <div class="timeline-wrap">
+          <div class="time-labels">
+            <span>08:00</span>
+            <span>10:00</span>
+            <span>12:00</span>
+            <span>14:00</span>
+            <span>16:00</span>
+            <span>18:00</span>
+          </div>
+          <div class="timeline-track">
+            <div class="today-tag">TODAY</div>
+            @for (block of todaySchedule; track block.id) {
+              <div
+                class="sched-block"
+                (click)="openPatient(block.patientId)"
+                [style.left]="block.left"
+                [style.background]="block.bg"
+                [style.border-left]="'3px solid ' + block.color">
+                <div class="sched-time" [style.color]="block.color">{{ block.time }}</div>
+                <div class="sched-name">{{ block.patientName }}</div>
+                <div class="sched-note">{{ block.note }}</div>
+              </div>
+            }
+            @if (todaySchedule.length === 0 && !isLoading) {
+              <div class="no-schedule">No appointments scheduled for today</div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Calendar + Appointments -->
+    <div class="right-panel">
+      <div class="card calendar-card">
+
+        <!-- Month header -->
+        <div class="cal-header">
+          <div class="cal-month">{{ calendarMonth }}</div>
+          <div class="cal-nav">
+            <button class="cal-nav-btn" type="button">‹</button>
+            <button class="cal-nav-btn" type="button">›</button>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="cal-legend">
+          <span class="legend-item"><span class="leg-dot green"></span> Scheduled</span>
+          <span class="legend-item"><span class="leg-dot amber"></span> Pending</span>
+        </div>
+
+        <!-- Day headers -->
+        <div class="cal-grid cal-days-header">
+          <span>MON</span><span>TUE</span><span>WED</span>
+          <span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+        </div>
+
+        <!-- Calendar days -->
+        <div class="cal-grid cal-dates">
+          @for (day of calendarDays; track $index) {
             <button
+              class="cal-day"
               type="button"
-              class="month-option"
-              [class.active]="m.index === currentMonthIndex"
-              (click)="selectMonth(m.index, $event)">
-              {{ m.label }}
+              [class.empty]="!day.date"
+              [class.today]="day.isToday"
+              [class.selected]="day.isSelected"
+              [class.has-appt]="day.hasAppointment"
+              [class.is-pending]="day.isPending"
+              (click)="selectDate(day)">
+              {{ day.date ?? '' }}
+              @if (day.hasAppointment) {
+                <span class="cal-dot green-dot"></span>
+              }
+              @if (day.isPending) {
+                <span class="cal-dot amber-dot"></span>
+              }
             </button>
           }
         </div>
-      }
 
-      <div class="cal-body">
-        <div class="cal-days">
-          @for (d of weekDays; track d) {
-            <div class="cal-day-header">{{ d }}</div>
+        <!-- Appointments list -->
+        <div class="appts-section">
+          <div class="appts-title">APPOINTMENTS · {{ selectedDate }}</div>
+
+          @if (todayAppointments.length === 0) {
+            <div class="no-appts">No appointments on this date</div>
           }
-        </div>
 
-        <div class="cal-grid">
-          @for (d of calendarDays; track $index) {
-            <div
-              class="cal-day"
-              [class.today]="d.isToday"
-              [class.empty]="!d.day"
-              [class.selected]="d.fullDate === selectedDate"
-              (click)="d.fullDate ? selectCalendarDate(d.fullDate) : null">
-
-              {{ d.day }}
-
-              @if (d.hasAppt) {
-                <div class="cdot"></div>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="appt-section">
-          <div class="appt-section-title">
-            {{ selectedDate ? ('Appointments · ' + selectedDate) : "Today's Appointments" }}
-          </div>
-
-          @if (filteredAppointments.length > 0) {
-            <div class="appt-list">
-              @for (a of filteredAppointments; track $index) {
-                <div class="appt-row">
-                  <span class="appt-time">{{ a.time }}</span>
-                  <div class="appt-dot" [style.background]="a.color"></div>
-                  <div class="appt-info">
-                    <div class="appt-name">{{ a.name }}</div>
-                    <div class="appt-type">{{ a.type }}</div>
-                  </div>
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="empty-appointments">
-              No appointments on this date
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card timeline-card">
-    <div class="card-header">
-      <div>
-        <div class="card-title">Today's Schedule</div>
-        <div class="card-sub">Today’s appointments overview</div>
-      </div>
-      <a routerLink="/schedule" class="card-action">Open Schedule</a>
-    </div>
-
-    <div class="timeline-wrap">
-      <div class="timeline-scale">
-        @for (h of timelineHours; track h) {
-          <div class="timeline-hour">{{ h }}</div>
-        }
-      </div>
-
-      @if (scheduleRows.length > 0) {
-        @for (row of scheduleRows; track row.day) {
-          <div class="timeline-row">
-            <div class="timeline-day">{{ row.day }}</div>
-
-            <div class="timeline-lane">
-              <div class="timeline-grid-lines">
-                @for (h of timelineHours; track h) {
-                  <div class="timeline-line"></div>
-                }
+          @for (appt of todayAppointments; track appt.id) {
+            <div class="appt-row" (click)="openPatient(appt.patientId)">
+              <div class="appt-time">{{ appt.time }}</div>
+              <div class="appt-indicator" [style.background]="appt.color"></div>
+              <div class="appt-info">
+                <div class="appt-name">{{ appt.patientName }}</div>
+                <div class="appt-note">{{ appt.note }}</div>
               </div>
-
-              @for (block of row.blocks; track $index) {
-                <div
-                  class="timeline-block"
-                  [style.left]="block.left"
-                  [style.width]="block.width"
-                  [style.background]="block.bg"
-                  [style.color]="block.color">
-                  <div class="tb-time">{{ block.time }}</div>
-                  <div class="tb-label">{{ block.label }}</div>
-                  <div class="tb-type">{{ block.type }}</div>
-                </div>
-              }
+              <span class="appt-status" [class]="'appt-' + appt.status">{{ appt.status }}</span>
             </div>
-          </div>
-        }
-      } @else {
-        <div class="timeline-empty">
-          No appointments scheduled for today
+          }
         </div>
-      }
+      </div>
     </div>
-  </div>
 
+  </div>
 </div>

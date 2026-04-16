@@ -20,7 +20,7 @@ export interface Appointment {
 })
 export class AppointmentService {
 
-  private baseUrl = 'http://192.168.1.5:8080';
+  private baseUrl = 'http://192.168.1.76:8080';
 
   constructor(private http: HttpClient) {}
 

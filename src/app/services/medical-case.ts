@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class MedicalCaseService {
 
-  private baseUrl = 'http://192.168.1.5:8080';
+  private baseUrl = 'http://192.168.1.76:8080';
 
   constructor(private http: HttpClient) {}
 

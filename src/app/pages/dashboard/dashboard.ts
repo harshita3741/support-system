@@ -1,30 +1,51 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { AuthService } from '../../services/auth';
-import { MedicalCaseService } from '../../services/medical-case';
-import { AppointmentService, Appointment } from '../../services/appointment.service';
+import { Router, RouterLink } from '@angular/router';
 
-type CalendarDay = {
-  day: number | null;
-  isToday: boolean;
-  hasAppt: boolean;
-  fullDate?: string;
+type DoctorKey = 'cardio' | 'neuro' | 'ortho';
+type PriorityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+
+type PatientRow = {
+  id: string;
+  name: string;
+  initials: string;
+  caseId: string;
+  priority: PriorityLevel | string;
+  startDate: string;
+  endDate: string;
+  age: number;
+  gender: string;
+  reason: string;
 };
 
-type TimelineBlock = {
-  label: string;
+type AppointmentItem = {
+  id: number;
+  patientId: string;
+  patientName: string;
+  time: string;
+  note: string;
+  color: string;
+  status: 'scheduled' | 'pending' | 'completed' | 'cancelled';
+};
+
+type ScheduleBlock = {
+  id: number;
+  patientId: string;
+  patientName: string;
+  time: string;
+  note: string;
   left: string;
   width: string;
   bg: string;
   color: string;
-  time?: string;
-  type?: string;
 };
 
-type ScheduleRow = {
-  day: string;
-  blocks: TimelineBlock[];
+type CalendarDay = {
+  date: number | null;
+  isToday: boolean;
+  isSelected: boolean;
+  hasAppointment: boolean;
+  isPending: boolean;
 };
 
 @Component({
@@ -35,449 +56,339 @@ type ScheduleRow = {
   styleUrls: ['./dashboard.css']
 })
 export class Dashboard implements OnInit {
-  doctorName = 'Doctor';
-  doctorDept = '';
-  doctorId = '';
-  greeting = 'Good Morning';
+  doctorKey: DoctorKey = 'cardio';
+  doctorName = 'Dr. Smith';
+  doctorDepartment = 'CARDIO';
 
-  monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  greeting = 'Good Afternoon';
+  isLoading = false;
 
-  shortMonthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
+  patientRows: PatientRow[] = [];
+  todayAppointments: AppointmentItem[] = [];
+  todaySchedule: ScheduleBlock[] = [];
 
-  currentMonthIndex = new Date().getMonth();
-  currentYear = new Date().getFullYear();
-  currentMonthLabel = '';
-  scheduleMonthLabel = '';
-
-  statCards = [
-    { label: "Today's Cases", value: '0', sub: '0 resolved today', barColor: '#0d6e6e', lightColor: '#e0f2f1', bars: [12, 18, 10, 22, 14, 30] },
-    { label: 'In Queue', value: '0', sub: '0 urgent priority', barColor: '#f59e0b', lightColor: '#fef3c7', bars: [8, 16, 12, 20, 9, 30] },
-    { label: 'Avg. Response', value: '12m', sub: 'Target: 15 mins', barColor: '#16a34a', lightColor: '#dcfce7', bars: [18, 22, 14, 26, 20, 30] }
-  ];
-
-  filteredPatients: any[] = [];
-  filteredAppointments: any[] = [];
-
+  calendarMonth = 'April 2026';
+  selectedDate = '2026-04-16';
   calendarDays: CalendarDay[] = [];
-  realAppointments: Appointment[] = [];
-  todaysAppointments: TimelineBlock[] = [];
-  calendarAppointmentDates: string[] = [];
-  selectedDateAppointments: Appointment[] = [];
-  selectedDate = '';
 
-  monthPickerOpen = false;
-
-  monthOptions = [
-    { index: 0, label: 'January 2026' },
-    { index: 1, label: 'February 2026' },
-    { index: 2, label: 'March 2026' },
-    { index: 3, label: 'April 2026' },
-    { index: 4, label: 'May 2026' },
-    { index: 5, label: 'June 2026' },
-    { index: 6, label: 'July 2026' },
-    { index: 7, label: 'August 2026' },
-    { index: 8, label: 'September 2026' },
-    { index: 9, label: 'October 2026' },
-    { index: 10, label: 'November 2026' },
-    { index: 11, label: 'December 2026' }
-  ];
-
-  timelineHours = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
-  weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-  scheduleRows: ScheduleRow[] = [];
-
-  constructor(
-    private auth: AuthService,
-    private caseService: MedicalCaseService,
-    private appointmentService: AppointmentService
-  ) {}
-
-  ngOnInit() {
-    const session = this.auth.getSession();
-    if (session) {
-      this.doctorName = session.name;
-      this.doctorDept = session.dept;
-      this.doctorId = session.id;
-    }
-
-    const hour = new Date().getHours();
-    if (hour < 12) this.greeting = 'Good Morning';
-    else if (hour < 17) this.greeting = 'Good Afternoon';
-    else this.greeting = 'Good Evening';
-
-    this.updateLabels();
-
-    this.useDummyData();
-    this.useMockAppointmentsForCheck();
-
-    this.loadPatients();
-    this.loadAppointments();
-  }
-
-  @HostListener('document:click')
-  closeMonthPickerOnOutsideClick() {
-    this.monthPickerOpen = false;
-  }
-
-  updateLabels() {
-    this.currentMonthLabel = `${this.monthNames[this.currentMonthIndex]} ${this.currentYear}`;
-    this.scheduleMonthLabel = `${this.shortMonthNames[this.currentMonthIndex]} ${this.currentYear}`;
-  }
-
-  toggleMonthPicker(event?: MouseEvent) {
-    if (event) event.stopPropagation();
-    this.monthPickerOpen = !this.monthPickerOpen;
-  }
-
-  changeMonth(step: number) {
-    this.currentMonthIndex += step;
-
-    if (this.currentMonthIndex < 0) {
-      this.currentMonthIndex = 11;
-      this.currentYear--;
-    } else if (this.currentMonthIndex > 11) {
-      this.currentMonthIndex = 0;
-      this.currentYear++;
-    }
-
-    this.updateLabels();
-    this.buildCalendarForCurrentData();
-    this.selectedDateAppointments = [];
-    this.filteredAppointments = [];
-    this.selectedDate = '';
-    this.monthPickerOpen = false;
-  }
-
-  selectMonth(monthIndex: number, event?: MouseEvent) {
-    if (event) event.stopPropagation();
-    this.currentMonthIndex = monthIndex;
-    this.updateLabels();
-    this.buildCalendarForCurrentData();
-    this.selectedDateAppointments = [];
-    this.filteredAppointments = [];
-    this.selectedDate = '';
-    this.monthPickerOpen = false;
-  }
-
-  loadPatients() {
-    if (!this.doctorId) {
-      this.useDummyData();
-      return;
-    }
-
-    this.caseService.getCasesByDoctor(this.doctorId).subscribe({
-      next: (cases: any[]) => {
-        if (cases && cases.length > 0) {
-          this.filteredPatients = cases.slice(0, 4).map((c: any) => ({
-            id: c.caseId,
-            name: c.patientName,
-            initials: c.patientName?.substring(0, 2).toUpperCase(),
-            age: c.age || '--',
-            gender: c.gender || '--',
-            priority: c.priority || 'Medium',
-            date: 'Today',
-            bg: '#eff6ff',
-            color: '#1d4ed8'
-          }));
-
-          this.statCards[0].value = cases.length.toString();
-          this.statCards[0].sub = `${cases.filter((c: any) => c.status === 'CLOSED').length} resolved today`;
-          this.statCards[1].value = cases.filter((c: any) => c.status === 'OPEN').length.toString();
-          this.statCards[1].sub = `${cases.filter((c: any) => c.priority === 'HIGH').length} urgent priority`;
-        } else {
-          this.useDummyData();
+  doctorSeedData: Record<DoctorKey, {
+    doctorName: string;
+    department: string;
+    patients: PatientRow[];
+    appointments: AppointmentItem[];
+    schedule: ScheduleBlock[];
+  }> = {
+    cardio: {
+      doctorName: 'Dr. Smith',
+      department: 'CARDIO',
+      patients: [
+        {
+          id: 'C-1042',
+          name: 'Priya Mehta',
+          initials: 'PM',
+          caseId: 'CASE-1001',
+          priority: 'MEDIUM',
+          startDate: 'Today',
+          endDate: '—',
+          age: 52,
+          gender: 'Female',
+          reason: 'Cardiac follow-up'
+        },
+        {
+          id: 'C-1043',
+          name: 'Rohan Verma',
+          initials: 'RV',
+          caseId: 'CASE-1002',
+          priority: 'MEDIUM',
+          startDate: 'Today',
+          endDate: '—',
+          age: 48,
+          gender: 'Male',
+          reason: 'Post-op check'
         }
-      },
-      error: () => this.useDummyData()
-    });
-  }
-
-  loadAppointments() {
-    const doctorIdNum = Number(this.doctorId);
-
-    if (!doctorIdNum) {
-      this.useMockAppointmentsForCheck();
-      return;
-    }
-
-    this.appointmentService.getAppointmentsByDoctor(doctorIdNum).subscribe({
-      next: (appointments: Appointment[]) => {
-        this.realAppointments = (appointments && appointments.length > 0)
-          ? appointments
-          : this.getMockAppointments();
-
-        this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
-        this.syncTimelineWithAppointments();
-        this.buildCalendarForCurrentData();
-
-        const todayStr = this.toYMD(new Date());
-        const hasToday = this.realAppointments.some(a => a.date === todayStr);
-
-        if (hasToday) {
-          this.selectedDate = todayStr;
-          this.selectCalendarDate(todayStr);
-        } else if (this.realAppointments.length > 0) {
-          const firstSortedDate = [...this.realAppointments]
-            .sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]?.date;
-
-          if (firstSortedDate) {
-            this.selectedDate = firstSortedDate;
-            this.selectCalendarDate(firstSortedDate);
-          }
-        } else {
-          this.selectedDate = '';
-          this.selectedDateAppointments = [];
-          this.filteredAppointments = [];
+      ],
+      appointments: [
+        {
+          id: 1,
+          patientId: 'C-1042',
+          patientName: 'Priya Mehta',
+          time: '09:00 AM',
+          note: 'Follow-up consultation',
+          color: '#3b82f6',
+          status: 'scheduled'
+        },
+        {
+          id: 2,
+          patientId: 'C-1043',
+          patientName: 'Rohan Verma',
+          time: '02:30 PM',
+          note: 'Post-op check',
+          color: '#2563eb',
+          status: 'pending'
         }
-      },
-      error: () => {
-        this.useMockAppointmentsForCheck();
-      }
-    });
-  }
-
-  private useMockAppointmentsForCheck() {
-    this.realAppointments = this.getMockAppointments();
-    this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
-    this.syncTimelineWithAppointments();
-    this.buildCalendarForCurrentData();
-
-    const todayStr = this.toYMD(new Date());
-    const hasToday = this.realAppointments.some(a => a.date === todayStr);
-
-    if (hasToday) {
-      this.selectedDate = todayStr;
-      this.selectCalendarDate(todayStr);
-    } else if (this.realAppointments.length > 0) {
-      const firstSortedDate = [...this.realAppointments]
-        .sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]?.date;
-
-      if (firstSortedDate) {
-        this.selectedDate = firstSortedDate;
-        this.selectCalendarDate(firstSortedDate);
-      }
-    }
-  }
-
-  private getMockAppointments(): Appointment[] {
-    const today = new Date();
-    const todayStr = this.toYMD(today);
-
-    const extraDate = new Date(today.getFullYear(), today.getMonth(), 22);
-    const extraDateStr = this.toYMD(extraDate);
-
-    return [
-      {
-        id: 9001,
-        doctorId: Number(this.doctorId) || 1,
-        patientName: 'Aarav Mehta',
-        date: todayStr,
-        timeSlot: '09:00 AM',
-        reason: 'Follow-up consultation',
-        status: 'SCHEDULED'
-      } as Appointment,
-      {
-        id: 9002,
-        doctorId: Number(this.doctorId) || 1,
-        patientName: 'Neha Sharma',
-        date: todayStr,
-        timeSlot: '11:00 AM',
-        reason: 'MRI review',
-        status: 'PENDING'
-      } as Appointment,
-      {
-        id: 9003,
-        doctorId: Number(this.doctorId) || 1,
-        patientName: 'Rohan Verma',
-        date: todayStr,
-        timeSlot: '02:30 PM',
-        reason: 'Post-op check',
-        status: 'SCHEDULED'
-      } as Appointment,
-      {
-        id: 9004,
-        doctorId: Number(this.doctorId) || 1,
-        patientName: 'Simran Kaur',
-        date: extraDateStr,
-        timeSlot: '10:30 AM',
-        reason: 'Review visit',
-        status: 'SCHEDULED'
-      } as Appointment
-    ];
-  }
-
-  syncTimelineWithAppointments() {
-    const todayStr = this.toYMD(new Date());
-
-    this.todaysAppointments = this.realAppointments
-      .filter(a => a.date === todayStr)
-      .sort((a, b) => this.timeSlotToHour(a.timeSlot) - this.timeSlotToHour(b.timeSlot))
-      .map(a => ({
-        label: a.patientName || 'Patient',
-        time: a.timeSlot,
-        type: a.reason || 'Appointment',
-        left: this.calculatePosition(a.timeSlot),
-        width: '14%',
-        bg: this.getTimelineBg(a.status || 'SCHEDULED'),
-        color: this.getTimelineText(a.status || 'SCHEDULED')
-      }));
-
-    this.scheduleRows = [
-      {
-        day: 'Today',
-        blocks: this.todaysAppointments
-      }
-    ];
-
-    this.statCards[2].value = this.todaysAppointments.length > 0 ? 'Live' : '—';
-    this.statCards[2].sub = this.todaysAppointments.length > 0
-      ? `${this.todaysAppointments.length} appointments today`
-      : 'No appointments today';
-  }
-
-  private calculatePosition(timeSlot: string): string {
-    const hour = this.timeSlotToHour(timeSlot);
-    const startRange = 8;
-    const endRange = 18;
-    const pct = ((hour - startRange) / (endRange - startRange)) * 100;
-    return `${Math.max(2, Math.min(pct, 88))}%`;
-  }
-
-  private timeSlotToHour(timeSlot: string): number {
-    if (!timeSlot) return 8;
-
-    const [time, period] = timeSlot.trim().split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-
-    return hours + (minutes === 30 ? 0.5 : 0);
-  }
-
-  private getTimelineBg(status: string): string {
-    switch (status) {
-      case 'COMPLETED': return '#dcfce7';
-      case 'CANCELLED': return '#fee2e2';
-      case 'PENDING': return '#fef3c7';
-      case 'SCHEDULED':
-      default: return '#dbeafe';
-    }
-  }
-
-  private getTimelineText(status: string): string {
-    switch (status) {
-      case 'COMPLETED': return '#166534';
-      case 'CANCELLED': return '#991b1b';
-      case 'PENDING': return '#92400e';
-      case 'SCHEDULED':
-      default: return '#1e3a8a';
-    }
-  }
-
-  getAppointmentColor(status: string): string {
-    switch (status) {
-      case 'SCHEDULED': return '#635bff';
-      case 'COMPLETED': return '#16a34a';
-      case 'CANCELLED': return '#ef4444';
-      case 'PENDING': return '#f59e0b';
-      default: return '#0d6e6e';
-    }
-  }
-
-  useDummyData() {
-    const allDummy: any = {
-      CARDIO: [
-        { id: 'C-1042', initials: 'PM', name: 'Priya Mehta', age: 52, gender: 'F', priority: 'Medium', date: 'Today', bg: '#fff8f0', color: '#c2410c' },
-        { id: 'C-1038', initials: 'RS', name: 'Rajesh Singh', age: 61, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'C-1035', initials: 'AL', name: 'Aisha Lakhani', age: 44, gender: 'F', priority: 'Low', date: 'Today', bg: '#fdf4ff', color: '#7e22ce' },
-        { id: 'C-1030', initials: 'VG', name: 'Vikram Gupta', age: 57, gender: 'M', priority: 'Medium', date: 'Today', bg: '#eff6ff', color: '#1d4ed8' }
       ],
-      NEURO: [
-        { id: 'N-2011', initials: 'AS', name: 'Amit Sharma', age: 45, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'N-2012', initials: 'RD', name: 'Rina Desai', age: 38, gender: 'F', priority: 'Medium', date: 'Today', bg: '#eff6ff', color: '#1d4ed8' },
-        { id: 'N-2013', initials: 'KP', name: 'Karan Patel', age: 52, gender: 'M', priority: 'Low', date: 'Today', bg: '#f0fdf4', color: '#15803d' }
-      ],
-      ORTHO: [
-        { id: 'O-3011', initials: 'SB', name: 'Sneha Bhatt', age: 29, gender: 'F', priority: 'Medium', date: 'Today', bg: '#fff8f0', color: '#c2410c' },
-        { id: 'O-3012', initials: 'MK', name: 'Mohit Kumar', age: 41, gender: 'M', priority: 'High', date: 'Today', bg: '#fef2f2', color: '#b91c1c' },
-        { id: 'O-3013', initials: 'PJ', name: 'Pooja Jain', age: 55, gender: 'F', priority: 'Low', date: 'Today', bg: '#f0fdf4', color: '#15803d' }
+      schedule: [
+        {
+          id: 1,
+          patientId: 'C-1042',
+          patientName: 'Priya Mehta',
+          time: '09:00 AM',
+          note: 'Follow-up consultation',
+          left: '11%',
+          width: '14%',
+          bg: '#dbeafe',
+          color: '#1d4ed8'
+        },
+        {
+          id: 2,
+          patientId: 'C-1043',
+          patientName: 'Rohan Verma',
+          time: '02:30 PM',
+          note: 'Post-op check',
+          left: '66%',
+          width: '13%',
+          bg: '#dbeafe',
+          color: '#1d4ed8'
+        }
       ]
-    };
-
-    this.filteredPatients = allDummy[this.doctorDept] || allDummy['CARDIO'];
-    this.statCards[0].value = this.filteredPatients.length.toString();
-    this.statCards[0].sub = '0 resolved today';
-    this.statCards[1].value = '1';
-    this.statCards[1].sub = '1 urgent priority';
-  }
-
-  buildCalendar() {
-    this.calendarDays = [];
-    const firstDay = new Date(this.currentYear, this.currentMonthIndex, 1);
-    const startDay = firstDay.getDay();
-    const blanks = startDay === 0 ? 6 : startDay - 1;
-    const daysInMonth = new Date(this.currentYear, this.currentMonthIndex + 1, 0).getDate();
-
-    for (let i = 0; i < blanks; i++) {
-      this.calendarDays.push({ day: null, isToday: false, hasAppt: false });
+    },
+    neuro: {
+      doctorName: 'Dr. Adams',
+      department: 'NEURO',
+      patients: [
+        {
+          id: 'N-2011',
+          name: 'Amit Sharma',
+          initials: 'AS',
+          caseId: 'CASE-2001',
+          priority: 'HIGH',
+          startDate: 'Today',
+          endDate: '—',
+          age: 45,
+          gender: 'Male',
+          reason: 'Migraine review'
+        },
+        {
+          id: 'N-2012',
+          name: 'Neha Sharma',
+          initials: 'NS',
+          caseId: 'CASE-2002',
+          priority: 'MEDIUM',
+          startDate: 'Today',
+          endDate: '—',
+          age: 39,
+          gender: 'Female',
+          reason: 'MRI review'
+        }
+      ],
+      appointments: [
+        {
+          id: 3,
+          patientId: 'N-2011',
+          patientName: 'Amit Sharma',
+          time: '10:00 AM',
+          note: 'Migraine consultation',
+          color: '#8b5cf6',
+          status: 'scheduled'
+        },
+        {
+          id: 4,
+          patientId: 'N-2012',
+          patientName: 'Neha Sharma',
+          time: '11:30 AM',
+          note: 'MRI review',
+          color: '#f59e0b',
+          status: 'pending'
+        }
+      ],
+      schedule: [
+        {
+          id: 3,
+          patientId: 'N-2011',
+          patientName: 'Amit Sharma',
+          time: '10:00 AM',
+          note: 'Migraine consultation',
+          left: '20%',
+          width: '13%',
+          bg: '#ede9fe',
+          color: '#6d28d9'
+        },
+        {
+          id: 4,
+          patientId: 'N-2012',
+          patientName: 'Neha Sharma',
+          time: '11:30 AM',
+          note: 'MRI review',
+          left: '35%',
+          width: '14%',
+          bg: '#fef3c7',
+          color: '#b45309'
+        }
+      ]
+    },
+    ortho: {
+      doctorName: 'Dr. Patel',
+      department: 'ORTHO',
+      patients: [
+        {
+          id: 'O-3001',
+          name: 'Vikram Singh',
+          initials: 'VS',
+          caseId: 'CASE-3001',
+          priority: 'MEDIUM',
+          startDate: 'Today',
+          endDate: '—',
+          age: 56,
+          gender: 'Male',
+          reason: 'Knee pain review'
+        },
+        {
+          id: 'O-3002',
+          name: 'Pooja Nair',
+          initials: 'PN',
+          caseId: 'CASE-3002',
+          priority: 'HIGH',
+          startDate: 'Today',
+          endDate: '—',
+          age: 34,
+          gender: 'Female',
+          reason: 'Fracture follow-up'
+        }
+      ],
+      appointments: [
+        {
+          id: 5,
+          patientId: 'O-3001',
+          patientName: 'Vikram Singh',
+          time: '09:30 AM',
+          note: 'Knee pain review',
+          color: '#10b981',
+          status: 'scheduled'
+        },
+        {
+          id: 6,
+          patientId: 'O-3002',
+          patientName: 'Pooja Nair',
+          time: '03:00 PM',
+          note: 'Fracture follow-up',
+          color: '#ef4444',
+          status: 'pending'
+        }
+      ],
+      schedule: [
+        {
+          id: 5,
+          patientId: 'O-3001',
+          patientName: 'Vikram Singh',
+          time: '09:30 AM',
+          note: 'Knee pain review',
+          left: '15%',
+          width: '14%',
+          bg: '#d1fae5',
+          color: '#047857'
+        },
+        {
+          id: 6,
+          patientId: 'O-3002',
+          patientName: 'Pooja Nair',
+          time: '03:00 PM',
+          note: 'Fracture follow-up',
+          left: '70%',
+          width: '13%',
+          bg: '#fee2e2',
+          color: '#b91c1c'
+        }
+      ]
     }
+  };
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayStr = String(day).padStart(2, '0');
-      const monthStr = String(this.currentMonthIndex + 1).padStart(2, '0');
-      const fullDate = `${this.currentYear}-${monthStr}-${dayStr}`;
+  constructor(private router: Router) {}
 
-      const today = new Date();
-      const isToday =
-        today.getFullYear() === this.currentYear &&
-        today.getMonth() === this.currentMonthIndex &&
-        today.getDate() === day;
+  ngOnInit(): void {
+    this.detectLoggedInDoctor();
+    this.loadDoctorDashboardData();
+    this.buildCalendarDays();
+  }
 
-      this.calendarDays.push({
-        day,
-        isToday,
-        hasAppt: this.calendarAppointmentDates.includes(fullDate),
-        fullDate
-      });
+  detectLoggedInDoctor(): void {
+    const storedDept = (localStorage.getItem('doctorDepartment') || '').toLowerCase();
+
+    if (storedDept.includes('neuro')) {
+      this.doctorKey = 'neuro';
+    } else if (storedDept.includes('ortho')) {
+      this.doctorKey = 'ortho';
+    } else {
+      this.doctorKey = 'cardio';
     }
   }
 
-  buildCalendarForCurrentData() {
-    this.buildCalendar();
+  loadDoctorDashboardData(): void {
+    const data = this.doctorSeedData[this.doctorKey];
+    this.doctorName = data.doctorName;
+    this.doctorDepartment = data.department;
+    this.patientRows = [...data.patients];
+    this.todayAppointments = [...data.appointments];
+    this.todaySchedule = [...data.schedule];
+    this.isLoading = false;
   }
 
-  hasAppointmentOnDate(fullDate: string): boolean {
-    return this.calendarAppointmentDates.includes(fullDate);
+  priorityClass(priority: string): 'high' | 'medium' | 'low' {
+    const p = (priority || '').toLowerCase();
+    if (p.includes('high')) return 'high';
+    if (p.includes('low')) return 'low';
+    return 'medium';
   }
 
-  selectCalendarDate(fullDate: string) {
-    this.selectedDate = fullDate;
-    this.selectedDateAppointments = this.realAppointments
-      .filter(a => a.date === fullDate)
-      .sort((a, b) => this.timeSlotToHour(a.timeSlot) - this.timeSlotToHour(b.timeSlot));
+  openPatient(patientId: string): void {
+    if (!patientId) return;
+    this.router.navigate(['/monitor', patientId]);
+  }
 
-    this.filteredAppointments = this.selectedDateAppointments.map(a => ({
-      time: a.timeSlot,
-      name: a.patientName,
-      type: a.reason || 'Appointment',
-      color: this.getAppointmentColor(a.status || 'SCHEDULED')
+  goToSchedule(): void {
+    this.router.navigate(['/schedule']);
+  }
+
+  selectDate(day: CalendarDay): void {
+    if (!day.date) return;
+    this.selectedDate = `2026-04-${String(day.date).padStart(2, '0')}`;
+    this.calendarDays = this.calendarDays.map(d => ({
+      ...d,
+      isSelected: d.date === day.date
     }));
   }
 
-  getPriorityClass(priority: string): string {
-    if (priority === 'High' || priority === 'HIGH') return 'prio-high';
-    if (priority === 'Low' || priority === 'LOW') return 'prio-low';
-    return 'prio-medium';
+  buildCalendarDays(): void {
+    const daysInMonth = 30;
+    const today = 16;
+    this.calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
+      const date = i + 1;
+      return {
+        date,
+        isToday: date === today,
+        isSelected: date === today,
+        hasAppointment: [9, 11, 15, 16, 19, 23, 28].includes(date),
+        isPending: [10, 14, 18, 24, 27].includes(date)
+      };
+    });
   }
 
-  private toYMD(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  get totalCases(): number {
+    return this.patientRows.length;
+  }
+
+  get resolvedCases(): number {
+    return Math.max(this.patientRows.length - 1, 0);
+  }
+
+  get urgentCount(): number {
+    return this.patientRows.filter(p => this.priorityClass(p.priority) === 'high').length;
+  }
+
+  get avgResponse(): string {
+    return 'Live';
+  }
+
+  get inQueue(): number {
+    return Math.max(this.patientRows.length - 1, 0);
   }
 }

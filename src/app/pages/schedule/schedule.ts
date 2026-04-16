@@ -1,38 +1,36 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppointmentService, Appointment } from '../../services/appointment.service';
-import { AuthService } from '../../services/auth';
+import { Router } from '@angular/router';
 
-export interface CalendarEvent {
+type DoctorKey = 'cardio' | 'neuro' | 'ortho';
+
+type ScheduleEvent = {
   id: number;
+  patientId: string;
+  patientName: string;
   title: string;
-  type: 'video' | 'hospital' | 'home' | 'audio' | 'in-person' | 'break' | 'meeting' | 'leave';
+  type: 'video' | 'hospital' | 'home' | 'in-person';
   startHour: number;
   endHour: number;
-  patientName?: string;
-  date?: string;
-  source?: 'backend' | 'leave';
-}
+  note: string;
+};
 
-export interface DayColumn {
+type SidePatient = {
+  id: string;
   name: string;
+  age: number;
+  gender: string;
+  caseId: string;
+  reason: string;
+};
+
+type DayColumn = {
   short: string;
   date: number;
   fullDate: string;
   isToday: boolean;
-  isSelected: boolean;
-  events: CalendarEvent[];
-}
-
-export interface MonthCell {
-  date: Date;
-  day: number;
-  fullDate: string;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  isSelected: boolean;
-  eventCount: number;
-}
+  events: ScheduleEvent[];
+};
 
 @Component({
   selector: 'app-schedule',
@@ -41,399 +39,164 @@ export interface MonthCell {
   templateUrl: './schedule.html',
   styleUrls: ['./schedule.css']
 })
-export class Schedule implements OnInit, OnDestroy {
-  viewMode: 'week' | 'month' = 'week';
-  weekLabel = '';
-  weekNumber = '';
-  monthLabel = '';
-
+export class Schedule implements OnInit {
+  doctorKey: DoctorKey = 'cardio';
   currentDate = new Date();
-  selectedDate = '';
-
-  startHour = 8;
-  endHour = 18;
-  rowHeight = 64;
-  hours: string[] = [];
-  hourCount = 0;
-
-  currentTimeLabel = '';
-  currentTimePct = 0;
-  showTimeLine = false;
-
-  private timerId: any;
-  private pollTimer: any;
-
+  weekLabel = '';
   days: DayColumn[] = [];
-  monthDays: MonthCell[] = [];
+  hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
-  backendAppointments: CalendarEvent[] = [];
-  leaveBlocks: CalendarEvent[] = [];
-  allEvents: CalendarEvent[] = [];
+  sidePatients: SidePatient[] = [];
+  todayAppointments: ScheduleEvent[] = [];
 
-  typeConfig: Record<string, { icon: string; bg: string; color: string; border: string }> = {
-    video: { icon: '📹', bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
-    hospital: { icon: '🏥', bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
-    home: { icon: '🏠', bg: '#fef9c3', color: '#854d0e', border: '#fde68a' },
-    audio: { icon: '📞', bg: '#fce7f3', color: '#9d174d', border: '#f9a8d4' },
-    'in-person': { icon: '👤', bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' },
-    break: { icon: '☕', bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
-    meeting: { icon: '📋', bg: '#f0fdf4', color: '#166534', border: '#86efac' },
-    leave: { icon: '🚫', bg: '#fff7ed', color: '#9a3412', border: '#fdba74' }
+  doctorSeedData: Record<DoctorKey, { patients: SidePatient[]; appointments: ScheduleEvent[] }> = {
+    cardio: {
+      patients: [
+        { id: 'C-1042', name: 'Priya Mehta', age: 52, gender: 'Female', caseId: 'CASE-1001', reason: 'Cardiac follow-up' },
+        { id: 'C-1043', name: 'Rohan Verma', age: 48, gender: 'Male', caseId: 'CASE-1002', reason: 'Post-op check' }
+      ],
+      appointments: [
+        { id: 1, patientId: 'C-1042', patientName: 'Priya Mehta', title: 'Priya Mehta', type: 'video', startHour: 9, endHour: 10, note: 'Follow-up consultation' },
+        { id: 2, patientId: 'C-1043', patientName: 'Rohan Verma', title: 'Rohan Verma', type: 'home', startHour: 14.5, endHour: 16, note: 'Post-op check' }
+      ]
+    },
+    neuro: {
+      patients: [
+        { id: 'N-2011', name: 'Amit Sharma', age: 45, gender: 'Male', caseId: 'CASE-2001', reason: 'Migraine review' },
+        { id: 'N-2012', name: 'Neha Sharma', age: 39, gender: 'Female', caseId: 'CASE-2002', reason: 'MRI review' }
+      ],
+      appointments: [
+        { id: 3, patientId: 'N-2011', patientName: 'Amit Sharma', title: 'Amit Sharma', type: 'video', startHour: 10, endHour: 11, note: 'Migraine consultation' },
+        { id: 4, patientId: 'N-2012', patientName: 'Neha Sharma', title: 'Neha Sharma', type: 'hospital', startHour: 11.5, endHour: 12.5, note: 'MRI review' }
+      ]
+    },
+    ortho: {
+      patients: [
+        { id: 'O-3001', name: 'Vikram Singh', age: 56, gender: 'Male', caseId: 'CASE-3001', reason: 'Knee pain review' },
+        { id: 'O-3002', name: 'Pooja Nair', age: 34, gender: 'Female', caseId: 'CASE-3002', reason: 'Fracture follow-up' }
+      ],
+      appointments: [
+        { id: 5, patientId: 'O-3001', patientName: 'Vikram Singh', title: 'Vikram Singh', type: 'in-person', startHour: 9.5, endHour: 10.5, note: 'Knee pain review' },
+        { id: 6, patientId: 'O-3002', patientName: 'Pooja Nair', title: 'Pooja Nair', type: 'hospital', startHour: 15, endHour: 16, note: 'Fracture follow-up' }
+      ]
+    }
   };
 
-  constructor(
-    private appointmentService: AppointmentService,
-    private authService: AuthService
-  ) {}
+  constructor(private router: Router) {}
 
-  ngOnInit() {
-    this.buildHours();
-    this.selectedDate = this.toYMD(new Date());
-    this.loadAppointments();
-    this.refreshView();
-    this.updateCurrentTime();
-
-    this.timerId = setInterval(() => {
-      this.updateCurrentTime();
-    }, 60000);
-
-    this.pollTimer = setInterval(() => {
-      this.loadAppointments();
-    }, 30000);
+  ngOnInit(): void {
+    this.detectLoggedInDoctor();
+    this.loadDoctorData();
+    this.buildWeek();
+    this.attachTodayAppointments();
   }
 
-  ngOnDestroy() {
-    if (this.timerId) clearInterval(this.timerId);
-    if (this.pollTimer) clearInterval(this.pollTimer);
-  }
+  detectLoggedInDoctor(): void {
+    const storedDept = (localStorage.getItem('doctorDepartment') || '').toLowerCase();
 
-  loadAppointments() {
-    const doctorId = this.authService.getDoctorId();
-    if (!doctorId) return;
-
-    this.appointmentService.getAppointmentsByDoctor(Number(doctorId)).subscribe({
-      next: (appointments: Appointment[]) => {
-        this.backendAppointments = appointments.map((appt: Appointment, index: number) => {
-          const start = this.timeSlotToHour(appt.timeSlot);
-          return {
-            id: appt.id ?? index + 1,
-            title: appt.patientName || 'Patient Appointment',
-            type: this.resolveAppointmentType(appt),
-            startHour: start,
-            endHour: start + 0.5,
-            date: appt.date,
-            patientName: appt.patientName,
-            source: 'backend'
-          };
-        });
-
-        this.mergeAllEvents();
-      },
-      error: (err: any) => {
-        console.error('Failed to load appointments', err);
-      }
-    });
-  }
-
-  private resolveAppointmentType(appt: Appointment): CalendarEvent['type'] {
-    const mode = (appt as any).mode?.toLowerCase?.() || '';
-    if (mode.includes('video')) return 'video';
-    if (mode.includes('audio')) return 'audio';
-    if (mode.includes('home')) return 'home';
-    if (mode.includes('hospital')) return 'hospital';
-    return 'in-person';
-  }
-
-  private mergeAllEvents() {
-    this.allEvents = [...this.backendAppointments, ...this.leaveBlocks];
-    this.refreshView();
-  }
-
-  addLeave(fullDate: string) {
-    const reason = window.prompt('Enter Leave/Block Reason', 'Doctor Unavailable');
-    if (!reason) return;
-
-    const startStr = window.prompt('Start Time (HH:MM)', '13:00');
-    const endStr = window.prompt('End Time (HH:MM)', '14:00');
-
-    if (!startStr || !endStr) return;
-
-    const startHour = this.parseTimeToDecimal(startStr);
-    const endHour = this.parseTimeToDecimal(endStr);
-
-    if (isNaN(startHour) || isNaN(endHour)) {
-      alert('Invalid time format. Use HH:MM');
-      return;
-    }
-
-    if (startHour >= endHour) {
-      alert('End time must be greater than start time');
-      return;
-    }
-
-    this.leaveBlocks.push({
-      id: Date.now(),
-      title: reason,
-      type: 'leave',
-      startHour,
-      endHour,
-      date: fullDate,
-      source: 'leave'
-    });
-
-    this.mergeAllEvents();
-  }
-
-  deleteEvent(id: number, mouseEvent: MouseEvent) {
-    mouseEvent.stopPropagation();
-
-    const target = this.allEvents.find(e => e.id === id);
-    if (!target) return;
-
-    if (target.source === 'backend') {
-      alert('Patient appointments come from backend. Cancel them from backend flow.');
-      return;
-    }
-
-    if (confirm('Remove this leave block?')) {
-      this.leaveBlocks = this.leaveBlocks.filter(e => e.id !== id);
-      this.mergeAllEvents();
-    }
-  }
-
-  canDeleteEvent(event: CalendarEvent): boolean {
-    return event.source === 'leave';
-  }
-
-  parseTimeToDecimal(time: string): number {
-    const [h, m] = time.split(':').map(Number);
-    if ([h, m].some(v => isNaN(v))) return NaN;
-    if (h < 0 || h > 23 || m < 0 || m > 59) return NaN;
-    return h + m / 60;
-  }
-
-  timeSlotToHour(timeSlot: string): number {
-    if (!timeSlot) return this.startHour;
-
-    const [time, period] = timeSlot.trim().split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-
-    return hours + (minutes === 30 ? 0.5 : 0);
-  }
-
-  buildHours() {
-    this.hours = [];
-    this.hourCount = this.endHour - this.startHour;
-
-    for (let h = this.startHour; h <= this.endHour; h++) {
-      const suffix = h < 12 ? 'AM' : 'PM';
-      const display = h <= 12 ? h : h - 12;
-      this.hours.push(`${display === 0 ? 12 : display} ${suffix}`);
-    }
-  }
-
-  refreshView() {
-    if (this.viewMode === 'week') {
-      this.buildWeek(this.currentDate);
+    if (storedDept.includes('neuro')) {
+      this.doctorKey = 'neuro';
+    } else if (storedDept.includes('ortho')) {
+      this.doctorKey = 'ortho';
     } else {
-      this.buildMonth(this.currentDate);
+      this.doctorKey = 'cardio';
     }
   }
 
-  buildWeek(baseDate: Date) {
+  loadDoctorData(): void {
+    const data = this.doctorSeedData[this.doctorKey];
+    this.sidePatients = [...data.patients];
+    this.todayAppointments = [...data.appointments];
+  }
+
+  buildWeek(): void {
     const today = new Date();
-    const dow = baseDate.getDay();
-    const monday = new Date(baseDate);
-    monday.setHours(0, 0, 0, 0);
-    monday.setDate(baseDate.getDate() - (dow === 0 ? 6 : dow - 1));
+    const current = new Date(this.currentDate);
+    const day = current.getDay();
+    const monday = new Date(current);
+    monday.setDate(current.getDate() - (day === 0 ? 6 : day - 1));
 
-    const end = new Date(monday);
-    end.setDate(monday.getDate() + 6);
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    this.weekLabel = `${this.fmt(monday)} – ${this.fmt(end)}`;
-    this.weekNumber = `W${this.getWeekNumber(monday)}`;
-
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const fullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-    this.days = dayNames.map((short, i) => {
+    this.days = names.map((short, index) => {
       const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const fullDate = this.toYMD(d);
+      d.setDate(monday.getDate() + index);
 
       return {
-        name: fullNames[i],
         short,
         date: d.getDate(),
-        fullDate,
-        isToday: this.isSameDay(d, today),
-        isSelected: this.selectedDate === fullDate,
-        events: this.allEvents
-          .filter(e => e.date === fullDate)
-          .sort((a, b) => a.startHour - b.startHour)
+        fullDate: this.toYMD(d),
+        isToday: this.toYMD(d) === this.toYMD(today),
+        events: []
       };
     });
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    this.weekLabel = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   }
 
-  buildMonth(baseDate: Date) {
-    const today = new Date();
-    const year = baseDate.getFullYear();
-    const month = baseDate.getMonth();
+  attachTodayAppointments(): void {
+    const todayKey = this.toYMD(new Date());
+    const todayCol = this.days.find(d => d.fullDate === todayKey);
 
-    this.monthLabel = baseDate.toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric'
-    });
-
-    const firstDay = new Date(year, month, 1);
-    const firstGridDay = new Date(firstDay);
-    const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-    firstGridDay.setDate(firstDay.getDate() - startDay);
-
-    this.monthDays = [];
-
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(firstGridDay);
-      d.setDate(firstGridDay.getDate() + i);
-      const fullDate = this.toYMD(d);
-
-      this.monthDays.push({
-        date: d,
-        day: d.getDate(),
-        fullDate,
-        isCurrentMonth: d.getMonth() === month,
-        isToday: this.isSameDay(d, today),
-        isSelected: this.selectedDate === fullDate,
-        eventCount: this.allEvents.filter(e => e.date === fullDate).length
-      });
+    if (todayCol) {
+      todayCol.events = [...this.todayAppointments];
     }
   }
 
-  selectDay(fullDate: string) {
-    this.selectedDate = fullDate;
-
-    if (this.viewMode === 'week') {
-      this.days = this.days.map(day => ({
-        ...day,
-        isSelected: day.fullDate === fullDate,
-        events: this.allEvents
-          .filter(e => e.date === day.fullDate)
-          .sort((a, b) => a.startHour - b.startHour)
-      }));
-    } else {
-      this.monthDays = this.monthDays.map(day => ({
-        ...day,
-        isSelected: day.fullDate === fullDate
-      }));
-    }
+  prevWeek(): void {
+    this.currentDate = new Date(this.currentDate);
+    this.currentDate.setDate(this.currentDate.getDate() - 7);
+    this.buildWeek();
+    this.attachTodayAppointments();
   }
 
-  setView(v: 'week' | 'month') {
-    this.viewMode = v;
-    this.refreshView();
-    this.updateCurrentTime();
+  nextWeek(): void {
+    this.currentDate = new Date(this.currentDate);
+    this.currentDate.setDate(this.currentDate.getDate() + 7);
+    this.buildWeek();
+    this.attachTodayAppointments();
   }
 
-  prevWeek() {
-    if (this.viewMode === 'week') {
-      this.currentDate = new Date(this.currentDate);
-      this.currentDate.setDate(this.currentDate.getDate() - 7);
-    } else {
-      this.currentDate = new Date(
-        this.currentDate.getFullYear(),
-        this.currentDate.getMonth() - 1,
-        1
-      );
-    }
-    this.refreshView();
+  openPatient(patientId: string): void {
+    if (!patientId) return;
+    this.router.navigate(['/monitor', patientId]);
   }
 
-  nextWeek() {
-    if (this.viewMode === 'week') {
-      this.currentDate = new Date(this.currentDate);
-      this.currentDate.setDate(this.currentDate.getDate() + 7);
-    } else {
-      this.currentDate = new Date(
-        this.currentDate.getFullYear(),
-        this.currentDate.getMonth() + 1,
-        1
-      );
-    }
-    this.refreshView();
-  }
-
-  updateCurrentTime() {
-    const now = new Date();
-    const h = now.getHours() + now.getMinutes() / 60;
-
-    this.showTimeLine = this.viewMode === 'week' && h >= this.startHour && h <= this.endHour;
-    this.currentTimePct = ((h - this.startHour) / this.hourCount) * 100;
-    this.currentTimeLabel = now.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  getEventTop(event: CalendarEvent): string {
-    return `${(event.startHour - this.startHour) * this.rowHeight}px`;
-  }
-
-  getEventHeight(event: CalendarEvent): string {
-    return `${Math.max((event.endHour - event.startHour) * this.rowHeight - 8, 42)}px`;
-  }
-
-  getEventBg(type: string): string {
-    return this.typeConfig[type]?.bg || '#f3f4f6';
-  }
-
-  getEventColor(type: string): string {
-    return this.typeConfig[type]?.color || '#374151';
-  }
-
-  getEventBorder(type: string): string {
-    return this.typeConfig[type]?.border || '#e5e7eb';
-  }
-
-  getEventIcon(type: string): string {
-    return this.typeConfig[type]?.icon || '📅';
-  }
-
-  formatHour(h: number): string {
-    const hour = Math.floor(h);
-    const min = h % 1 === 0.5 ? '30' : '00';
-    const suffix = hour < 12 ? 'AM' : 'PM';
-    const display = hour <= 12 ? (hour === 0 ? 12 : hour) : hour - 12;
-    return `${display}:${min} ${suffix}`;
-  }
-
-  private fmt(d: Date): string {
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }
-
-  private toYMD(d: Date): string {
+  toYMD(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  private isSameDay(a: Date, b: Date): boolean {
-    return (
-      a.getDate() === b.getDate() &&
-      a.getMonth() === b.getMonth() &&
-      a.getFullYear() === b.getFullYear()
-    );
+  getEventTop(startHour: number): string {
+    return `${(startHour - 8) * 64}px`;
   }
 
-  private getWeekNumber(date: Date): number {
-    const temp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = temp.getUTCDay() || 7;
-    temp.setUTCDate(temp.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(temp.getUTCFullYear(), 0, 1));
-    return Math.ceil((((temp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  getEventHeight(startHour: number, endHour: number): string {
+    return `${(endHour - startHour) * 64 - 6}px`;
+  }
+
+  getEventBg(type: string): string {
+    if (type === 'video') return '#dbeafe';
+    if (type === 'hospital') return '#fef3c7';
+    if (type === 'home') return '#d1fae5';
+    return '#ede9fe';
+  }
+
+  getEventColor(type: string): string {
+    if (type === 'video') return '#1d4ed8';
+    if (type === 'hospital') return '#b45309';
+    if (type === 'home') return '#047857';
+    return '#6d28d9';
+  }
+
+  formatHour(hour: number): string {
+    const whole = Math.floor(hour);
+    const mins = hour % 1 === 0.5 ? '30' : '00';
+    const suffix = whole >= 12 ? 'PM' : 'AM';
+    const rawDisplay = whole > 12 ? whole - 12 : whole;
+    const display = rawDisplay === 0 ? 12 : rawDisplay;
+    return `${display}:${mins} ${suffix}`;
   }
 }

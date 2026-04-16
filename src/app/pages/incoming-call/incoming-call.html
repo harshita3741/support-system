@@ -11,15 +11,24 @@
     <div class="call-layout">
       <div class="patient-panel">
         <div class="back-btn" (click)="goBack()">← Back to Queue</div>
+
         <div class="patient-header">
           <div class="p-avatar" [style.background]="patient.bg" [style.color]="patient.color">
             {{ patient.initials || getPatientInitials() }}
           </div>
+
           <div>
             <div class="p-name">{{ patient.name || patient.patientName }}</div>
-            <div class="p-meta">{{ patient.age || '--' }} yrs · {{ patient.gender || '--' }} · {{ patient.dept || patient.department }}</div>
+            <div class="p-meta">
+              {{ patient.age || '--' }} yrs · {{ patient.gender || '--' }} · {{ patient.dept || patient.department }}
+            </div>
           </div>
-          <span class="prio-badge" [class.high]="(patient.priority || '').toLowerCase() === 'high'">
+
+          <span
+            class="prio-badge"
+            [class.high]="(patient.priority || '').toLowerCase() === 'high'"
+            [class.medium]="(patient.priority || '').toLowerCase() === 'medium'"
+            [class.low]="(patient.priority || '').toLowerCase() === 'low'">
             {{ patient.priority || 'Medium' }} Priority
           </span>
         </div>
@@ -28,7 +37,37 @@
           <div class="section-title">Current Symptoms</div>
           <div class="symptoms-box">{{ patient.symptoms }}</div>
         </div>
+
+        <div class="section">
+          <div class="section-title">AI Summary</div>
+          <div class="summary-box">
+            Patient reports {{ patient.symptoms }}.
+            Known conditions: {{ parseConditions().join(', ') || 'None' }}.
+          </div>
         </div>
+
+        <div class="section">
+          <div class="section-title">Patient Details</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Previous Visits</span>
+              <span class="info-value">{{ parseVisits().length }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Department</span>
+              <span class="info-value">{{ patient.dept || patient.department || '--' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Priority</span>
+              <span class="info-value">{{ patient.priority || 'Medium' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Status</span>
+              <span class="info-value">Waiting</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="video-panel">
         @if (!callAccepted) {
@@ -37,8 +76,9 @@
               <span class="pulse"></span>
               <span class="call-tag">Incoming patient request</span>
             </div>
-            
+
             <div class="call-name">{{ patient.name || patient.patientName }}</div>
+
             <div class="call-meta">
               {{ patient.age || '--' }} yrs · {{ patient.gender || '--' }} · {{ parseVisits().length }} previous visits
             </div>
@@ -46,7 +86,7 @@
             <div class="ai-box">
               <div class="ai-label">AI SUMMARY</div>
               <div class="ai-text">
-                Patient reports {{ patient.symptoms }}. 
+                Patient reports {{ patient.symptoms }}.
                 Known conditions: {{ parseConditions().join(', ') || 'None' }}.
               </div>
             </div>
@@ -64,69 +104,104 @@
         }
 
         @if (callAccepted) {
-          <div class="video-active">
-            <div class="video-header">
-              <div class="video-title">Video Call — {{ patient.name || patient.patientName }}</div>
-              <div class="video-live"><span class="live-dot"></span> Live</div>
+          <div class="video-active modern-call">
+            <div class="video-topbar">
+              <div>
+                <div class="video-title">Video Call — {{ patient.name || patient.patientName }}</div>
+                <div class="video-subline">
+                  <span class="live-pill"><span class="live-dot"></span> Live</span>
+                  <span class="call-time">{{ getCallTime() }}</span>
+                </div>
+              </div>
             </div>
 
-            <div class="video-frame">
+            <div class="video-frame large-frame">
+              <video #remoteVideo autoplay playsinline class="remote-video"></video>
+
               @if (cameraOn) {
-                <video #localVideo autoplay playsinline muted class="local-video"></video>
+                <video #localVideo autoplay playsinline muted class="local-video pip-video"></video>
               } @else {
-                <div class="video-placeholder">
-                  <div class="video-icon">📷</div>
-                  <div class="video-text">Camera is off</div>
+                <div class="local-video-off">
+                  <div class="cam-off-icon">📷</div>
+                  <div class="cam-off-text">Camera is off</div>
                 </div>
               }
-              <div class="doctor-video">
-                <div class="doc-avatar">DS</div>
-                <div class="doc-label">You</div>
+
+              <div class="remote-name-badge">
+                {{ patient.name || patient.patientName }}
               </div>
+
+              <div class="self-badge">
+                You
+              </div>
+
+              @if (webrtcStatus !== 'connected' && webrtcStatusMsg) {
+                <div class="connection-banner">
+                  {{ webrtcStatusMsg }}
+                </div>
+              }
             </div>
 
             @if (prescriptionOpen) {
               <div class="prescription-card">
                 <div class="prescription-body">
                   <div class="rx-form expanded-form">
-                    <input type="text" [(ngModel)]="prescription.diagnosis" placeholder="Diagnosis" class="full-width-input"/>
-                    
+                    <input
+                      type="text"
+                      [(ngModel)]="prescription.diagnosis"
+                      placeholder="Diagnosis"
+                      class="full-width-input"
+                    />
+
                     @for (med of medicines; track $index) {
                       <div class="medicine-row-improved">
                         <input type="text" [(ngModel)]="med.name" placeholder="Medicine" />
                         <input type="text" [(ngModel)]="med.dosage" placeholder="Dose" />
                         <input type="text" [(ngModel)]="med.frequency" placeholder="Freq" />
                         <input type="text" [(ngModel)]="med.duration" placeholder="Dur" />
-                        <button class="remove-med-btn" (click)="removeMedicine($index)">×</button>
+                        <button class="remove-med-btn" type="button" (click)="removeMedicine($index)">×</button>
                       </div>
                     }
-                    
-                    <button class="add-med-btn" (click)="addMedicine()">+ Add Medicine</button>
+
+                    <button class="add-med-btn" type="button" (click)="addMedicine()">+ Add Medicine</button>
                     <textarea [(ngModel)]="prescription.advice" placeholder="Advice"></textarea>
-                    <button class="save-rx-btn theme-teal" (click)="savePrescription()">💾 Save & Download PDF</button>
+                    <button class="save-rx-btn theme-teal" type="button" (click)="savePrescription()">
+                      💾 Save & Download PDF
+                    </button>
                   </div>
-                  </div>
+                </div>
               </div>
             }
 
-            <div class="call-controls">
-  <button class="ctrl-btn" type="button" (click)="toggleMic()" [title]="micOn ? 'Mute' : 'Unmute'">
-    <span>{{ micOn ? '🎤' : '🔇' }}</span>
-  </button>
+            <div class="floating-controls">
+              <button
+                class="call-action"
+                type="button"
+                (click)="toggleMic()"
+                [class.off]="!micOn"
+                [title]="micOn ? 'Mute' : 'Unmute'">
+                <span>{{ micOn ? '🎤' : '🔇' }}</span>
+              </button>
 
-  <button class="ctrl-btn" type="button" (click)="toggleCamera()" [title]="cameraOn ? 'Stop Video' : 'Start Video'">
-    <span>{{ cameraOn ? '📷' : '🚫' }}</span>
-  </button>
+              <button
+                class="call-action"
+                type="button"
+                (click)="toggleCamera()"
+                [class.off]="!cameraOn"
+                [title]="cameraOn ? 'Stop Video' : 'Start Video'">
+                <span>{{ cameraOn ? '📷' : '🚫' }}</span>
+              </button>
 
-  <button class="ctrl-btn" type="button" (click)="togglePrescription()" style="width: auto; border-radius: 24px; padding: 0 16px; gap: 8px;">
-    <span>🧾</span>
-    <span style="font-size: 13px; font-weight: 500;">Prescription</span>
-  </button>
+              <button class="call-action wide" type="button" (click)="togglePrescription()">
+                <span>🧾</span>
+                <span>Prescription</span>
+              </button>
 
-  <button class="ctrl-btn end-call" type="button" (click)="endCall()">
-    End Call
-  </button>
-</div>
+              <button class="call-action end" type="button" (click)="endCall()">
+                <span>📞</span>
+                <span>End</span>
+              </button>
+            </div>
           </div>
         }
       </div>

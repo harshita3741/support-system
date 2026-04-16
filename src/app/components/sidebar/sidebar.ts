@@ -20,7 +20,7 @@ export class Sidebar implements OnInit {
     { label: 'Dashboard', icon: '⊞', route: '/dashboard' },
     { label: 'Patients', icon: '👤', route: '/patients' },
     { label: 'Schedule', icon: '📅', route: '/schedule' },
-    { label: 'Patient Monitor', icon: '♥', route: '/monitor' },
+    { label: 'Patient Monitor', icon: '♥', route: ['/monitor', 'C-1042'] },
     { label: 'Queue', icon: '≡', route: '/queue'},
     { label: 'Incoming Call', icon: '📞', route: '/call' },
     { label: 'Settings', icon: '⚙', route: '/settings' }
