@@ -11,63 +11,40 @@ public class VideoSessionService {
   @Autowired
   private VideoSessionRepository repository;
 
-  private VideoSession getOrCreate(Long caseId) {
-    return repository.findById(caseId).orElseGet(() -> {
-      VideoSession vs = new VideoSession();
-      vs.setCaseId(caseId);
-      vs.setPatientCandidates("[]");
-      vs.setDoctorCandidates("[]");
-      return vs;
-    });
-  }
-
+  /** Patient posts their SDP offer — atomic upsert, no race condition */
   public void postOffer(Long caseId, String sdp) {
-    VideoSession vs = getOrCreate(caseId);
-    vs.setOfferSdp(sdp);
-    vs.setStatus("OFFERED");
-    repository.save(vs);
+    repository.upsertOffer(caseId, sdp);
   }
 
+  /** Doctor reads patient's SDP offer */
   public String getOffer(Long caseId) {
     return repository.findById(caseId).map(VideoSession::getOfferSdp).orElse(null);
   }
 
+  /** Doctor posts their SDP answer — atomic upsert */
   public void postAnswer(Long caseId, String sdp) {
-    VideoSession vs = getOrCreate(caseId);
-    vs.setAnswerSdp(sdp);
-    vs.setStatus("ANSWERED");
-    repository.save(vs);
+    repository.upsertAnswer(caseId, sdp);
   }
 
+  /** Patient reads doctor's SDP answer */
   public String getAnswer(Long caseId) {
     return repository.findById(caseId).map(VideoSession::getAnswerSdp).orElse(null);
   }
 
+  /** Either side posts an ICE candidate — atomic append to JSON array in DB */
   public void addCandidate(Long caseId, String role, String candidate) {
-    VideoSession vs = getOrCreate(caseId);
     if ("patient".equals(role)) {
-      String existing = vs.getPatientCandidates() != null ? vs.getPatientCandidates() : "[]";
-      vs.setPatientCandidates(appendToJsonArray(existing, candidate));
+      repository.appendPatientCandidate(caseId, candidate);
     } else {
-      String existing = vs.getDoctorCandidates() != null ? vs.getDoctorCandidates() : "[]";
-      vs.setDoctorCandidates(appendToJsonArray(existing, candidate));
+      repository.appendDoctorCandidate(caseId, candidate);
     }
-    repository.save(vs);
   }
 
+  /** Either side reads the other's ICE candidates */
   public String getCandidates(Long caseId, String role) {
     VideoSession vs = repository.findById(caseId).orElse(null);
     if (vs == null) return "[]";
     String result = "patient".equals(role) ? vs.getPatientCandidates() : vs.getDoctorCandidates();
     return result != null ? result : "[]";
-  }
-
-  private String appendToJsonArray(String jsonArray, String item) {
-    // Safely append item to JSON array string
-    String trimmed = jsonArray.trim();
-    if (trimmed.equals("[]")) {
-      return "[" + item + "]";
-    }
-    return trimmed.substring(0, trimmed.length() - 1) + "," + item + "]";
   }
 }
