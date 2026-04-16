@@ -32,7 +32,7 @@ type ScheduleRow = {
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.css'
+  styleUrls: ['./dashboard.css']
 })
 export class Dashboard implements OnInit {
   doctorName = 'Doctor';
@@ -112,7 +112,10 @@ export class Dashboard implements OnInit {
     else this.greeting = 'Good Evening';
 
     this.updateLabels();
-    this.buildCalendar();
+
+    this.useDummyData();
+    this.useMockAppointmentsForCheck();
+
     this.loadPatients();
     this.loadAppointments();
   }
@@ -163,24 +166,33 @@ export class Dashboard implements OnInit {
   }
 
   loadPatients() {
+    if (!this.doctorId) {
+      this.useDummyData();
+      return;
+    }
+
     this.caseService.getCasesByDoctor(this.doctorId).subscribe({
       next: (cases: any[]) => {
-        this.filteredPatients = cases.slice(0, 4).map((c: any) => ({
-          id: c.caseId,
-          name: c.patientName,
-          initials: c.patientName?.substring(0, 2).toUpperCase(),
-          age: c.age || '--',
-          gender: c.gender || '--',
-          priority: c.priority || 'Medium',
-          date: 'Today',
-          bg: '#eff6ff',
-          color: '#1d4ed8'
-        }));
+        if (cases && cases.length > 0) {
+          this.filteredPatients = cases.slice(0, 4).map((c: any) => ({
+            id: c.caseId,
+            name: c.patientName,
+            initials: c.patientName?.substring(0, 2).toUpperCase(),
+            age: c.age || '--',
+            gender: c.gender || '--',
+            priority: c.priority || 'Medium',
+            date: 'Today',
+            bg: '#eff6ff',
+            color: '#1d4ed8'
+          }));
 
-        this.statCards[0].value = cases.length.toString();
-        this.statCards[0].sub = `${cases.filter((c: any) => c.status === 'CLOSED').length} resolved today`;
-        this.statCards[1].value = cases.filter((c: any) => c.status === 'OPEN').length.toString();
-        this.statCards[1].sub = `${cases.filter((c: any) => c.priority === 'HIGH').length} urgent priority`;
+          this.statCards[0].value = cases.length.toString();
+          this.statCards[0].sub = `${cases.filter((c: any) => c.status === 'CLOSED').length} resolved today`;
+          this.statCards[1].value = cases.filter((c: any) => c.status === 'OPEN').length.toString();
+          this.statCards[1].sub = `${cases.filter((c: any) => c.priority === 'HIGH').length} urgent priority`;
+        } else {
+          this.useDummyData();
+        }
       },
       error: () => this.useDummyData()
     });
@@ -188,6 +200,7 @@ export class Dashboard implements OnInit {
 
   loadAppointments() {
     const doctorIdNum = Number(this.doctorId);
+
     if (!doctorIdNum) {
       this.useMockAppointmentsForCheck();
       return;
@@ -195,11 +208,9 @@ export class Dashboard implements OnInit {
 
     this.appointmentService.getAppointmentsByDoctor(doctorIdNum).subscribe({
       next: (appointments: Appointment[]) => {
-        if (appointments && appointments.length > 0) {
-          this.realAppointments = appointments;
-        } else {
-          this.realAppointments = this.getMockAppointments();
-        }
+        this.realAppointments = (appointments && appointments.length > 0)
+          ? appointments
+          : this.getMockAppointments();
 
         this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
         this.syncTimelineWithAppointments();
@@ -238,8 +249,20 @@ export class Dashboard implements OnInit {
     this.buildCalendarForCurrentData();
 
     const todayStr = this.toYMD(new Date());
-    this.selectedDate = todayStr;
-    this.selectCalendarDate(todayStr);
+    const hasToday = this.realAppointments.some(a => a.date === todayStr);
+
+    if (hasToday) {
+      this.selectedDate = todayStr;
+      this.selectCalendarDate(todayStr);
+    } else if (this.realAppointments.length > 0) {
+      const firstSortedDate = [...this.realAppointments]
+        .sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]?.date;
+
+      if (firstSortedDate) {
+        this.selectedDate = firstSortedDate;
+        this.selectCalendarDate(firstSortedDate);
+      }
+    }
   }
 
   private getMockAppointments(): Appointment[] {

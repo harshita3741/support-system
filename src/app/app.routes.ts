@@ -14,7 +14,7 @@ export const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
   { path: 'patients', component: Patients, canActivate: [authGuard] },
-  { path: 'monitor', component: PatientMonitor, canActivate: [authGuard] },
+  { path: 'monitor/:id', component: PatientMonitor, canActivate: [authGuard] },
   { path: 'schedule', component: Schedule, canActivate: [authGuard] },
   { path: 'queue', component: Queue, canActivate: [authGuard] },
   { path: 'call', component: IncomingCall, canActivate: [authGuard] },
