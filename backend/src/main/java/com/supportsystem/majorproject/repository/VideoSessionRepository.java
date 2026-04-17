@@ -64,4 +64,19 @@ public interface VideoSessionRepository extends JpaRepository<VideoSession, Long
     "VALUES (:caseId, 'OPEN', '[]', '[' + :candidate + ']');",
     nativeQuery = true)
   void appendDoctorCandidate(@Param("caseId") Long caseId, @Param("candidate") String candidate);
+
+  /** Atomic append to messages JSON array */
+  @Modifying
+  @Transactional
+  @Query(value =
+    "MERGE INTO video_sessions WITH (HOLDLOCK) AS t " +
+    "USING (VALUES (:caseId)) AS s(case_id) ON t.case_id = s.case_id " +
+    "WHEN MATCHED THEN UPDATE SET t.messages = " +
+    "  CASE WHEN t.messages IS NULL OR t.messages = '[]' " +
+    "       THEN '[' + :message + ']' " +
+    "       ELSE LEFT(t.messages, LEN(t.messages)-1) + ',' + :message + ']' END " +
+    "WHEN NOT MATCHED THEN INSERT (case_id, status, patient_candidates, doctor_candidates, messages) " +
+    "VALUES (:caseId, 'OPEN', '[]', '[]', '[' + :message + ']');",
+    nativeQuery = true)
+  void appendMessage(@Param("caseId") Long caseId, @Param("message") String message);
 }

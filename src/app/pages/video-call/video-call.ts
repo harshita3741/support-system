@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, ChangeDetectorRef, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
 import { RouterModule, Router, ActivatedRoute } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
 
@@ -7,23 +8,15 @@ const STUN_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
+    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" }
   ]
 };
 
 @Component({
   selector: "app-video-call",
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: "./video-call.html",
   styleUrls: ["./video-call.css"]
 })
@@ -33,11 +26,17 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   @ViewChild("remoteVideo") remoteVideoRef!: ElementRef<HTMLVideoElement>;
 
   caseId = "";
-  callStatus: "loading" | "waiting" | "connecting" | "connected" | "ended" | "error" = "loading";
+  callStatus: "loading" | "waiting" | "connecting" | "connected" | "ended" | "declined" | "error" = "loading";
   callDuration = 0;
   isMuted = false;
   isVideoOff = false;
   statusMessage = "Initialising camera...";
+
+  // Chat
+  chatOpen = false;
+  newMessage = "";
+  messages: { sender: string; text: string; time: string }[] = [];
+  unreadCount = 0;
 
   private pc: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
@@ -45,6 +44,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private timer: any;
   private answerPollInterval: any;
   private candidatePollInterval: any;
+  private statusPollInterval: any;
+  private messagePollInterval: any;
 
   constructor(
     private http: HttpClient,
@@ -85,25 +86,17 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       }, 100);
 
       this.pc = new RTCPeerConnection(STUN_SERVERS);
-
       this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
 
-      // Store remote stream when tracks arrive
       this.pc.ontrack = (event) => {
-        if (event.streams?.[0]) {
-          this.remoteStream = event.streams[0];
-        }
-        this.ngZone.run(() => {
-          this.attachRemoteStream();
-        });
+        if (event.streams?.[0]) this.remoteStream = event.streams[0];
+        this.ngZone.run(() => this.attachRemoteStream());
       };
 
-      // Fallback: when peer connection fully establishes, force-attach stream
       this.pc.onconnectionstatechange = () => {
         if (this.pc?.connectionState === "connected") {
           this.ngZone.run(() => {
             setTimeout(() => {
-              // If ontrack didn't provide a stream, build one from receivers
               if (!this.remoteStream && this.pc) {
                 const tracks = this.pc.getReceivers().map(r => r.track).filter(t => t);
                 if (tracks.length) this.remoteStream = new MediaStream(tracks);
@@ -112,10 +105,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
             }, 300);
           });
         }
-      };
-
-      this.pc.oniceconnectionstatechange = () => {
-        console.log("[ICE]", this.pc?.iceConnectionState);
       };
 
       this.pc.onicecandidate = (event) => {
@@ -141,6 +130,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
             this.statusMessage = "Waiting for doctor to join...";
             this.cdr.detectChanges();
             this.pollForAnswer();
+            this.pollCaseStatus(); // detect if doctor declines
           });
         },
         error: () => {
@@ -163,12 +153,35 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Poll case status while waiting — stops when doctor declines ──────────
+
+  pollCaseStatus() {
+    this.statusPollInterval = setInterval(() => {
+      this.http.get<any>(`http://localhost:8080/cases/${this.caseId}/status`).subscribe({
+        next: (res) => {
+          if (res?.status === "DECLINED") {
+            clearInterval(this.statusPollInterval);
+            clearInterval(this.answerPollInterval);
+            this.ngZone.run(() => {
+              this.callStatus = "declined";
+              this.cdr.detectChanges();
+            });
+          }
+        },
+        error: () => {}
+      });
+    }, 4000);
+  }
+
+  // ── WebRTC signaling ──────────────────────────────────────────────────────
+
   pollForAnswer() {
     this.answerPollInterval = setInterval(async () => {
       this.http.get<any>(`http://localhost:8080/video-sessions/${this.caseId}/answer`).subscribe({
         next: async (res) => {
           if (res?.sdp && this.pc) {
             clearInterval(this.answerPollInterval);
+            clearInterval(this.statusPollInterval); // doctor answered, stop decline-check
             try {
               const answer = JSON.parse(res.sdp);
               await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -215,9 +228,52 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     if (this.callStatus !== "connected") {
       this.callStatus = "connected";
       this.startTimer();
+      this.startMessagePolling();
       this.cdr.detectChanges();
     }
   }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+
+  toggleChat() {
+    this.chatOpen = !this.chatOpen;
+    if (this.chatOpen) this.unreadCount = 0;
+    this.cdr.detectChanges();
+  }
+
+  sendMessage() {
+    const text = this.newMessage.trim();
+    if (!text) return;
+    this.newMessage = "";
+    this.http.post(`http://localhost:8080/video-sessions/${this.caseId}/messages`,
+      { sender: "patient", text }
+    ).subscribe({ error: () => {} });
+  }
+
+  startMessagePolling() {
+    this.messagePollInterval = setInterval(() => {
+      this.http.get(`http://localhost:8080/video-sessions/${this.caseId}/messages`,
+        { responseType: "text" }
+      ).subscribe({
+        next: (raw: string) => {
+          try {
+            const incoming: any[] = JSON.parse(raw);
+            this.ngZone.run(() => {
+              if (incoming.length !== this.messages.length) {
+                const newOnes = incoming.slice(this.messages.length);
+                this.messages = incoming;
+                if (!this.chatOpen) this.unreadCount += newOnes.filter(m => m.sender === "doctor").length;
+                this.cdr.detectChanges();
+              }
+            });
+          } catch (_) {}
+        },
+        error: () => {}
+      });
+    }, 2000);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   startTimer() {
     this.timer = setInterval(() => {
@@ -229,6 +285,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     const m = Math.floor(this.callDuration / 60).toString().padStart(2, "0");
     const s = (this.callDuration % 60).toString().padStart(2, "0");
     return m + ":" + s;
+  }
+
+  formatTime(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0");
+    } catch { return ""; }
   }
 
   toggleMute() {
@@ -243,25 +306,18 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   endCall() {
     this.cleanup();
-    this.callStatus = 'ended';
-    this.cdr.detectChanges();
-    setTimeout(() => this.router.navigate(['/dashboard']), 2000);
+    this.ngZone.run(() => { this.callStatus = "ended"; this.cdr.detectChanges(); });
   }
 
   cleanup() {
     clearInterval(this.timer);
     clearInterval(this.answerPollInterval);
     clearInterval(this.candidatePollInterval);
-
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
-      this.localStream = null;
-    }
-
-    if (this.pc) {
-      this.pc.close();
-      this.pc = null;
-    }
+    clearInterval(this.statusPollInterval);
+    clearInterval(this.messagePollInterval);
+    this.localStream?.getTracks().forEach(t => t.stop());
+    this.localStream = null;
+    this.pc?.close();
+    this.pc = null;
   }
 }
- 

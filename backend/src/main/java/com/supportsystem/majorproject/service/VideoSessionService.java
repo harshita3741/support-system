@@ -47,4 +47,16 @@ public class VideoSessionService {
     String result = "patient".equals(role) ? vs.getPatientCandidates() : vs.getDoctorCandidates();
     return result != null ? result : "[]";
   }
+
+  /** Append a chat message — stored as JSON: {"sender":"doctor","text":"Hi","time":"..."} */
+  public void sendMessage(Long caseId, String messageJson) {
+    repository.appendMessage(caseId, messageJson);
+  }
+
+  /** Return all chat messages for this session */
+  public String getMessages(Long caseId) {
+    VideoSession vs = repository.findById(caseId).orElse(null);
+    if (vs == null) return "[]";
+    return vs.getMessages() != null ? vs.getMessages() : "[]";
+  }
 }

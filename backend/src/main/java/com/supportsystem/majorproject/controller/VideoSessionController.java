@@ -69,4 +69,27 @@ public class VideoSessionController {
     String candidates = videoSessionService.getCandidates(caseId, role);
     return ResponseEntity.ok(candidates);
   }
+
+  // Either side sends a chat message
+  // body: { sender: "doctor"|"patient", text: "message content" }
+  @PostMapping("/{caseId}/messages")
+  public ResponseEntity<Map<String, String>> sendMessage(
+    @PathVariable Long caseId,
+    @RequestBody Map<String, String> body) {
+    String sender = body.get("sender");
+    String text = body.get("text");
+    String time = java.time.LocalDateTime.now().toString();
+    // Build JSON object manually (no Jackson dependency needed)
+    String messageJson = "{\"sender\":\"" + sender + "\",\"text\":\"" +
+      text.replace("\"", "\\\"") + "\",\"time\":\"" + time + "\"}";
+    videoSessionService.sendMessage(caseId, messageJson);
+    return ResponseEntity.ok(Map.of("status", "ok"));
+  }
+
+  // Either side fetches all chat messages
+  @GetMapping("/{caseId}/messages")
+  public ResponseEntity<String> getMessages(@PathVariable Long caseId) {
+    String messages = videoSessionService.getMessages(caseId);
+    return ResponseEntity.ok(messages);
+  }
 }

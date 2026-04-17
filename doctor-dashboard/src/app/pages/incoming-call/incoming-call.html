@@ -153,6 +153,34 @@
               </div>
             }
 
+            <!-- Chat panel -->
+            @if (chatOpen) {
+              <div class="chat-panel">
+                <div class="chat-header">
+                  <span>Chat with Patient</span>
+                  <button class="chat-close" (click)="toggleChat()">✕</button>
+                </div>
+                <div class="chat-messages">
+                  @if (messages.length === 0) {
+                    <div class="chat-empty">No messages yet. Say hello!</div>
+                  }
+                  @for (msg of messages; track $index) {
+                    <div class="chat-bubble" [class.mine]="msg.sender === 'doctor'" [class.theirs]="msg.sender === 'patient'">
+                      <div class="bubble-text">{{ msg.text }}</div>
+                      <div class="bubble-time">{{ formatTime(msg.time) }}</div>
+                    </div>
+                  }
+                </div>
+                <div class="chat-input-row">
+                  <input class="chat-input" [(ngModel)]="chatMessage" placeholder="Type a message..."
+                         (keydown.enter)="sendMessage()" />
+                  <button class="chat-send" (click)="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  </button>
+                </div>
+              </div>
+            }
+
             <!-- Call controls -->
             <div class="call-controls">
               <button class="ctrl-btn" type="button" (click)="toggleMic()" [title]="micOn ? 'Mute' : 'Unmute'">
@@ -162,6 +190,15 @@
               <button class="ctrl-btn" type="button" (click)="toggleCamera()" [title]="cameraOn ? 'Stop Video' : 'Start Video'">
                 <span>{{ cameraOn ? '📷' : '🚫' }}</span>
               </button>
+
+              @if (webrtcStatus === 'connected') {
+                <button class="ctrl-btn" type="button" (click)="toggleChat()" style="position:relative;">
+                  <span>💬</span>
+                  @if (unreadCount > 0) {
+                    <span style="position:absolute;top:-4px;right:-4px;background:#e53e3e;color:white;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">{{ unreadCount }}</span>
+                  }
+                </button>
+              }
 
               <button class="ctrl-btn" type="button" (click)="togglePrescription()" style="width:auto;border-radius:24px;padding:0 16px;gap:8px;">
                 <span>🧾</span>

@@ -53,5 +53,11 @@ public class MedicalCaseController {
   public String acceptCase(@PathVariable Long caseId, @RequestBody Map<String, String> body) {
     return medicalCaseService.acceptCase(caseId, body.get("doctorId"));
   }
+
+  @PatchMapping("/{caseId}/decline")
+  public ResponseEntity<Map<String, String>> declineCase(@PathVariable Long caseId) {
+    medicalCaseService.declineCase(caseId);
+    return ResponseEntity.ok(Map.of("status", "declined"));
+  }
 }
 

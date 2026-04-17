@@ -58,9 +58,11 @@ export class IncomingCall implements OnInit, OnDestroy {
   private offerPollInterval: any;
   private candidatePollInterval: any;
   private callTimer: any;
+  private messagePollInterval: any;
+  unreadCount = 0;
 
   chatMessage = '';
-  messages: { sender: 'doctor' | 'patient'; text: string }[] = [];
+  messages: { sender: string; text: string; time: string }[] = [];
 
   medicines: { name: string; dosage: string; frequency: string; duration: string }[] = [
     { name: '', dosage: '', frequency: '', duration: '' }
@@ -264,6 +266,7 @@ export class IncomingCall implements OnInit, OnDestroy {
       this.webrtcStatus = 'connected';
       this.webrtcStatusMsg = '';
       this.startCallTimer();
+      this.startMessagePolling();
       this.cdr.detectChanges();
     }
   }
@@ -301,11 +304,6 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
-  toggleChat() {
-    this.chatOpen = !this.chatOpen;
-    if (this.chatOpen) this.prescriptionOpen = false;
-  }
-
   togglePrescription() {
     this.prescriptionOpen = !this.prescriptionOpen;
     if (this.prescriptionOpen) this.chatOpen = false;
@@ -326,6 +324,7 @@ export class IncomingCall implements OnInit, OnDestroy {
     clearInterval(this.offerPollInterval);
     clearInterval(this.candidatePollInterval);
     clearInterval(this.callTimer);
+    clearInterval(this.messagePollInterval);
     this.pc?.close();
     this.pc = null;
     this.stopMediaTracks();
@@ -339,17 +338,66 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   goBack() {
+    // Decline the case so patient sees it on their side
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {}).subscribe({ error: () => {} });
+    }
     this.cleanup();
     this.router.navigate(['/queue']);
   }
 
   // ─── CHAT ────────────────────────────────────────────────────
 
+  toggleChat() {
+    this.chatOpen = !this.chatOpen;
+    if (this.chatOpen) {
+      this.prescriptionOpen = false;
+      this.unreadCount = 0;
+    }
+  }
+
   sendMessage() {
     const text = this.chatMessage.trim();
     if (!text) return;
-    this.messages.push({ sender: 'doctor', text });
     this.chatMessage = '';
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.http.post(`${this.baseUrl}/video-sessions/${caseId}/messages`,
+      { sender: 'doctor', text }
+    ).subscribe({ error: () => {} });
+  }
+
+  startMessagePolling() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.messagePollInterval = setInterval(() => {
+      this.http.get(`${this.baseUrl}/video-sessions/${caseId}/messages`,
+        { responseType: 'text' }
+      ).subscribe({
+        next: (raw: string) => {
+          try {
+            const incoming: any[] = JSON.parse(raw);
+            this.ngZone.run(() => {
+              if (incoming.length !== this.messages.length) {
+                const newOnes = incoming.slice(this.messages.length);
+                this.messages = incoming;
+                if (!this.chatOpen) this.unreadCount += newOnes.filter((m: any) => m.sender === 'patient').length;
+                this.cdr.detectChanges();
+              }
+            });
+          } catch (_) {}
+        },
+        error: () => {}
+      });
+    }, 2000);
+  }
+
+  formatTime(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+    } catch { return ''; }
   }
 
   // ─── MEDICINES ───────────────────────────────────────────────

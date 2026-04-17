@@ -48,5 +48,15 @@ public class MedicalCaseService {
     }
     return "Case not found";
   }
+
+  public String declineCase(Long caseId) {
+    MedicalCase mc = repository.findById(caseId).orElse(null);
+    if (mc != null) {
+      mc.setStatus("DECLINED");
+      repository.save(mc);
+      return "Declined";
+    }
+    return "Case not found";
+  }
 }
 
