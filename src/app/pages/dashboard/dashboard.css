@@ -232,10 +232,22 @@
   gap: 12px;
 }
 
-.sort-label {
+.sort-label-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 4px 10px;
   font-size: 12px;
-  color: #94a3b8;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s;
 }
+ 
+.sort-label-btn:hover {
+  background: #f8fafc;
+}
+ 
 
 .see-all-btn {
   background: transparent;

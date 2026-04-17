@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth';
 
 type DoctorKey = 'cardio' | 'neuro' | 'ortho';
 
@@ -82,7 +83,10 @@ export class Schedule implements OnInit {
     }
   };
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.detectLoggedInDoctor();
@@ -92,11 +96,11 @@ export class Schedule implements OnInit {
   }
 
   detectLoggedInDoctor(): void {
-    const storedDept = (localStorage.getItem('doctorDepartment') || '').toLowerCase();
+    const dept = (this.authService.getDepartment() || '').toLowerCase();
 
-    if (storedDept.includes('neuro')) {
+    if (dept.includes('neuro')) {
       this.doctorKey = 'neuro';
-    } else if (storedDept.includes('ortho')) {
+    } else if (dept.includes('ortho')) {
       this.doctorKey = 'ortho';
     } else {
       this.doctorKey = 'cardio';

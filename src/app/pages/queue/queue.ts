@@ -39,41 +39,41 @@ export class Queue implements OnInit, OnDestroy {
   }
 
   loadQueue() {
-    const doctor = this.authService.getSession();
+  const doctor = this.authService.getSession();
 
-    if (!doctor || !doctor.id) {
-      this.loading = false;
-      this.errorMessage = 'Doctor session not found. Please log in again.';
-      return;
-    }
-
-    this.departmentLabel = doctor?.dept || 'Department';
-
-    this.medicalCaseService.getQueue().subscribe({
-      next: (data: any[]) => {
-        const dept = (doctor.dept || '').toUpperCase();
-        const now = Date.now();
-        const last24Hours = now - 24 * 60 * 60 * 1000;
-
-        this.queueItems = (Array.isArray(data) ? data : [])
-          .filter((c: any) => !dept || (c.department || '').toUpperCase() === dept)
-          .map((c: any) => {
-            const normalized = this.normalizeCase(c);
-            return normalized;
-          })
-          .filter((c: any) => !c.timestamp || c.timestamp >= last24Hours)
-          .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
-
-        this.loading = false;
-        this.errorMessage = '';
-      },
-      error: (err) => {
-        console.error('Error fetching queue:', err);
-        this.loading = false;
-        this.errorMessage = 'Unable to load queue. Is the backend running?';
-      }
-    });
+  if (!doctor || !doctor.id) {
+    this.loading = false;
+    this.errorMessage = 'Doctor session not found. Please log in again.';
+    return;
   }
+
+  this.departmentLabel = doctor?.dept || 'Department';
+
+  this.medicalCaseService.getQueue().subscribe({
+    next: (data: any[]) => {
+      const dept = (doctor.dept || '').toUpperCase();
+      const now = Date.now();
+      const last2Hours = now - 2 * 60 * 60 * 1000;
+
+      this.queueItems = (Array.isArray(data) ? data : [])
+        .filter((c: any) => !dept || (c.department || '').toUpperCase() === dept)
+        .map((c: any) => {
+          const normalized = this.normalizeCase(c);
+          return normalized;
+        })
+        .filter((c: any) => !c.timestamp || c.timestamp >= last2Hours)
+        .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      this.loading = false;
+      this.errorMessage = '';
+    },
+    error: (err) => {
+      console.error('Error fetching queue:', err);
+      this.loading = false;
+      this.errorMessage = 'Unable to load queue. Is the backend running?';
+    }
+  });
+}
 
   private normalizeCase(c: any) {
     const patientName = c.patientName || c.name || 'Unknown Patient';

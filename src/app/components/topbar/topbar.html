@@ -3,16 +3,57 @@
     <span class="search-icon">🔍</span>
     <input type="text" placeholder="Search patient name or ID" />
   </div>
+
   <div class="topbar-right">
-    <a routerLink="/call" class="sim-btn">Simulate Incoming Call</a>
-    <div class="notif">
-      🔔
-      <div class="notif-dot"></div>
+    <div class="notif-wrap">
+      <div class="notif" (click)="toggleNotifPanel()">
+        🔔
+        @if (queueCount > 0) {
+          <div class="notif-badge">{{ queueCount > 9 ? '9+' : queueCount }}</div>
+        }
+      </div>
+
+      @if (showNotifPanel) {
+        <div class="notif-panel">
+          <div class="notif-panel-head">
+            <span>Queue Notifications</span>
+            <span class="notif-count">{{ queueCount }}</span>
+          </div>
+
+          @if (latestNotifications.length === 0) {
+            <div class="notif-empty">No new appointments in queue</div>
+          } @else {
+            <div class="notif-list">
+              @for (item of latestNotifications; track item.id) {
+                <a class="notif-item" routerLink="/queue" (click)="showNotifPanel = false">
+                  <div class="notif-item-title">{{ item.patientName }}</div>
+                  <div class="notif-item-sub">{{ item.reason }}</div>
+                  <div class="notif-item-time">
+                    {{ item.date || 'Today' }} · {{ item.time }}
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        </div>
+      }
     </div>
+
     <div class="avatar">{{ initials }}</div>
     <div class="doc-info">
       <div class="doc-name">{{ doctorName }}</div>
       <div class="doc-spec">{{ doctorDept }}</div>
     </div>
   </div>
+
+  @if (showToast) {
+    <div class="notif-toast">
+      <div class="notif-toast-icon">🔔</div>
+      <div class="notif-toast-body">
+        <div class="notif-toast-title">New Appointment</div>
+        <div class="notif-toast-text">{{ toastMessage }}</div>
+      </div>
+      <button class="notif-toast-close" (click)="closeToast()">✕</button>
+    </div>
+  }
 </div>

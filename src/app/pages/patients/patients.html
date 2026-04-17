@@ -1,18 +1,67 @@
 <div class="patients-page">
+
   <div class="page-head">
-    <h2>Patients</h2>
-    <p>Doctor-specific patient list</p>
+    <div>
+      <h2>Patients</h2>
+      <p>Doctor-specific patient list</p>
+    </div>
+    <div class="page-head-actions">
+      <button class="sort-btn" type="button" (click)="sortPatients()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M3 6h18M7 12h10M11 18h2"/>
+        </svg>
+        Sort: {{ sortLabel }}
+      </button>
+    </div>
   </div>
 
-  <div class="patients-grid">
-    @for (patient of patients; track patient.id) {
-      <div class="patient-card" (click)="openPatient(patient.id)">
-        <div class="patient-avatar">{{ patient.initials }}</div>
-        <div class="patient-name">{{ patient.name }}</div>
-        <div class="patient-sub">{{ patient.age }} yrs | {{ patient.gender }}</div>
-        <div class="patient-sub">{{ patient.caseId }}</div>
-        <div class="patient-sub">{{ patient.reason }}</div>
+  <div class="card">
+    @if (patients.length === 0) {
+      <div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+        <p>No patient records found</p>
       </div>
     }
+
+    @if (patients.length > 0) {
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>NAME</th>
+            <th>CASE ID</th>
+            <th>REASON</th>
+            <th>AGE / GENDER</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (patient of patients; track patient.id) {
+            <tr class="patient-row" (click)="openPatient(patient.id)">
+              <td>
+                <div class="name-cell">
+                  <div class="avatar avatar-{{ avatarColor(patient.id) }}">{{ patient.initials }}</div>
+                  <div>
+                    <div class="p-name">{{ patient.name }}</div>
+                    <div class="p-age">ID: {{ patient.id }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="case-id-cell">{{ patient.caseId }}</td>
+              <td class="muted">{{ patient.reason }}</td>
+              <td class="muted">{{ patient.age }} yrs · {{ patient.gender }}</td>
+              <td>
+                <button class="view-btn" type="button" (click)="openPatient(patient.id); $event.stopPropagation()">
+                  View →
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
   </div>
+
 </div>

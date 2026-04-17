@@ -1,6 +1,11 @@
 import {
-  Component, OnInit, OnDestroy, ElementRef,
-  ViewChild, ChangeDetectorRef, NgZone
+  Component,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  ViewChild,
+  ChangeDetectorRef,
+  NgZone
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -32,10 +37,12 @@ const STUN_SERVERS = {
   styleUrl: './incoming-call.css'
 })
 export class IncomingCall implements OnInit, OnDestroy {
+
   patient: any = null;
   callAccepted = false;
   callEnded = false;
 
+  // WebRTC state
   webrtcStatus: 'idle' | 'waiting-offer' | 'connecting' | 'connected' | 'error' = 'idle';
   webrtcStatusMsg = '';
 
@@ -46,15 +53,16 @@ export class IncomingCall implements OnInit, OnDestroy {
   callDuration = 0;
 
   localStream: MediaStream | null = null;
-  remoteStream: MediaStream | null = null;
-
+  private remoteStream: MediaStream | null = null;
   private pc: RTCPeerConnection | null = null;
   private offerPollInterval: any;
   private candidatePollInterval: any;
   private callTimer: any;
+  private messagePollInterval: any;
+  unreadCount = 0;
 
   chatMessage = '';
-  messages: { sender: 'doctor' | 'patient'; text: string }[] = [];
+  messages: { sender: string; text: string; time: string }[] = [];
 
   medicines: { name: string; dosage: string; frequency: string; duration: string }[] = [
     { name: '', dosage: '', frequency: '', duration: '' }
@@ -80,14 +88,20 @@ export class IncomingCall implements OnInit, OnDestroy {
     private ngZone: NgZone
   ) {}
 
+  // ─── LIFECYCLE ───────────────────────────────────────────────
+
   ngOnInit() {
     const data = localStorage.getItem('activePatient');
-    if (data) this.patient = JSON.parse(data);
+    if (data) {
+      this.patient = JSON.parse(data);
+    }
   }
 
   ngOnDestroy() {
     this.cleanup();
   }
+
+  // ─── CALL CONTROLS ───────────────────────────────────────────
 
   async startVideoCall() {
     this.callAccepted = true;
@@ -96,49 +110,57 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
 
+      // Small delay to ensure @if(callAccepted) has rendered the video element
       setTimeout(() => {
-        this.attachLocalStream();
+        if (this.localVideoRef?.nativeElement && this.localStream) {
+          this.localVideoRef.nativeElement.srcObject = this.localStream;
+          this.localVideoRef.nativeElement.muted = true;
+          this.localVideoRef.nativeElement.play().catch(() => {});
+        }
       }, 100);
 
       this.micOn = true;
       this.cameraOn = true;
 
+      // Set up WebRTC peer connection
       this.pc = new RTCPeerConnection(STUN_SERVERS);
+      this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
 
-      this.pc.oniceconnectionstatechange = () => {
-        console.log('[ICE] connection state:', this.pc?.iceConnectionState);
-      };
-
-      this.pc.onconnectionstatechange = () => {
-        console.log('[PEER] connection state:', this.pc?.connectionState);
-      };
-
-      this.localStream.getTracks().forEach(track => {
-        this.pc!.addTrack(track, this.localStream!);
-      });
-
+      // Store remote stream when tracks arrive
       this.pc.ontrack = (event) => {
+        if (event.streams?.[0]) {
+          this.remoteStream = event.streams[0];
+        }
         this.ngZone.run(() => {
-          if (event.streams && event.streams[0]) {
-            this.remoteStream = event.streams[0];
-            setTimeout(() => {
-              this.attachRemoteStream();
-            }, 100);
-          }
-
-          this.webrtcStatus = 'connected';
-          this.webrtcStatusMsg = '';
-
-          if (!this.callTimer) {
-            this.startCallTimer();
-          }
-
-          this.cdr.detectChanges();
+          this.attachRemoteStream();
         });
       };
 
+      // Fallback: when peer connection fully establishes, force-attach stream
+      this.pc.onconnectionstatechange = () => {
+        if (this.pc?.connectionState === 'connected') {
+          this.ngZone.run(() => {
+            setTimeout(() => {
+              if (!this.remoteStream && this.pc) {
+                const tracks = this.pc.getReceivers().map(r => r.track).filter(t => t);
+                if (tracks.length) this.remoteStream = new MediaStream(tracks);
+              }
+              this.attachRemoteStream();
+            }, 300);
+          });
+        }
+      };
+
+      this.pc.oniceconnectionstatechange = () => {
+        console.log('[ICE]', this.pc?.iceConnectionState);
+      };
+
+      // Send our ICE candidates to backend
       this.pc.onicecandidate = (event) => {
         if (event.candidate) {
           const caseId = this.patient?.caseId;
@@ -146,62 +168,50 @@ export class IncomingCall implements OnInit, OnDestroy {
             this.http.post(
               `${this.baseUrl}/video-sessions/${caseId}/candidate/doctor`,
               { candidate: JSON.stringify(event.candidate) }
-            ).subscribe();
+            ).subscribe({ error: () => {} });
           }
         }
       };
 
       this.webrtcStatusMsg = 'Waiting for patient to join...';
       this.cdr.detectChanges();
+
+      // Poll for patient's WebRTC offer
       this.pollForPatientOffer();
 
     } catch (err: any) {
       this.ngZone.run(() => {
         this.webrtcStatus = 'error';
-        this.webrtcStatusMsg =
-          err.name === 'NotAllowedError'
-            ? 'Camera/microphone access denied. Please allow access and try again.'
-            : 'Could not start video: ' + (err.message || 'Unknown error');
+        this.webrtcStatusMsg = err.name === 'NotAllowedError'
+          ? 'Camera/microphone access denied. Please allow access and try again.'
+          : 'Could not start video: ' + (err.message || 'Unknown error');
         this.cdr.detectChanges();
       });
     }
   }
 
-  attachLocalStream() {
-    if (this.localVideoRef?.nativeElement && this.localStream) {
-      this.localVideoRef.nativeElement.srcObject = this.localStream;
-      this.localVideoRef.nativeElement.muted = true;
-      this.localVideoRef.nativeElement.play().catch(() => {});
-    }
-  }
-
-  attachRemoteStream() {
-    if (this.remoteVideoRef?.nativeElement && this.remoteStream) {
-      this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
-      this.remoteVideoRef.nativeElement.play().catch(() => {});
-    }
-  }
-
+  /** Poll backend for the patient's SDP offer */
   pollForPatientOffer() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
 
-    this.offerPollInterval = setInterval(() => {
+    this.offerPollInterval = setInterval(async () => {
       this.http.get<any>(`${this.baseUrl}/video-sessions/${caseId}/offer`).subscribe({
         next: async (res) => {
           if (res?.sdp && this.pc) {
             clearInterval(this.offerPollInterval);
             try {
               const offer = JSON.parse(res.sdp);
-              await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
+              await this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
 
-              const answer = await this.pc.createAnswer();
-              await this.pc.setLocalDescription(answer);
+              const answer = await this.pc!.createAnswer();
+              await this.pc!.setLocalDescription(answer);
 
+              // Send answer back to backend so patient can pick it up
               this.http.post(
                 `${this.baseUrl}/video-sessions/${caseId}/answer`,
                 { sdp: JSON.stringify(answer) }
-              ).subscribe();
+              ).subscribe({ error: () => {} });
 
               this.ngZone.run(() => {
                 this.webrtcStatus = 'connecting';
@@ -209,6 +219,7 @@ export class IncomingCall implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
               });
 
+              // Start polling for patient's ICE candidates
               this.pollForPatientCandidates();
             } catch (e) {
               console.error('WebRTC answer error:', e);
@@ -220,6 +231,7 @@ export class IncomingCall implements OnInit, OnDestroy {
     }, 3000);
   }
 
+  /** Poll for patient's ICE candidates and add them */
   pollForPatientCandidates() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
@@ -245,12 +257,23 @@ export class IncomingCall implements OnInit, OnDestroy {
     }, 3000);
   }
 
+  attachRemoteStream() {
+    if (this.remoteVideoRef?.nativeElement && this.remoteStream) {
+      this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
+      this.remoteVideoRef.nativeElement.play().catch(() => {});
+    }
+    if (this.webrtcStatus !== 'connected') {
+      this.webrtcStatus = 'connected';
+      this.webrtcStatusMsg = '';
+      this.startCallTimer();
+      this.startMessagePolling();
+      this.cdr.detectChanges();
+    }
+  }
+
   startCallTimer() {
     this.callTimer = setInterval(() => {
-      this.ngZone.run(() => {
-        this.callDuration++;
-        this.cdr.detectChanges();
-      });
+      this.ngZone.run(() => { this.callDuration++; this.cdr.detectChanges(); });
     }, 1000);
   }
 
@@ -268,18 +291,17 @@ export class IncomingCall implements OnInit, OnDestroy {
 
   toggleCamera() {
     if (!this.localStream) return;
-
     this.cameraOn = !this.cameraOn;
     this.localStream.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
 
     if (this.cameraOn) {
-      setTimeout(() => this.attachLocalStream(), 50);
+      setTimeout(() => {
+        if (this.localVideoRef?.nativeElement) {
+          this.localVideoRef.nativeElement.srcObject = this.localStream;
+          this.localVideoRef.nativeElement.play().catch(() => {});
+        }
+      }, 50);
     }
-  }
-
-  toggleChat() {
-    this.chatOpen = !this.chatOpen;
-    if (this.chatOpen) this.prescriptionOpen = false;
   }
 
   togglePrescription() {
@@ -292,24 +314,20 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.callEnded = true;
     this.callAccepted = false;
     localStorage.removeItem('activePatient');
-    setTimeout(() => this.router.navigate(['/queue']), 2000);
+
+    setTimeout(() => {
+      this.router.navigate(['/queue']);
+    }, 2000);
   }
 
   cleanup() {
     clearInterval(this.offerPollInterval);
     clearInterval(this.candidatePollInterval);
     clearInterval(this.callTimer);
-
+    clearInterval(this.messagePollInterval);
     this.pc?.close();
     this.pc = null;
-
     this.stopMediaTracks();
-
-    this.remoteStream = null;
-    this.callTimer = null;
-    this.callDuration = 0;
-    this.webrtcStatus = 'idle';
-    this.webrtcStatusMsg = '';
   }
 
   stopMediaTracks() {
@@ -320,54 +338,111 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   goBack() {
+    // Decline the case so patient sees it on their side
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {}).subscribe({ error: () => {} });
+    }
     this.cleanup();
     this.router.navigate(['/queue']);
+  }
+
+  // ─── CHAT ────────────────────────────────────────────────────
+
+  toggleChat() {
+    this.chatOpen = !this.chatOpen;
+    if (this.chatOpen) {
+      this.prescriptionOpen = false;
+      this.unreadCount = 0;
+    }
   }
 
   sendMessage() {
     const text = this.chatMessage.trim();
     if (!text) return;
-    this.messages.push({ sender: 'doctor', text });
     this.chatMessage = '';
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.http.post(`${this.baseUrl}/video-sessions/${caseId}/messages`,
+      { sender: 'doctor', text }
+    ).subscribe({ error: () => {} });
   }
+
+  startMessagePolling() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.messagePollInterval = setInterval(() => {
+      this.http.get(`${this.baseUrl}/video-sessions/${caseId}/messages`,
+        { responseType: 'text' }
+      ).subscribe({
+        next: (raw: string) => {
+          try {
+            const incoming: any[] = JSON.parse(raw);
+            this.ngZone.run(() => {
+              if (incoming.length !== this.messages.length) {
+                const newOnes = incoming.slice(this.messages.length);
+                this.messages = incoming;
+                if (!this.chatOpen) this.unreadCount += newOnes.filter((m: any) => m.sender === 'patient').length;
+                this.cdr.detectChanges();
+              }
+            });
+          } catch (_) {}
+        },
+        error: () => {}
+      });
+    }, 2000);
+  }
+
+  formatTime(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+    } catch { return ''; }
+  }
+
+  // ─── MEDICINES ───────────────────────────────────────────────
 
   addMedicine() {
     this.medicines.push({ name: '', dosage: '', frequency: '', duration: '' });
   }
 
   removeMedicine(index: number) {
-    if (this.medicines.length > 1) this.medicines.splice(index, 1);
+    if (this.medicines.length > 1) {
+      this.medicines.splice(index, 1);
+    }
   }
+
+  // ─── PRESCRIPTION SAVE + PDF ──────────────────────────────────
 
   savePrescription() {
     const doctor = this.getDoctorSession();
     const date = new Date().toLocaleDateString('en-IN');
 
     const payload = {
-      caseId: this.patient?.caseId || null,
-      doctorId: doctor.id,
-      doctorName: this.getDoctorName(),
-      department: doctor.dept || this.patient?.dept || 'General',
-      patientName: this.patient?.name || this.patient?.patientName || '',
-      symptoms: this.patient?.symptoms || '',
-      diagnosis: this.prescription.diagnosis,
-      medicines: JSON.stringify(this.medicines),
+      caseId:         this.patient?.caseId || null,
+      doctorId:       doctor.id,
+      doctorName:     this.getDoctorName(),
+      department:     doctor.dept || this.patient?.dept || 'General',
+      patientName:    this.patient?.name || this.patient?.patientName || '',
+      symptoms:       this.patient?.symptoms || '',
+      diagnosis:      this.prescription.diagnosis,
+      medicines:      JSON.stringify(this.medicines),
       investigations: this.prescription.investigations,
-      advice: this.prescription.advice,
-      followUpDate: this.prescription.followUpDate,
-      createdAt: new Date().toISOString()
+      advice:         this.prescription.advice,
+      followUpDate:   this.prescription.followUpDate,
+      createdAt:      new Date().toISOString()
     };
 
     this.http.post(`${this.baseUrl}/prescriptions`, payload).subscribe({
       next: () => this.generatePDF(payload, date),
-      error: () => this.generatePDF(payload, date)
+      error: ()  => this.generatePDF(payload, date)
     });
   }
 
   generatePDF(data: any, date: string) {
     const doctor = this.getDoctorSession();
-    let medsHtml = '';
 
+    let medsHtml = '';
     try {
       const meds = typeof data.medicines === 'string' ? JSON.parse(data.medicines) : data.medicines;
       meds.forEach((m: any) => {
@@ -379,20 +454,16 @@ export class IncomingCall implements OnInit, OnDestroy {
       medsHtml = `<div style="margin-left:16px">${data.medicines}</div>`;
     }
 
-    const html = `<html><head><title>Prescription</title><style>
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:Arial,sans-serif;padding:48px 56px;max-width:720px;margin:auto;color:#111}
-      .hosp{font-size:22px;font-weight:bold;text-align:center}
-      .docname{font-size:16px;font-weight:bold;text-align:center;margin-top:4px}
-      .center{text-align:center;font-size:13px;color:#444;line-height:1.6}
-      .divider{border:none;border-top:2.5px solid #0d6e6e;margin:16px 0}
-      .patient-block{font-size:14px;line-height:1.9;margin-bottom:4px}
+    const html = `<html><head><title>Prescription — ${data.patientName}</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:48px 56px;max-width:720px;margin:auto;color:#111}
+      .date{text-align:center;font-style:italic;font-size:13px;margin-bottom:12px}.hosp{font-size:22px;font-weight:bold;text-align:center}
+      .docname{font-size:16px;font-weight:bold;text-align:center;margin-top:4px}.center{text-align:center;font-size:13px;color:#444;line-height:1.6}
+      .divider{border:none;border-top:2.5px solid #0d6e6e;margin:16px 0}.patient-block{font-size:14px;line-height:1.9;margin-bottom:4px}
       .rx-symbol{font-size:30px;font-style:italic;font-weight:bold;margin:20px 0 8px;font-family:Georgia,serif}
-      .section-title{font-weight:bold;margin-top:18px;font-size:14px}
-      .section-body{font-size:14px;margin-left:8px;line-height:1.7}
+      .section-title{font-weight:bold;margin-top:18px;font-size:14px}.section-body{font-size:14px;margin-left:8px;line-height:1.7}
       .footer{margin-top:64px;display:flex;justify-content:space-between;font-size:13px;border-top:1px solid #ddd;padding-top:12px}
     </style></head><body>
-      <div style="text-align:center;font-style:italic;font-size:13px;margin-bottom:12px">Date: ${date}</div>
+      <div class="date">Date: ${date}</div>
       <div class="hosp">MediQueue Hospital</div>
       <div class="docname">${data.doctorName}</div>
       <div class="center">${data.department} Department<br/>Reg. No. MQ/${doctor.id || '001'}</div>
@@ -402,7 +473,7 @@ export class IncomingCall implements OnInit, OnDestroy {
       <div class="rx-symbol">R<sub>x</sub></div>
       ${medsHtml || '<div style="margin-left:16px;font-size:14px">No medicines prescribed</div>'}
       ${data.investigations ? `<div class="section-title">Investigations</div><div class="section-body">${data.investigations}</div>` : ''}
-      <div class="section-title">Advice</div><div class="section-body">${data.advice || '—'}</div>
+      <div class="section-title">Advice / Referrals</div><div class="section-body">${data.advice || '—'}</div>
       <div class="section-title">Follow-up Date</div><div class="section-body">${data.followUpDate || 'Not specified'}</div>
       <div class="footer"><div><b>${data.doctorName}</b><br/>${data.department}</div><div style="text-align:right">MediQueue Hospital<br/>${date}</div></div>
     </body></html>`;
@@ -415,12 +486,11 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
+  // ─── HELPERS ─────────────────────────────────────────────────
+
   getDoctorSession() {
-    try {
-      return JSON.parse(localStorage.getItem('doctor') || '{}');
-    } catch {
-      return {};
-    }
+    try { return JSON.parse(localStorage.getItem('doctor') || '{}'); }
+    catch { return {}; }
   }
 
   getDoctorName(): string {
@@ -438,8 +508,7 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   getMedicinesSummary(): string {
-    return this.medicines
-      .filter(m => m.name)
+    return this.medicines.filter(m => m.name)
       .map(m => `${m.name}${m.dosage ? ' ' + m.dosage : ''}`)
       .join(', ') || '—';
   }
