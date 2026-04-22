@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../services/auth';
 
 type DoctorKey = 'cardio' | 'neuro' | 'ortho';
 type PriorityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
@@ -51,6 +50,14 @@ type CalendarDay = {
   isPending: boolean;
 };
 
+type IncomingCallPatient = {
+  id: string;
+  name: string;
+  reason: string;
+  time: string;
+  avatar: string;
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -75,7 +82,6 @@ export class Dashboard implements OnInit {
 
   calendarViewYear = 2026;
   calendarViewMonth = 3;
-
   calendarDays: CalendarDay[] = [];
 
   private readonly TODAY_YEAR = 2026;
@@ -83,6 +89,17 @@ export class Dashboard implements OnInit {
   private readonly TODAY_DATE = 16;
 
   selectedDate = `${this.TODAY_YEAR}-${String(this.TODAY_MONTH + 1).padStart(2, '0')}-${String(this.TODAY_DATE).padStart(2, '0')}`;
+
+  sortAsc = true;
+
+  showIncomingCallPopup = true;
+  incomingCallPatient: IncomingCallPatient = {
+    id: 'C-1042',
+    name: 'Priya Mehta',
+    reason: 'Follow-up consultation',
+    time: 'Incoming now',
+    avatar: 'PM'
+  };
 
   get calendarMonth(): string {
     const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -160,10 +177,7 @@ export class Dashboard implements OnInit {
     }
   };
 
-  constructor(
-    private router: Router,
-    private authService: AuthService
-  ) {}
+  constructor(private router: Router) {}
 
   ngOnInit(): void {
     this.setGreeting();
@@ -171,6 +185,7 @@ export class Dashboard implements OnInit {
     this.loadDoctorDashboardData();
     this.buildCalendarDays();
     this.filterByDate(this.selectedDate);
+    this.setIncomingCallPatient();
   }
 
   setGreeting(): void {
@@ -181,30 +196,48 @@ export class Dashboard implements OnInit {
   }
 
   detectLoggedInDoctor(): void {
-    const dept = (this.authService.getDepartment() || '').toLowerCase();
-    const loggedName = this.authService.getDoctorName();
+    const sessionRaw = localStorage.getItem('doctor');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+    const storedDept = (session?.dept || '').toLowerCase();
 
-    if (dept.includes('neuro')) {
-      this.doctorKey = 'neuro';
-    } else if (dept.includes('ortho')) {
-      this.doctorKey = 'ortho';
-    } else {
-      this.doctorKey = 'cardio';
-    }
-
-    if (loggedName) {
-      this.doctorName = loggedName;
-    }
+    if (storedDept.includes('neuro')) this.doctorKey = 'neuro';
+    else if (storedDept.includes('ortho')) this.doctorKey = 'ortho';
+    else this.doctorKey = 'cardio';
   }
 
   loadDoctorDashboardData(): void {
     const data = this.doctorSeedData[this.doctorKey];
-    this.doctorName = this.authService.getDoctorName() || data.doctorName;
-    this.doctorDepartment = this.authService.getDepartment() || data.department;
+    this.doctorName = data.doctorName;
+    this.doctorDepartment = data.department;
     this.patientRows = [...data.patients];
     this.allAppointments = [...data.appointments];
     this.allScheduleBlocks = [...data.scheduleBlocks];
     this.isLoading = false;
+  }
+
+  setIncomingCallPatient(): void {
+    const firstPatient = this.patientRows[0];
+    if (!firstPatient) {
+      this.showIncomingCallPopup = false;
+      return;
+    }
+
+    this.incomingCallPatient = {
+      id: firstPatient.id,
+      name: firstPatient.name,
+      reason: firstPatient.reason,
+      time: 'Incoming now',
+      avatar: firstPatient.initials
+    };
+  }
+
+  acceptIncomingCall(): void {
+    this.showIncomingCallPopup = false;
+    this.router.navigate(['/incoming-call', this.incomingCallPatient.id]);
+  }
+
+  dismissIncomingCall(): void {
+    this.showIncomingCallPopup = false;
   }
 
   prevMonth(): void {
@@ -254,13 +287,7 @@ export class Dashboard implements OnInit {
     const days: CalendarDay[] = [];
 
     for (let i = 0; i < offset; i++) {
-      days.push({
-        date: null,
-        isToday: false,
-        isSelected: false,
-        hasAppointment: false,
-        isPending: false
-      });
+      days.push({ date: null, isToday: false, isSelected: false, hasAppointment: false, isPending: false });
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -302,6 +329,10 @@ export class Dashboard implements OnInit {
     this.router.navigate(['/monitor', patientId]);
   }
 
+  goToQueue(): void {
+    this.router.navigate(['/queue']);
+  }
+
   goToSchedule(): void {
     this.router.navigate(['/schedule']);
   }
@@ -325,8 +356,6 @@ export class Dashboard implements OnInit {
   get inQueue(): number {
     return Math.max(this.patientRows.length - 1, 0);
   }
-
-  sortAsc = true;
 
   get sortLabel(): string {
     return this.sortAsc ? 'A–Z' : 'Z–A';

@@ -151,6 +151,13 @@
   flex-wrap: wrap;
 }
 
+.action-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .accept-btn,
 .decline-btn {
   min-width: 96px;
@@ -173,19 +180,49 @@
 }
 
 .decline-btn {
-  border: 1px solid #fda4af;
-  background: #fff1f2;
-  color: #be123c;
+  background: #fff;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: auto;
+  height: auto;
 }
 
 .decline-btn:hover:not(:disabled) {
-  background: #ffe4e6;
+  background: #fef2f2;
 }
 
 .accept-btn:disabled,
 .decline-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.ctag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.ctag-chat {
+  background: #f0fdfa;
+  color: #0d9488;
+  border: 1px solid #99f6e4;
+}
+
+.ctag-video {
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
 }
 
 .state-box {

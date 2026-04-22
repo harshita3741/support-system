@@ -9,10 +9,12 @@ export class MedicalCaseService {
 
   constructor(private http: HttpClient) {}
 
+  /** All OPEN cases in the queue (shown to doctor before accepting) */
   getQueue(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/cases/queue`);
   }
 
+  /** Cases already assigned to a specific doctor */
   getCasesByDoctor(doctorId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/cases/doctor/${doctorId}`);
   }
@@ -25,8 +27,14 @@ export class MedicalCaseService {
     return this.http.get<any>(`${this.baseUrl}/cases/${caseId}/status`);
   }
 
+  /** Doctor accepts a case → sets status to ACCEPTED in backend */
   acceptCase(caseId: string | number, doctorId: string): Observable<any> {
     return this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, { doctorId });
+  }
+
+  /** Doctor declines a case from the queue → sets status to DECLINED */
+  declineCase(caseId: string | number): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {});
   }
 
   getAllCases(): Observable<any[]> {

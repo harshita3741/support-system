@@ -117,6 +117,41 @@ export class PatientMonitor implements OnInit {
       ]
     },
     {
+      id: 'C-1043',
+      doctorDept: 'CARDIO',
+      name: 'Rohan Verma',
+      initials: 'RV',
+      age: 48,
+      gender: 'Male',
+      patientId: '#83948',
+      bloodGroup: 'A+',
+      bmi: '26.4',
+      height: '5.8 ft',
+      weight: '76 kg',
+      contact: '9812345678',
+      vitals: [
+        { name: 'Blood Sugar', value: '110', unit: 'mg/dL', status: 'Pre-diabetic', icon: '🩸', bg: '#fff8f0' },
+        { name: 'Heart Rate', value: '84', unit: 'BPM', status: 'Normal', icon: '❤️', bg: '#fff0f0' },
+        { name: 'Blood Pressure', value: '132', unit: '/ 86 mmhg', status: 'Elevated', icon: '💧', bg: '#f0f9ff' },
+        { name: 'Hemoglobin', value: '13.6', unit: 'g/dL', status: 'Normal', icon: '🧬', bg: '#fff0f5' }
+      ],
+      reports: [
+        { name: 'Post-op Review.pdf', size: '2.8 MB', icon: '📄', downloaded: true },
+        { name: 'Medication Plan.pdf', size: '1.0 MB', icon: '📄', downloaded: false }
+      ],
+      history: [
+        { diagnosis: 'Post-op check', doctor: 'Dr. Smith', icon: '🩺' },
+        { diagnosis: 'Medication review', doctor: 'Dr. Smith', icon: '💊' }
+      ],
+      upcomingTests: [
+        { name: 'Blood Pressure Review', freq: 'Weekly', date: '24/04/26', icon: '📈', bg: '#f0f6ff' }
+      ],
+      visits: [
+        { date: 'Apr 10, 2026', diagnosis: 'Post-op check', notes: 'Recovery stable.' },
+        { date: 'Feb 18, 2026', diagnosis: 'Cardiac review', notes: 'Advised light activity.' }
+      ]
+    },
+    {
       id: 'N-2011',
       doctorDept: 'NEURO',
       name: 'Amit Sharma',
@@ -147,6 +182,109 @@ export class PatientMonitor implements OnInit {
       ],
       visits: [
         { date: 'Mar 22, 2026', diagnosis: 'Headache consult', notes: 'MRI advised.' }
+      ]
+    },
+    {
+      id: 'N-2012',
+      doctorDept: 'NEURO',
+      name: 'Neha Sharma',
+      initials: 'NS',
+      age: 39,
+      gender: 'Female',
+      patientId: '#83952',
+      bloodGroup: 'O+',
+      bmi: '23.7',
+      height: '5.5 ft',
+      weight: '59 kg',
+      contact: '9898982222',
+      vitals: [
+        { name: 'Blood Sugar', value: '96', unit: 'mg/dL', status: 'Normal', icon: '🩸', bg: '#fff8f0' },
+        { name: 'Heart Rate', value: '78', unit: 'BPM', status: 'Normal', icon: '❤️', bg: '#fff0f0' },
+        { name: 'Blood Pressure', value: '118', unit: '/ 76 mmhg', status: 'Normal', icon: '💧', bg: '#f0f9ff' },
+        { name: 'Hemoglobin', value: '13.1', unit: 'g/dL', status: 'Normal', icon: '🧬', bg: '#fff0f5' }
+      ],
+      reports: [
+        { name: 'MRI Review.pdf', size: '3.5 MB', icon: '📄', downloaded: true },
+        { name: 'Neuro Assessment.pdf', size: '1.6 MB', icon: '📄', downloaded: false }
+      ],
+      history: [
+        { diagnosis: 'MRI review', doctor: 'Dr. Adams', icon: '🧠' },
+        { diagnosis: 'Neuro assessment', doctor: 'Dr. Adams', icon: '🩺' }
+      ],
+      upcomingTests: [
+        { name: 'Follow-up Scan', freq: 'Monthly', date: '26/04/26', icon: '📈', bg: '#f0f6ff' }
+      ],
+      visits: [
+        { date: 'Apr 08, 2026', diagnosis: 'MRI review', notes: 'No major abnormality seen.' },
+        { date: 'Feb 12, 2026', diagnosis: 'Consultation', notes: 'Headache frequency reduced.' }
+      ]
+    },
+    {
+      id: 'O-3001',
+      doctorDept: 'ORTHO',
+      name: 'Vikram Singh',
+      initials: 'VS',
+      age: 56,
+      gender: 'Male',
+      patientId: '#83961',
+      bloodGroup: 'AB+',
+      bmi: '28.2',
+      height: '5.7 ft',
+      weight: '81 kg',
+      contact: '9765432101',
+      vitals: [
+        { name: 'Blood Sugar', value: '104', unit: 'mg/dL', status: 'Normal', icon: '🩸', bg: '#fff8f0' },
+        { name: 'Heart Rate', value: '82', unit: 'BPM', status: 'Normal', icon: '❤️', bg: '#fff0f0' },
+        { name: 'Blood Pressure', value: '128', unit: '/ 82 mmhg', status: 'Elevated', icon: '💧', bg: '#f0f9ff' },
+        { name: 'Hemoglobin', value: '13.9', unit: 'g/dL', status: 'Normal', icon: '🧬', bg: '#fff0f5' }
+      ],
+      reports: [
+        { name: 'Knee Evaluation.pdf', size: '2.7 MB', icon: '📄', downloaded: true },
+        { name: 'Physio Notes.pdf', size: '1.3 MB', icon: '📄', downloaded: false }
+      ],
+      history: [
+        { diagnosis: 'Knee pain review', doctor: 'Dr. Patel', icon: '🦴' }
+      ],
+      upcomingTests: [
+        { name: 'Physio assessment', freq: 'Weekly', date: '25/04/26', icon: '📈', bg: '#f0f6ff' }
+      ],
+      visits: [
+        { date: 'Mar 18, 2026', diagnosis: 'Knee pain review', notes: 'Mobility mildly restricted.' }
+      ]
+    },
+    {
+      id: 'O-3002',
+      doctorDept: 'ORTHO',
+      name: 'Pooja Nair',
+      initials: 'PN',
+      age: 34,
+      gender: 'Female',
+      patientId: '#83962',
+      bloodGroup: 'A-',
+      bmi: '22.9',
+      height: '5.4 ft',
+      weight: '56 kg',
+      contact: '9765432102',
+      vitals: [
+        { name: 'Blood Sugar', value: '92', unit: 'mg/dL', status: 'Normal', icon: '🩸', bg: '#fff8f0' },
+        { name: 'Heart Rate', value: '76', unit: 'BPM', status: 'Normal', icon: '❤️', bg: '#fff0f0' },
+        { name: 'Blood Pressure', value: '116', unit: '/ 74 mmhg', status: 'Normal', icon: '💧', bg: '#f0f9ff' },
+        { name: 'Hemoglobin', value: '12.9', unit: 'g/dL', status: 'Normal', icon: '🧬', bg: '#fff0f5' }
+      ],
+      reports: [
+        { name: 'Fracture Follow-up.pdf', size: '4.1 MB', icon: '📄', downloaded: true },
+        { name: 'X-ray Review.pdf', size: '2.4 MB', icon: '📄', downloaded: false }
+      ],
+      history: [
+        { diagnosis: 'Fracture follow-up', doctor: 'Dr. Patel', icon: '🦴' },
+        { diagnosis: 'X-ray review', doctor: 'Dr. Patel', icon: '🩻' }
+      ],
+      upcomingTests: [
+        { name: 'X-ray check', freq: 'Monthly', date: '27/04/26', icon: '📈', bg: '#f0f6ff' }
+      ],
+      visits: [
+        { date: 'Apr 02, 2026', diagnosis: 'Fracture follow-up', notes: 'Healing progressing well.' },
+        { date: 'Feb 25, 2026', diagnosis: 'Initial review', notes: 'Brace support continued.' }
       ]
     }
   ];

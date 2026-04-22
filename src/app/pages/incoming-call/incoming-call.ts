@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
+
 const STUN_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -29,6 +30,7 @@ const STUN_SERVERS = {
   ]
 };
 
+
 @Component({
   selector: 'app-incoming-call',
   standalone: true,
@@ -41,8 +43,18 @@ export class IncomingCall implements OnInit, OnDestroy {
   patient: any = null;
   callAccepted = false;
   callEnded = false;
+  endedByPatient = false;
+  endedReason = '';
+  private endHandled = false;
 
-  // WebRTC state
+  get consultationType(): string {
+    return (this.patient?.consultationType || 'VIDEO').toUpperCase();
+  }
+
+  get isChatConsultation(): boolean {
+    return this.consultationType === 'CHAT';
+  }
+
   webrtcStatus: 'idle' | 'waiting-offer' | 'connecting' | 'connected' | 'error' = 'idle';
   webrtcStatusMsg = '';
 
@@ -52,8 +64,11 @@ export class IncomingCall implements OnInit, OnDestroy {
   prescriptionOpen = false;
   callDuration = 0;
 
+  chatConsultationActive = false;
+  switchingToVideo = false;
+
   localStream: MediaStream | null = null;
-  private remoteStream: MediaStream | null = null;
+  remoteStream: MediaStream | null = null;
   private pc: RTCPeerConnection | null = null;
   private offerPollInterval: any;
   private candidatePollInterval: any;
@@ -88,8 +103,6 @@ export class IncomingCall implements OnInit, OnDestroy {
     private ngZone: NgZone
   ) {}
 
-  // ─── LIFECYCLE ───────────────────────────────────────────────
-
   ngOnInit() {
     const data = localStorage.getItem('activePatient');
     if (data) {
@@ -101,10 +114,10 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.cleanup();
   }
 
-  // ─── CALL CONTROLS ───────────────────────────────────────────
-
   async startVideoCall() {
     this.callAccepted = true;
+    this.chatConsultationActive = false;
+    this.chatOpen = false;
     this.webrtcStatus = 'waiting-offer';
     this.webrtcStatusMsg = 'Accessing camera...';
     this.cdr.detectChanges();
@@ -115,52 +128,82 @@ export class IncomingCall implements OnInit, OnDestroy {
         audio: true
       });
 
-      // Small delay to ensure @if(callAccepted) has rendered the video element
+      this.micOn = true;
+      this.cameraOn = true;
+      this.cdr.detectChanges();
+
       setTimeout(() => {
         if (this.localVideoRef?.nativeElement && this.localStream) {
           this.localVideoRef.nativeElement.srcObject = this.localStream;
           this.localVideoRef.nativeElement.muted = true;
+          this.localVideoRef.nativeElement.playsInline = true;
           this.localVideoRef.nativeElement.play().catch(() => {});
         }
-      }, 100);
+      }, 250);
 
-      this.micOn = true;
-      this.cameraOn = true;
-
-      // Set up WebRTC peer connection
       this.pc = new RTCPeerConnection(STUN_SERVERS);
       this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
 
-      // Store remote stream when tracks arrive
       this.pc.ontrack = (event) => {
         if (event.streams?.[0]) {
           this.remoteStream = event.streams[0];
         }
+
+        event.track.onended = () => {
+          this.ngZone.run(() => {
+            this.handleRemoteEnd('Call ended by patient');
+          });
+        };
+
         this.ngZone.run(() => {
           this.attachRemoteStream();
         });
       };
 
-      // Fallback: when peer connection fully establishes, force-attach stream
       this.pc.onconnectionstatechange = () => {
-        if (this.pc?.connectionState === 'connected') {
+        if (!this.pc) return;
+
+        const state = this.pc.connectionState;
+
+        if (state === 'connected') {
           this.ngZone.run(() => {
             setTimeout(() => {
               if (!this.remoteStream && this.pc) {
-                const tracks = this.pc.getReceivers().map(r => r.track).filter(t => t);
-                if (tracks.length) this.remoteStream = new MediaStream(tracks);
+                const tracks = this.pc.getReceivers()
+                  .map(r => r.track)
+                  .filter(Boolean) as MediaStreamTrack[];
+
+                if (tracks.length) {
+                  this.remoteStream = new MediaStream(tracks);
+                }
               }
               this.attachRemoteStream();
             }, 300);
           });
         }
+
+        if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+          this.ngZone.run(() => {
+            this.handleRemoteEnd('Call ended by patient');
+          });
+        }
       };
 
       this.pc.oniceconnectionstatechange = () => {
-        console.log('[ICE]', this.pc?.iceConnectionState);
+        const iceState = this.pc?.iceConnectionState;
+        console.log('[ICE]', iceState);
+
+        if (
+          iceState === 'disconnected' ||
+          iceState === 'failed' ||
+          iceState === 'closed'
+        ) {
+          this.ngZone.run(() => {
+            this.handleRemoteEnd('Call ended by patient');
+          });
+        }
       };
 
-      // Send our ICE candidates to backend
       this.pc.onicecandidate = (event) => {
         if (event.candidate) {
           const caseId = this.patient?.caseId;
@@ -175,22 +218,62 @@ export class IncomingCall implements OnInit, OnDestroy {
 
       this.webrtcStatusMsg = 'Waiting for patient to join...';
       this.cdr.detectChanges();
-
-      // Poll for patient's WebRTC offer
       this.pollForPatientOffer();
 
     } catch (err: any) {
       this.ngZone.run(() => {
         this.webrtcStatus = 'error';
-        this.webrtcStatusMsg = err.name === 'NotAllowedError'
+        this.webrtcStatusMsg = err?.name === 'NotAllowedError'
           ? 'Camera/microphone access denied. Please allow access and try again.'
-          : 'Could not start video: ' + (err.message || 'Unknown error');
+          : 'Could not start video: ' + (err?.message || 'Unknown error');
         this.cdr.detectChanges();
       });
     }
   }
 
-  /** Poll backend for the patient's SDP offer */
+  acceptChatConsultation() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+
+    const doctor = this.getDoctorSession();
+    this.callAccepted = true;
+    this.chatConsultationActive = true;
+    this.chatOpen = true;
+    this.cdr.detectChanges();
+
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, {
+      doctorId: String(doctor.id || '')
+    }).subscribe({ error: () => {} });
+
+    this.startMessagePolling();
+  }
+
+  switchToVideo() {
+    const caseId = this.patient?.caseId;
+    if (!caseId || this.switchingToVideo) return;
+
+    this.switchingToVideo = true;
+    this.webrtcStatus = 'waiting-offer';
+    this.webrtcStatusMsg = 'Switching to video call...';
+    this.cdr.detectChanges();
+
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/upgrade-to-video`, {}).subscribe({
+      next: () => {
+        clearInterval(this.messagePollInterval);
+        this.chatConsultationActive = false;
+        this.chatOpen = false;
+        this.switchingToVideo = false;
+        this.startVideoCall();
+      },
+      error: () => {
+        this.switchingToVideo = false;
+        this.webrtcStatus = 'error';
+        this.webrtcStatusMsg = 'Could not switch to video call.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   pollForPatientOffer() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
@@ -202,12 +285,11 @@ export class IncomingCall implements OnInit, OnDestroy {
             clearInterval(this.offerPollInterval);
             try {
               const offer = JSON.parse(res.sdp);
-              await this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
+              await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
 
-              const answer = await this.pc!.createAnswer();
-              await this.pc!.setLocalDescription(answer);
+              const answer = await this.pc.createAnswer();
+              await this.pc.setLocalDescription(answer);
 
-              // Send answer back to backend so patient can pick it up
               this.http.post(
                 `${this.baseUrl}/video-sessions/${caseId}/answer`,
                 { sdp: JSON.stringify(answer) }
@@ -219,7 +301,6 @@ export class IncomingCall implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
               });
 
-              // Start polling for patient's ICE candidates
               this.pollForPatientCandidates();
             } catch (e) {
               console.error('WebRTC answer error:', e);
@@ -231,7 +312,6 @@ export class IncomingCall implements OnInit, OnDestroy {
     }, 3000);
   }
 
-  /** Poll for patient's ICE candidates and add them */
   pollForPatientCandidates() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
@@ -260,9 +340,11 @@ export class IncomingCall implements OnInit, OnDestroy {
   attachRemoteStream() {
     if (this.remoteVideoRef?.nativeElement && this.remoteStream) {
       this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
+      this.remoteVideoRef.nativeElement.playsInline = true;
       this.remoteVideoRef.nativeElement.play().catch(() => {});
     }
-    if (this.webrtcStatus !== 'connected') {
+
+    if (this.webrtcStatus !== 'connected' && this.remoteStream) {
       this.webrtcStatus = 'connected';
       this.webrtcStatusMsg = '';
       this.startCallTimer();
@@ -272,8 +354,12 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   startCallTimer() {
+    clearInterval(this.callTimer);
     this.callTimer = setInterval(() => {
-      this.ngZone.run(() => { this.callDuration++; this.cdr.detectChanges(); });
+      this.ngZone.run(() => {
+        this.callDuration++;
+        this.cdr.detectChanges();
+      });
     }, 1000);
   }
 
@@ -291,6 +377,7 @@ export class IncomingCall implements OnInit, OnDestroy {
 
   toggleCamera() {
     if (!this.localStream) return;
+
     this.cameraOn = !this.cameraOn;
     this.localStream.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
 
@@ -309,8 +396,63 @@ export class IncomingCall implements OnInit, OnDestroy {
     if (this.prescriptionOpen) this.chatOpen = false;
   }
 
+  handleRemoteEnd(reason = 'Call ended by patient') {
+    if (this.endHandled || this.callEnded) return;
+    this.endHandled = true;
+
+    this.endedByPatient = true;
+    this.endedReason = reason;
+    this.callEnded = true;
+    this.callAccepted = false;
+    this.chatConsultationActive = false;
+    this.chatOpen = false;
+    this.prescriptionOpen = false;
+    this.webrtcStatus = 'idle';
+    this.webrtcStatusMsg = '';
+
+    clearInterval(this.offerPollInterval);
+    clearInterval(this.candidatePollInterval);
+    clearInterval(this.callTimer);
+    clearInterval(this.messagePollInterval);
+
+    if (this.remoteVideoRef?.nativeElement) {
+      this.remoteVideoRef.nativeElement.pause();
+      this.remoteVideoRef.nativeElement.srcObject = null;
+    }
+
+    if (this.localVideoRef?.nativeElement) {
+      this.localVideoRef.nativeElement.pause();
+      this.localVideoRef.nativeElement.srcObject = null;
+    }
+
+    this.remoteStream?.getTracks().forEach(t => t.stop());
+    this.remoteStream = null;
+
+    if (this.pc) {
+      this.pc.ontrack = null;
+      this.pc.onicecandidate = null;
+      this.pc.onconnectionstatechange = null;
+      this.pc.oniceconnectionstatechange = null;
+      this.pc.close();
+      this.pc = null;
+    }
+
+    this.stopMediaTracks();
+    localStorage.removeItem('activePatient');
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.router.navigate(['/queue']);
+    }, 2200);
+  }
+
   endCall() {
+    if (this.endHandled) return;
+    this.endHandled = true;
+
     this.cleanup();
+    this.endedByPatient = false;
+    this.endedReason = 'Consultation ended';
     this.callEnded = true;
     this.callAccepted = false;
     localStorage.removeItem('activePatient');
@@ -325,9 +467,26 @@ export class IncomingCall implements OnInit, OnDestroy {
     clearInterval(this.candidatePollInterval);
     clearInterval(this.callTimer);
     clearInterval(this.messagePollInterval);
+
+    if (this.remoteVideoRef?.nativeElement) {
+      this.remoteVideoRef.nativeElement.pause();
+      this.remoteVideoRef.nativeElement.srcObject = null;
+    }
+
+    if (this.localVideoRef?.nativeElement) {
+      this.localVideoRef.nativeElement.pause();
+      this.localVideoRef.nativeElement.srcObject = null;
+    }
+
     this.pc?.close();
     this.pc = null;
+    this.chatConsultationActive = false;
     this.stopMediaTracks();
+
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach(t => t.stop());
+      this.remoteStream = null;
+    }
   }
 
   stopMediaTracks() {
@@ -338,7 +497,6 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   goBack() {
-    // Decline the case so patient sees it on their side
     const caseId = this.patient?.caseId;
     if (caseId) {
       this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {}).subscribe({ error: () => {} });
@@ -346,8 +504,6 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.cleanup();
     this.router.navigate(['/queue']);
   }
-
-  // ─── CHAT ────────────────────────────────────────────────────
 
   toggleChat() {
     this.chatOpen = !this.chatOpen;
@@ -360,21 +516,26 @@ export class IncomingCall implements OnInit, OnDestroy {
   sendMessage() {
     const text = this.chatMessage.trim();
     if (!text) return;
+
     this.chatMessage = '';
     const caseId = this.patient?.caseId;
     if (!caseId) return;
-    this.http.post(`${this.baseUrl}/video-sessions/${caseId}/messages`,
-      { sender: 'doctor', text }
-    ).subscribe({ error: () => {} });
+
+    this.http.post(`${this.baseUrl}/video-sessions/${caseId}/messages`, {
+      sender: 'doctor',
+      text
+    }).subscribe({ error: () => {} });
   }
 
   startMessagePolling() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
+
+    clearInterval(this.messagePollInterval);
     this.messagePollInterval = setInterval(() => {
-      this.http.get(`${this.baseUrl}/video-sessions/${caseId}/messages`,
-        { responseType: 'text' }
-      ).subscribe({
+      this.http.get(`${this.baseUrl}/video-sessions/${caseId}/messages`, {
+        responseType: 'text'
+      }).subscribe({
         next: (raw: string) => {
           try {
             const incoming: any[] = JSON.parse(raw);
@@ -382,7 +543,9 @@ export class IncomingCall implements OnInit, OnDestroy {
               if (incoming.length !== this.messages.length) {
                 const newOnes = incoming.slice(this.messages.length);
                 this.messages = incoming;
-                if (!this.chatOpen) this.unreadCount += newOnes.filter((m: any) => m.sender === 'patient').length;
+                if (!this.chatOpen) {
+                  this.unreadCount += newOnes.filter((m: any) => m.sender === 'patient').length;
+                }
                 this.cdr.detectChanges();
               }
             });
@@ -397,10 +560,10 @@ export class IncomingCall implements OnInit, OnDestroy {
     try {
       const d = new Date(iso);
       return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-    } catch { return ''; }
+    } catch {
+      return '';
+    }
   }
-
-  // ─── MEDICINES ───────────────────────────────────────────────
 
   addMedicine() {
     this.medicines.push({ name: '', dosage: '', frequency: '', duration: '' });
@@ -412,30 +575,28 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
-  // ─── PRESCRIPTION SAVE + PDF ──────────────────────────────────
-
   savePrescription() {
     const doctor = this.getDoctorSession();
     const date = new Date().toLocaleDateString('en-IN');
 
     const payload = {
-      caseId:         this.patient?.caseId || null,
-      doctorId:       doctor.id,
-      doctorName:     this.getDoctorName(),
-      department:     doctor.dept || this.patient?.dept || 'General',
-      patientName:    this.patient?.name || this.patient?.patientName || '',
-      symptoms:       this.patient?.symptoms || '',
-      diagnosis:      this.prescription.diagnosis,
-      medicines:      JSON.stringify(this.medicines),
+      caseId: this.patient?.caseId || null,
+      doctorId: doctor.id,
+      doctorName: this.getDoctorName(),
+      department: doctor.dept || this.patient?.dept || 'General',
+      patientName: this.patient?.name || this.patient?.patientName || '',
+      symptoms: this.patient?.symptoms || '',
+      diagnosis: this.prescription.diagnosis,
+      medicines: JSON.stringify(this.medicines),
       investigations: this.prescription.investigations,
-      advice:         this.prescription.advice,
-      followUpDate:   this.prescription.followUpDate,
-      createdAt:      new Date().toISOString()
+      advice: this.prescription.advice,
+      followUpDate: this.prescription.followUpDate,
+      createdAt: new Date().toISOString()
     };
 
     this.http.post(`${this.baseUrl}/prescriptions`, payload).subscribe({
       next: () => this.generatePDF(payload, date),
-      error: ()  => this.generatePDF(payload, date)
+      error: () => this.generatePDF(payload, date)
     });
   }
 
@@ -486,11 +647,12 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
-  // ─── HELPERS ─────────────────────────────────────────────────
-
   getDoctorSession() {
-    try { return JSON.parse(localStorage.getItem('doctor') || '{}'); }
-    catch { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem('doctor') || '{}');
+    } catch {
+      return {};
+    }
   }
 
   getDoctorName(): string {
@@ -508,7 +670,8 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   getMedicinesSummary(): string {
-    return this.medicines.filter(m => m.name)
+    return this.medicines
+      .filter(m => m.name)
       .map(m => `${m.name}${m.dosage ? ' ' + m.dosage : ''}`)
       .join(', ') || '—';
   }

@@ -1,13 +1,11 @@
 <div class="dashboard-page" [class.loading]="isLoading">
 
-  <!-- Loading overlay -->
   @if (isLoading) {
     <div class="loading-overlay">
       <div class="spinner"></div>
     </div>
   }
 
-  <!-- Hero -->
   <div class="hero-head">
     <div class="hero-text">
       <h1>{{ greeting }}, {{ doctorName }}!</h1>
@@ -21,7 +19,6 @@
     <div class="hero-date">{{ selectedDate | date: 'EEEE, MMMM d' }}</div>
   </div>
 
-  <!-- Stats row -->
   <div class="stats-grid">
     <div class="stat-card stat-cases">
       <div class="stat-icon">
@@ -69,13 +66,8 @@
     </div>
   </div>
 
-  <!-- Main layout -->
   <div class="dashboard-main-grid">
-
-    <!-- LEFT PANEL -->
     <div class="left-panel">
-
-      <!-- Patients table -->
       <div class="card patients-card">
         <div class="card-top">
           <div>
@@ -138,7 +130,6 @@
         }
       </div>
 
-      <!-- Schedule timeline -->
       <div class="card schedule-card">
         <div class="card-top">
           <div>
@@ -159,6 +150,7 @@
           </div>
           <div class="timeline-track">
             <div class="today-tag">TODAY</div>
+
             @for (block of todaySchedule; track block.id) {
               <div
                 class="sched-block"
@@ -171,6 +163,7 @@
                 <div class="sched-note">{{ block.note }}</div>
               </div>
             }
+
             @if (todaySchedule.length === 0 && !isLoading) {
               <div class="no-schedule">No appointments scheduled for this date</div>
             }
@@ -179,11 +172,8 @@
       </div>
     </div>
 
-    <!-- RIGHT PANEL: Calendar + Appointments -->
     <div class="right-panel">
       <div class="card calendar-card">
-
-        <!-- Month header -->
         <div class="cal-header">
           <div class="cal-month">{{ calendarMonth }}</div>
           <div class="cal-nav">
@@ -192,19 +182,16 @@
           </div>
         </div>
 
-        <!-- Legend -->
         <div class="cal-legend">
           <span class="legend-item"><span class="leg-dot green"></span> Scheduled</span>
           <span class="legend-item"><span class="leg-dot amber"></span> Pending</span>
         </div>
 
-        <!-- Day headers -->
         <div class="cal-grid cal-days-header">
           <span>MON</span><span>TUE</span><span>WED</span>
           <span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
         </div>
 
-        <!-- Calendar days -->
         <div class="cal-grid cal-dates">
           @for (day of calendarDays; track $index) {
             <button
@@ -217,9 +204,11 @@
               [class.is-pending]="day.isPending"
               (click)="selectDate(day)">
               {{ day.date ?? '' }}
+
               @if (day.hasAppointment) {
                 <span class="cal-dot green-dot"></span>
               }
+
               @if (day.isPending) {
                 <span class="cal-dot amber-dot"></span>
               }
@@ -227,7 +216,6 @@
           }
         </div>
 
-        <!-- Appointments list -->
         <div class="appts-section">
           <div class="appts-title">APPOINTMENTS · {{ formattedSelectedDate }}</div>
 
@@ -249,6 +237,35 @@
         </div>
       </div>
     </div>
-
   </div>
+
+  @if (showIncomingCallPopup) {
+    <div class="incoming-call-popup" (click)="goToQueue()">
+      <button
+        class="incoming-close-btn"
+        type="button"
+        (click)="dismissIncomingCall(); $event.stopPropagation()">×</button>
+
+      <div class="incoming-top">
+        <div class="incoming-avatar">{{ incomingCallPatient.avatar }}</div>
+        <div class="incoming-meta">
+          <div class="incoming-label">Incoming consultation</div>
+          <div class="incoming-name">{{ incomingCallPatient.name }}</div>
+          <div class="incoming-reason">{{ incomingCallPatient.reason }}</div>
+          <div class="incoming-time">{{ incomingCallPatient.time }}</div>
+        </div>
+      </div>
+
+      <div class="incoming-actions">
+        <button
+          class="incoming-decline"
+          type="button"
+          (click)="dismissIncomingCall(); $event.stopPropagation()">Decline</button>
+        <button
+          class="incoming-accept"
+          type="button"
+          (click)="acceptIncomingCall(); $event.stopPropagation()">Accept</button>
+      </div>
+    </div>
+  }
 </div>

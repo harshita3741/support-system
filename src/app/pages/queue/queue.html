@@ -2,26 +2,25 @@
   <div class="card">
     <div class="card-header">
       <div>
-        <div class="card-title">Live Queue — {{ departmentLabel }}</div>
+        <div class="card-title">Live Queue — {{ doctorDept || 'All Departments' }}</div>
         <div class="card-sub">Patients waiting for assignment</div>
       </div>
       <span class="waiting-badge">{{ queueItems.length }} waiting</span>
     </div>
 
     @if (loading) {
-      <div class="state-box muted-text">Loading queue...</div>
+      <div style="padding: 20px; color: #6b7280;">Loading queue...</div>
     } @else if (errorMessage) {
-      <div class="state-box error-text">{{ errorMessage }}</div>
+      <div style="padding: 20px; color: #dc2626;">{{ errorMessage }}</div>
     } @else if (queueItems.length === 0) {
-      <div class="state-box empty-text">No patients in queue</div>
+      <div style="padding: 20px; color: #9ca3af;">No patients in queue</div>
     } @else {
       <table class="queue-table">
         <thead>
           <tr>
             <th>Patient</th>
-            <th>Date</th>
-            <th>Time</th>
             <th>Symptoms</th>
+            <th>Type</th>
             <th>Priority</th>
             <th>Status</th>
             <th>Action</th>
@@ -38,23 +37,20 @@
                     [style.color]="getAvatarColor(q.priority)">
                     {{ getInitials(q.patientName) }}
                   </div>
-
                   <div>
                     <div class="p-name">{{ q.patientName }}</div>
-                    <div class="p-age">
-                      @if (q.age || q.gender) {
-                        {{ q.age ?? '--' }} yrs · {{ q.gender ?? '--' }}
-                      } @else {
-                        Details not available
-                      }
-                    </div>
+                    <div class="p-age">{{ q.age || '--' }} yrs · {{ q.gender || '--' }}</div>
                   </div>
                 </div>
               </td>
 
-              <td>{{ q.date || '—' }}</td>
-              <td>{{ q.time || '—' }}</td>
               <td class="muted">{{ q.symptoms }}</td>
+
+              <td>
+                <span class="ctag" [ngClass]="getConsultTypeClass(q)">
+                  {{ getConsultTypeLabel(q) }}
+                </span>
+              </td>
 
               <td>
                 <span class="prio" [ngClass]="getPriorityClass(q.priority)">
@@ -69,19 +65,16 @@
               </td>
 
               <td>
-                <div class="action-cell">
-                  <button
-                    class="accept-btn"
+                <div class="action-btns">
+                  <button class="accept-btn"
                     (click)="acceptPatient(q)"
-                    [disabled]="acceptingId === q.caseId">
+                    [disabled]="acceptingId === q.caseId || decliningId === q.caseId">
                     {{ acceptingId === q.caseId ? 'Accepting...' : 'Accept' }}
                   </button>
-
-                  <button
-                    class="decline-btn"
+                  <button class="decline-btn"
                     (click)="declinePatient(q)"
-                    [disabled]="decliningId === q.caseId">
-                    {{ decliningId === q.caseId ? 'Declining...' : 'Decline' }}
+                    [disabled]="acceptingId === q.caseId || decliningId === q.caseId">
+                    {{ decliningId === q.caseId ? '...' : 'Decline' }}
                   </button>
                 </div>
               </td>
