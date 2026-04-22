@@ -44,13 +44,13 @@ public class ChatService {
       "cannot breath", "no breath", "emergency", "ambulance"})) {
       department = "CARDIO";
       isEmergency = true;
-      responseText = "🚨 This may be a serious condition. Please seek immediate medical attention.";
+      responseText = "🚨 This sounds like a medical emergency. Please call emergency services immediately or go to the nearest ER. I am connecting you to a cardiologist right now.";
     }
     // 🫀 CARDIO — heart / chest related
     else if (has.test(new String[]{"chest pain", "chest ache", "heart", "cardiac", "cardio",
       "palpitat", "pressure in chest", "tight chest", "cardiol"})) {
       department = "CARDIO";
-      responseText = "You may be experiencing a cardiac issue. A cardiologist is recommended.";
+      responseText = "I understand you're experiencing chest or heart-related symptoms. Our Cardiology team can help you. Please choose how you'd like to connect with a cardiologist:";
     }
     // 🧠 NEURO — head / brain / nerve related
     else if (has.test(new String[]{"headach", "head ach", "head pain", "head hurt", "heaache",
@@ -58,7 +58,7 @@ public class ChatService {
       "seizure", "convuls", "numbness", "tingling", "memory", "confus",
       "neuro", "neurolog", "brain", "nerve", "spine", "spinal"})) {
       department = "NEURO";
-      responseText = "This could be a neurological issue. Please consult a neurologist.";
+      responseText = "I understand you're experiencing neurological symptoms such as headache, dizziness, or nerve-related discomfort. Our Neurology team can assist you. Please choose how you'd like to connect with a neurologist:";
     }
     // 🦴 ORTHO — bone / joint / muscle related
     else if (has.test(new String[]{"fracture", "broken bone", "bone pain", "joint pain",
@@ -66,38 +66,16 @@ public class ChatService {
       "ankle", "wrist pain", "sprain", "ligament", "ortho", "orthoped",
       "muscle pain", "swollen joint", "arthrit"})) {
       department = "ORTHO";
-      responseText = "This appears to be an orthopedic issue. Consult an orthopedic specialist.";
+      responseText = "I see you're dealing with bone, joint, or muscle-related pain. Our Orthopedics team is here to help. Please choose how you'd like to connect with a specialist:";
     }
     // 🤒 GENERAL — fever / cold / infection
     else if (has.test(new String[]{"fever", "cold", "cough", "flu", "sore throat",
       "runny nose", "sneezing", "body ache", "chills", "infection", "viral",
       "fatigue", "tired", "weak", "stomach", "abdomen", "diarrhea", "vomiting"})) {
-      responseText = "This may be a general infection. Stay hydrated and monitor your symptoms.";
+      responseText = "These symptoms are common with infections or viral illnesses. Make sure to stay hydrated, rest well, and monitor your temperature. If symptoms worsen or persist beyond 3 days, please consult a doctor. Would you like to describe your symptoms in more detail?";
     }
     else {
-      responseText = "Please describe your symptoms in more detail. For example: headache, chest pain, fever, joint pain, etc.";
-    }
-
-    Long createdCaseId = null;
-
-    // 🚀 AUTO CASE CREATION
-    if (department != null) {
-      MedicalCase mc = new MedicalCase();
-      long caseId = System.currentTimeMillis();
-      mc.setCaseId(caseId);
-      mc.setPatientName(patientName != null && !patientName.isEmpty() ? patientName : "Patient");
-      mc.setSymptoms(message);
-      mc.setDepartment(department);
-
-      medicalCaseService.createCase(mc);
-      createdCaseId = caseId;
-
-      responseText += " ✅ Your case has been registered and assigned to the " + department + " department.";
-    }
-
-    // 💬 FOLLOW-UP SUGGESTION
-    if (!isEmergency && department != null) {
-      responseText += " A doctor from the " + department + " team will connect with you shortly.";
+      responseText = "Thank you for reaching out! Could you describe your symptoms in a bit more detail? For example: Do you have a headache, chest pain, fever, joint pain, or any other discomfort? The more details you share, the better I can help.";
     }
 
     // 💾 SAVE CHAT
@@ -107,7 +85,30 @@ public class ChatService {
     chat.setTimestamp(LocalDateTime.now());
     chatRepository.save(chat);
 
-    return new ChatResponse(responseText, createdCaseId, department);
+    // 🚀 DEPARTMENT DETECTED → ask patient for consultation type (Video or Chat)
+    // Emergency cases bypass choice and go straight to video
+    if (department != null && isEmergency) {
+      MedicalCase mc = new MedicalCase();
+      long caseId = System.currentTimeMillis();
+      mc.setCaseId(caseId);
+      mc.setPatientName(patientName != null && !patientName.isEmpty() ? patientName : "Patient");
+      mc.setSymptoms(message);
+      mc.setDepartment(department);
+      mc.setConsultationType("VIDEO");
+      medicalCaseService.createCase(mc);
+      responseText += " ✅ Case registered — " + department + " dept. A doctor will connect with you immediately.";
+      return new ChatResponse(responseText, caseId, department);
+    }
+
+    if (department != null) {
+      // Don't create case yet — ask the patient how they want to consult
+      ChatResponse resp = new ChatResponse(responseText, null, department);
+      resp.setAwaitingConsultationType(true);
+      resp.setPendingSymptoms(message);
+      return resp;
+    }
+
+    return new ChatResponse(responseText, null, null);
   }
 
   // Keep old method for backward compatibility

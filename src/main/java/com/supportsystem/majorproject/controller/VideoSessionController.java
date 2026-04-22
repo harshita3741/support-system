@@ -15,6 +15,7 @@ public class VideoSessionController {
   @Autowired
   private VideoSessionService videoSessionService;
 
+  // Patient posts SDP offer
   @PostMapping("/{caseId}/offer")
   public ResponseEntity<Map<String, String>> postOffer(
     @PathVariable Long caseId,
@@ -23,6 +24,7 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
+  // Doctor gets patient's SDP offer
   @GetMapping("/{caseId}/offer")
   public ResponseEntity<Map<String, String>> getOffer(@PathVariable Long caseId) {
     String sdp = videoSessionService.getOffer(caseId);
@@ -30,6 +32,7 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("sdp", sdp));
   }
 
+  // Doctor posts SDP answer
   @PostMapping("/{caseId}/answer")
   public ResponseEntity<Map<String, String>> postAnswer(
     @PathVariable Long caseId,
@@ -38,6 +41,7 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
+  // Patient gets doctor's SDP answer
   @GetMapping("/{caseId}/answer")
   public ResponseEntity<Map<String, String>> getAnswer(@PathVariable Long caseId) {
     String sdp = videoSessionService.getAnswer(caseId);
@@ -45,6 +49,8 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("sdp", sdp));
   }
 
+  // Either side posts an ICE candidate
+  // role = "patient" | "doctor"
   @PostMapping("/{caseId}/candidate/{role}")
   public ResponseEntity<Map<String, String>> addCandidate(
     @PathVariable Long caseId,
@@ -54,11 +60,36 @@ public class VideoSessionController {
     return ResponseEntity.ok(Map.of("status", "ok"));
   }
 
+  // Either side fetches the OTHER side's candidates
+  // role = "patient" (doctor fetches patient's) | "doctor" (patient fetches doctor's)
   @GetMapping("/{caseId}/candidates/{role}")
   public ResponseEntity<String> getCandidates(
     @PathVariable Long caseId,
     @PathVariable String role) {
     String candidates = videoSessionService.getCandidates(caseId, role);
     return ResponseEntity.ok(candidates);
+  }
+
+  // Either side sends a chat message
+  // body: { sender: "doctor"|"patient", text: "message content" }
+  @PostMapping("/{caseId}/messages")
+  public ResponseEntity<Map<String, String>> sendMessage(
+    @PathVariable Long caseId,
+    @RequestBody Map<String, String> body) {
+    String sender = body.get("sender");
+    String text = body.get("text");
+    String time = java.time.LocalDateTime.now().toString();
+    // Build JSON object manually (no Jackson dependency needed)
+    String messageJson = "{\"sender\":\"" + sender + "\",\"text\":\"" +
+      text.replace("\"", "\\\"") + "\",\"time\":\"" + time + "\"}";
+    videoSessionService.sendMessage(caseId, messageJson);
+    return ResponseEntity.ok(Map.of("status", "ok"));
+  }
+
+  // Either side fetches all chat messages
+  @GetMapping("/{caseId}/messages")
+  public ResponseEntity<String> getMessages(@PathVariable Long caseId) {
+    String messages = videoSessionService.getMessages(caseId);
+    return ResponseEntity.ok(messages);
   }
 }

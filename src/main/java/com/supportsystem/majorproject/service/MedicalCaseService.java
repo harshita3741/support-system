@@ -24,7 +24,7 @@ public class MedicalCaseService {
   public void createCase(MedicalCase medicalCase) {
     medicalCase.setStatus("OPEN");
     departmentQueue.addCase(medicalCase);
-    repository.save(medicalCase);  // ← persists to DB so queue endpoint can fetch it
+    repository.save(medicalCase);
     System.out.println("Medical case added to queue: " + medicalCase.getCaseId());
   }
 
@@ -48,5 +48,24 @@ public class MedicalCaseService {
     }
     return "Case not found";
   }
-}
 
+  public String updateStatus(Long caseId, String status) {
+    MedicalCase mc = repository.findById(caseId).orElse(null);
+    if (mc != null) {
+      mc.setStatus(status);
+      repository.save(mc);
+      return status;
+    }
+    return "Case not found";
+  }
+
+  public String upgradeToVideo(Long caseId) {
+    MedicalCase mc = repository.findById(caseId).orElse(null);
+    if (mc != null) {
+      mc.setConsultationType("VIDEO");
+      repository.save(mc);
+      return "Upgraded to VIDEO";
+    }
+    return "Case not found";
+  }
+}

@@ -5,6 +5,8 @@ public class ChatResponse {
   private String message;
   private Long caseId;
   private String department;
+  private boolean awaitingConsultationType;  // true = show Video/Chat choice buttons
+  private String pendingSymptoms;            // original symptom text, passed back to FE for case creation
 
   public ChatResponse() {}
 
@@ -22,4 +24,10 @@ public class ChatResponse {
 
   public String getDepartment() { return department; }
   public void setDepartment(String department) { this.department = department; }
+
+  public boolean isAwaitingConsultationType() { return awaitingConsultationType; }
+  public void setAwaitingConsultationType(boolean awaitingConsultationType) { this.awaitingConsultationType = awaitingConsultationType; }
+
+  public String getPendingSymptoms() { return pendingSymptoms; }
+  public void setPendingSymptoms(String pendingSymptoms) { this.pendingSymptoms = pendingSymptoms; }
 }

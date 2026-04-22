@@ -22,7 +22,10 @@ public class VideoSession {
   @Column(name = "doctor_candidates", columnDefinition = "NVARCHAR(MAX)")
   private String doctorCandidates;
 
-  private String status; // OFFERED, ANSWERED
+  @Column(name = "messages", columnDefinition = "NVARCHAR(MAX)")
+  private String messages;
+
+  private String status;
 
   public VideoSession() {}
 
@@ -40,6 +43,9 @@ public class VideoSession {
 
   public String getDoctorCandidates() { return doctorCandidates; }
   public void setDoctorCandidates(String doctorCandidates) { this.doctorCandidates = doctorCandidates; }
+
+  public String getMessages() { return messages; }
+  public void setMessages(String messages) { this.messages = messages; }
 
   public String getStatus() { return status; }
   public void setStatus(String status) { this.status = status; }

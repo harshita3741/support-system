@@ -1,9 +1,6 @@
 package com.supportsystem.majorproject.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "medical_case")
@@ -16,7 +13,7 @@ public class MedicalCase {
   @Column(name = "patient_name")
   private String patientName;
 
-  @Column(name = "patient_id", insertable = false, updatable = false)
+  @Column(name = "patient_id")
   private String patientId;
 
   private String department;
@@ -25,6 +22,9 @@ public class MedicalCase {
 
   @Column(name = "assigned_doctor_id")
   private Long assignedDoctorId;
+
+  @Column(name = "consultation_type")
+  private String consultationType;  // VIDEO | CHAT
 
   public Long getCaseId() { return caseId; }
   public void setCaseId(Long caseId) { this.caseId = caseId; }
@@ -46,4 +46,7 @@ public class MedicalCase {
 
   public Long getAssignedDoctorId() { return assignedDoctorId; }
   public void setAssignedDoctorId(Long assignedDoctorId) { this.assignedDoctorId = assignedDoctorId; }
+
+  public String getConsultationType() { return consultationType; }
+  public void setConsultationType(String consultationType) { this.consultationType = consultationType; }
 }

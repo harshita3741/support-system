@@ -6,7 +6,13 @@ import com.supportsystem.majorproject.model.Doctor;
 import com.supportsystem.majorproject.repository.AppointmentRepository;
 import com.supportsystem.majorproject.repository.SlotRepository;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
@@ -22,23 +28,16 @@ public class AppointmentService {
   }
 
   public Appointment bookAppointment(Appointment appt) {
-    Doctor doctor = doctorService.assignDoctorByDepartment(appt.getDepartment());
-    if (doctor != null) {
-      appt.setDoctorId(doctor.getDoctorId());
+    // Auto-assign doctor if none specified
+    if (appt.getDoctorId() == null && appt.getDepartment() != null) {
+      Doctor doctor = doctorService.assignDoctorByDepartment(appt.getDepartment());
+      if (doctor != null) {
+        appt.setDoctorId(doctor.getDoctorId());
+        if (appt.getDoctorName() == null) appt.setDoctorName(doctor.getName());
+      }
     }
 
-    // Mark the slot as booked
-    if (appt.getAppointmentTime() != null && appt.getDoctorId() != null) {
-      slotRepo.findByDoctorIdAndBookedFalse(appt.getDoctorId())
-        .stream()
-        .filter(s -> s.getSlotTime().equals(appt.getAppointmentTime()))
-        .findFirst()
-        .ifPresent(slot -> {
-          slot.setBooked(true);
-          slotRepo.save(slot);
-        });
-    }
-
+    appt.setStatus("BOOKED");
     return repo.save(appt);
   }
 
@@ -49,7 +48,25 @@ public class AppointmentService {
   public List<AppointmentSlot> getAvailableSlots(Long doctorId) {
     return slotRepo.findByDoctorIdAndBookedFalse(doctorId);
   }
+
   public List<Appointment> getAppointmentsForPatient(String patientName) {
-    return repo.findByPatientName(patientName);
+    return repo.findByPatientNameIgnoreCase(patientName);
+  }
+
+  /**
+   * Returns list of booked time strings (e.g. "09:00 AM") for a given doctor on a given date.
+   * date format: YYYY-MM-DD
+   */
+  public List<String> getBookedSlotStrings(Long doctorId, String date) {
+    LocalDate ld = LocalDate.parse(date);
+    LocalDateTime start = ld.atStartOfDay();
+    LocalDateTime end = ld.atTime(LocalTime.MAX);
+
+    List<Appointment> appointments = repo.findByDoctorIdAndDate(doctorId, start, end);
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("hh:mm a");
+    return appointments.stream()
+      .filter(a -> a.getAppointmentTime() != null)
+      .map(a -> a.getAppointmentTime().toLocalTime().format(fmt).toUpperCase())
+      .collect(Collectors.toList());
   }
 }
