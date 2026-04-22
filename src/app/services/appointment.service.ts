@@ -5,13 +5,12 @@ import { Observable } from 'rxjs';
 export interface Appointment {
   id?: number;
   patientName: string;
-  patientEmail: string;
+  patientId?: string;
   doctorId: number;
   doctorName: string;
   department: string;
-  date: string;
-  timeSlot: string;
   reason: string;
+  appointmentTime: string; // ISO: "2026-04-22T09:00:00"
   status?: string;
 }
 
@@ -20,19 +19,19 @@ export interface Appointment {
 })
 export class AppointmentService {
 
-  private baseUrl = 'http://192.168.1.76:8080';
+  private baseUrl = 'http://localhost:8080';
 
   constructor(private http: HttpClient) {}
 
   createAppointment(payload: Appointment): Observable<any> {
-    return this.http.post(`${this.baseUrl}/appointments/create`, payload);
+    return this.http.post(`${this.baseUrl}/appointments/book`, payload);
   }
 
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
     return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/doctor/${doctorId}`);
   }
 
-  getAppointmentsByDoctorAndDate(doctorId: number, date: string): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/doctor/${doctorId}/date/${date}`);
+  getAppointmentsByPatient(patientName: string): Observable<Appointment[]> {
+    return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/patient/${patientName}`);
   }
 }

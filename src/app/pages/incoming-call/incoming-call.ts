@@ -46,6 +46,8 @@ export class IncomingCall implements OnInit, OnDestroy {
   endedByPatient = false;
   endedReason = '';
   private endHandled = false;
+  isRemoteVideoOff = false;   // patient camera state
+  videoUpgradeReady = false;  // patient switched to video during chat
 
   get consultationType(): string {
     return (this.patient?.consultationType || 'VIDEO').toUpperCase();
@@ -147,6 +149,11 @@ export class IncomingCall implements OnInit, OnDestroy {
       this.pc.ontrack = (event) => {
         if (event.streams?.[0]) {
           this.remoteStream = event.streams[0];
+          // Monitor patient video track for camera on/off
+          event.streams[0].getVideoTracks().forEach(track => {
+            track.onmute = () => this.ngZone.run(() => { this.isRemoteVideoOff = true; this.cdr.detectChanges(); });
+            track.onunmute = () => this.ngZone.run(() => { this.isRemoteVideoOff = false; this.cdr.detectChanges(); });
+          });
         }
 
         event.track.onended = () => {
@@ -246,6 +253,38 @@ export class IncomingCall implements OnInit, OnDestroy {
     }).subscribe({ error: () => {} });
 
     this.startMessagePolling();
+    // Poll if patient requested video upgrade
+    this.pollPatientVideoUpgrade();
+  }
+
+  private patientUpgradePollInterval: any;
+
+  pollPatientVideoUpgrade() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.patientUpgradePollInterval = setInterval(() => {
+      this.http.get<any>(`${this.baseUrl}/cases/${caseId}/status`).subscribe({
+        next: (res) => {
+          const ct = (res?.consultationType || '').toUpperCase();
+          if (ct === 'VIDEO' && !this.videoUpgradeReady && !this.switchingToVideo) {
+            clearInterval(this.patientUpgradePollInterval);
+            this.ngZone.run(() => {
+              this.videoUpgradeReady = true;
+              this.cdr.detectChanges();
+            });
+          }
+        },
+        error: () => {}
+      });
+    }, 4000);
+  }
+
+  joinVideoCallFromChat() {
+    clearInterval(this.patientUpgradePollInterval);
+    clearInterval(this.messagePollInterval);
+    this.videoUpgradeReady = false;
+    this.chatConsultationActive = false;
+    this.startVideoCall();
   }
 
   switchToVideo() {
@@ -260,9 +299,11 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.http.patch(`${this.baseUrl}/cases/${caseId}/upgrade-to-video`, {}).subscribe({
       next: () => {
         clearInterval(this.messagePollInterval);
+        clearInterval(this.patientUpgradePollInterval);
         this.chatConsultationActive = false;
         this.chatOpen = false;
         this.switchingToVideo = false;
+        this.videoUpgradeReady = false;
         this.startVideoCall();
       },
       error: () => {
@@ -353,11 +394,15 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
+  private callTimerStartedAt = 0;
+
   startCallTimer() {
     clearInterval(this.callTimer);
+    this.callTimerStartedAt = Date.now();
+    this.callDuration = 0;
     this.callTimer = setInterval(() => {
       this.ngZone.run(() => {
-        this.callDuration++;
+        this.callDuration = Math.floor((Date.now() - this.callTimerStartedAt) / 1000);
         this.cdr.detectChanges();
       });
     }, 1000);
@@ -449,6 +494,12 @@ export class IncomingCall implements OnInit, OnDestroy {
   endCall() {
     if (this.endHandled) return;
     this.endHandled = true;
+
+    // Notify patient that doctor ended the call
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.patch(`${this.baseUrl}/cases/${caseId}/end`, {}).subscribe({ error: () => {} });
+    }
 
     this.cleanup();
     this.endedByPatient = false;

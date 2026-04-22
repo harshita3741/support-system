@@ -91,6 +91,15 @@
       </div>
 
       <div *ngIf="callAccepted && chatConsultationActive" class="chat-only-active">
+
+        <!-- Patient upgraded to video — show Join Video Call overlay -->
+        <div *ngIf="videoUpgradeReady" class="video-upgrade-overlay">
+          <div class="vup-icon">📹</div>
+          <div class="vup-title">Patient switched to Video Call</div>
+          <div class="vup-sub">The patient has requested to upgrade to a video call.</div>
+          <button class="join-video-btn" (click)="joinVideoCallFromChat()">Join Video Call</button>
+        </div>
+
         <div class="chat-only-header">
           <div class="chat-only-title">
             <span class="pulse-dot"></span>
@@ -203,6 +212,11 @@
               playsinline
               [class.hidden]="!remoteStream && webrtcStatus !== 'connected'">
             </video>
+            <div *ngIf="isRemoteVideoOff && webrtcStatus === 'connected'" class="video-paused-overlay">
+              <div class="video-paused-icon">📷</div>
+              <p class="video-paused-text">Video Paused</p>
+              <p class="video-paused-sub">Patient turned off camera</p>
+            </div>
           </div>
 
           <div class="remote-label">

@@ -80,15 +80,12 @@ export class Dashboard implements OnInit {
   todayAppointments: AppointmentItem[] = [];
   todaySchedule: ScheduleBlock[] = [];
 
-  calendarViewYear = 2026;
-  calendarViewMonth = 3;
+  private readonly today = new Date();
+
+  calendarViewYear = this.today.getFullYear();
+  calendarViewMonth = this.today.getMonth();
   calendarDays: CalendarDay[] = [];
-
-  private readonly TODAY_YEAR = 2026;
-  private readonly TODAY_MONTH = 3;
-  private readonly TODAY_DATE = 16;
-
-  selectedDate = `${this.TODAY_YEAR}-${String(this.TODAY_MONTH + 1).padStart(2, '0')}-${String(this.TODAY_DATE).padStart(2, '0')}`;
+  selectedDate = this.toYMD(this.today);
 
   sortAsc = true;
 
@@ -186,6 +183,13 @@ export class Dashboard implements OnInit {
     this.buildCalendarDays();
     this.filterByDate(this.selectedDate);
     this.setIncomingCallPatient();
+  }
+
+  private toYMD(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   setGreeting(): void {
@@ -293,7 +297,7 @@ export class Dashboard implements OnInit {
     for (let d = 1; d <= daysInMonth; d++) {
       days.push({
         date: d,
-        isToday: d === this.TODAY_DATE && month === this.TODAY_MONTH && year === this.TODAY_YEAR,
+        isToday: d === this.today.getDate() && month === this.today.getMonth() && year === this.today.getFullYear(),
         isSelected: d === selDate && month === selMonth && year === selYear,
         hasAppointment: apptDates.has(d),
         isPending: pendingDates.has(d)
