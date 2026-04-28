@@ -91,4 +91,19 @@ public class MedicalCaseController {
   public String upgradeToVideo(@PathVariable Long caseId) {
     return medicalCaseService.upgradeToVideo(caseId);
   }
+
+  /**
+   * Append quick details (duration, severity, notes) to the case.
+   * Called from the chatbot "Add Details" mini-form.
+   */
+  @PatchMapping("/{caseId}/add-details")
+  public ResponseEntity<String> addDetails(
+    @PathVariable Long caseId,
+    @RequestBody Map<String, String> details) {
+    String duration = details.getOrDefault("duration", "");
+    String severity = details.getOrDefault("severity", "");
+    String notes    = details.getOrDefault("notes", "");
+    medicalCaseService.appendQuickDetails(caseId, duration, severity, notes);
+    return ResponseEntity.ok("Details saved");
+  }
 }

@@ -68,4 +68,31 @@ public class MedicalCaseService {
     }
     return "Case not found";
   }
+
+  /**
+   * Appends quick-add details (duration, severity, notes) to the case's quick_details field.
+   * Doctors can see this alongside symptoms in the queue.
+   */
+  public void appendQuickDetails(Long caseId, String duration, String severity, String notes) {
+    MedicalCase mc = repository.findById(caseId).orElse(null);
+    if (mc == null) return;
+
+    StringBuilder sb = new StringBuilder();
+    if (duration != null && !duration.isBlank()) sb.append("Duration: ").append(duration);
+    if (severity != null && !severity.isBlank()) {
+      if (sb.length() > 0) sb.append(" | ");
+      sb.append("Severity: ").append(severity);
+    }
+    if (notes != null && !notes.isBlank()) {
+      if (sb.length() > 0) sb.append(" | ");
+      sb.append("Notes: ").append(notes);
+    }
+
+    // Append to existing symptoms so doctors see everything in one place
+    String existing = mc.getSymptoms() != null ? mc.getSymptoms() : "";
+    if (sb.length() > 0) {
+      mc.setSymptoms(existing.isBlank() ? sb.toString() : existing + " | " + sb.toString());
+      repository.save(mc);
+    }
+  }
 }
