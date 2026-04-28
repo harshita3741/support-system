@@ -19,7 +19,11 @@ export class Queue implements OnInit, OnDestroy {
   acceptingId: number | null = null;
   decliningId: number | null = null;
   doctorDept = '';
+  /** Popup shown when a new case arrives */
+  newCaseNotification: any = null;
+  private knownCaseIds = new Set<number>();
   private pollInterval: any;
+  private notificationTimeout: any;
 
   constructor(
     private router: Router,
@@ -30,13 +34,26 @@ export class Queue implements OnInit, OnDestroy {
   ngOnInit() {
     const doctor = this.authService.getSession();
     this.doctorDept = (doctor?.dept || '').toUpperCase();
+    this.requestNotificationPermission();
     this.loadQueue();
-    // Poll every 8s so new patient cases appear automatically
     this.pollInterval = setInterval(() => this.loadQueue(), 8000);
   }
 
   ngOnDestroy() {
     if (this.pollInterval) clearInterval(this.pollInterval);
+    if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+  }
+
+  requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  sendBrowserNotification(title: string, body: string) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico' });
+    }
   }
 
   loadQueue() {
@@ -50,10 +67,33 @@ export class Queue implements OnInit, OnDestroy {
     this.medicalCaseService.getQueue().subscribe({
       next: (data: any[]) => {
         const dept = (doctor.dept || '').toUpperCase();
-        // Show OPEN cases for this doctor's department
-        this.queueItems = (Array.isArray(data) ? data : []).filter(
+        const filtered = (Array.isArray(data) ? data : []).filter(
           (c: any) => !dept || c.department === dept
         );
+
+        // Detect newly arrived cases
+        if (this.knownCaseIds.size > 0) {
+          const newCases = filtered.filter((c: any) => !this.knownCaseIds.has(c.caseId));
+          if (newCases.length > 0) {
+            const newest = newCases[0];
+            // Browser notification
+            this.sendBrowserNotification(
+              'New patient in queue',
+              `${newest.patientName} — ${newest.department} · ${newest.symptoms || ''}`
+            );
+            // In-app popup
+            this.newCaseNotification = newest;
+            if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+            this.notificationTimeout = setTimeout(() => {
+              this.newCaseNotification = null;
+            }, 8000);
+          }
+        }
+
+        // Track all case IDs
+        filtered.forEach((c: any) => this.knownCaseIds.add(c.caseId));
+
+        this.queueItems = filtered;
         this.loading = false;
         this.errorMessage = '';
       },
@@ -65,17 +105,21 @@ export class Queue implements OnInit, OnDestroy {
     });
   }
 
+  dismissNewCaseNotification() {
+    this.newCaseNotification = null;
+    if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+  }
+
   acceptPatient(patient: any) {
     const doctor = this.authService.getSession();
     if (!doctor) return;
 
     this.acceptingId = patient.caseId;
+    this.dismissNewCaseNotification();
 
-    // 1. Tell backend this case is ACCEPTED
     this.medicalCaseService.acceptCase(patient.caseId, String(doctor.id)).subscribe({
       next: () => {
         this.acceptingId = null;
-        // 2. Store accepted patient info and navigate to call screen
         const patientData = {
           ...patient,
           name:       patient.patientName,
@@ -91,7 +135,6 @@ export class Queue implements OnInit, OnDestroy {
         this.router.navigate(['/call']);
       },
       error: () => {
-        // Navigate anyway so doctor can still see the patient
         this.acceptingId = null;
         const patientData = {
           ...patient,
@@ -115,12 +158,10 @@ export class Queue implements OnInit, OnDestroy {
     this.medicalCaseService.declineCase(patient.caseId).subscribe({
       next: () => {
         this.decliningId = null;
-        // Remove from queue immediately
         this.queueItems = this.queueItems.filter(q => q.caseId !== patient.caseId);
       },
       error: () => {
         this.decliningId = null;
-        // Still remove from local view even on error
         this.queueItems = this.queueItems.filter(q => q.caseId !== patient.caseId);
       }
     });

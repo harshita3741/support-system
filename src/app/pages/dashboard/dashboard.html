@@ -8,7 +8,12 @@
 
   <div class="hero-head">
     <div class="hero-text">
-      <h1>{{ greeting }}, {{ doctorName }}!</h1>
+      <h1>
+        {{ greeting }}, {{ doctorName }}!
+        @if (doctorDepartment === 'GENERAL') {
+          <span class="dept-live"></span>
+        }
+      </h1>
       <p>
         <span class="dept-badge">{{ doctorDepartment }}</span>
         <span class="dept-live">

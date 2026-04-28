@@ -259,3 +259,33 @@
     white-space: nowrap;
   }
 }
+/* New patient arrival toast */
+.new-case-toast {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 9999;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  border-left: 5px solid #6c63ff;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  min-width: 320px;
+  max-width: 400px;
+  cursor: pointer;
+  animation: slideIn 0.3s ease;
+}
+.new-case-toast:hover { background: #f9f8ff; }
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.toast-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+.toast-body { flex: 1; }
+.toast-title { font-weight: 700; font-size: 14px; color: #12103a; margin-bottom: 4px; }
+.toast-sub { font-size: 12px; color: #6b7280; line-height: 1.5; }
+.toast-close { background: none; border: none; color: #9ca3af; font-size: 16px; cursor: pointer; padding: 0; flex-shrink: 0; }
+.toast-close:hover { color: #374151; }

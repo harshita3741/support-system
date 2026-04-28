@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 
-type DoctorKey = 'cardio' | 'neuro' | 'ortho';
+type DoctorKey = 'cardio' | 'neuro' | 'ortho' | 'general';
 type PriorityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
 
 type PatientRow = {
@@ -99,7 +99,10 @@ export class Dashboard implements OnInit {
   };
 
   get calendarMonth(): string {
-    const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const names = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
     return `${names[this.calendarViewMonth]} ${this.calendarViewYear}`;
   }
 
@@ -132,6 +135,7 @@ export class Dashboard implements OnInit {
         { id: 5, patientId: 'C-1042', patientName: 'Priya Mehta', time: '10:00 AM', note: 'Final discharge check', left: '20%', width: '14%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-05-05' }
       ]
     },
+
     neuro: {
       doctorName: 'Dr. Adams',
       department: 'NEURO',
@@ -152,6 +156,7 @@ export class Dashboard implements OnInit {
         { id: 13, patientId: 'N-2012', patientName: 'Neha Sharma', time: '02:00 PM', note: 'Neuro assessment', left: '55%', width: '14%', bg: '#fef3c7', color: '#b45309', date: '2026-04-14' }
       ]
     },
+
     ortho: {
       doctorName: 'Dr. Patel',
       department: 'ORTHO',
@@ -170,6 +175,27 @@ export class Dashboard implements OnInit {
         { id: 21, patientId: 'O-3002', patientName: 'Pooja Nair', time: '03:00 PM', note: 'Fracture follow-up', left: '70%', width: '13%', bg: '#fee2e2', color: '#b91c1c', date: '2026-04-18' },
         { id: 22, patientId: 'O-3001', patientName: 'Vikram Singh', time: '11:00 AM', note: 'Physio assessment', left: '30%', width: '14%', bg: '#d1fae5', color: '#047857', date: '2026-04-25' },
         { id: 23, patientId: 'O-3002', patientName: 'Pooja Nair', time: '10:30 AM', note: 'X-ray review', left: '22%', width: '13%', bg: '#fee2e2', color: '#b91c1c', date: '2026-04-15' }
+      ]
+    },
+
+    general: {
+      doctorName: 'Dr. Johnson',
+      department: 'GENERAL',
+      patients: [
+        { id: 'G-4001', name: 'Anita Rao', initials: 'AR', caseId: 'CASE-4001', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 41, gender: 'Female', reason: 'General consultation' },
+        { id: 'G-4002', name: 'Manoj Kumar', initials: 'MK', caseId: 'CASE-4002', priority: 'LOW', startDate: 'Today', endDate: '—', age: 50, gender: 'Male', reason: 'Routine check-up' }
+      ],
+      appointments: [
+        { id: 30, patientId: 'G-4001', patientName: 'Anita Rao', time: '09:30 AM', note: 'General consultation', color: '#14b8a6', status: 'scheduled', date: '2026-04-28' },
+        { id: 31, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '11:00 AM', note: 'Routine check-up', color: '#0f766e', status: 'pending', date: '2026-04-28' },
+        { id: 32, patientId: 'G-4001', patientName: 'Anita Rao', time: '02:00 PM', note: 'Review vitals', color: '#14b8a6', status: 'completed', date: '2026-04-26' },
+        { id: 33, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '03:30 PM', note: 'Prescription follow-up', color: '#0f766e', status: 'scheduled', date: '2026-05-02' }
+      ],
+      scheduleBlocks: [
+        { id: 30, patientId: 'G-4001', patientName: 'Anita Rao', time: '09:30 AM', note: 'General consultation', left: '14%', width: '14%', bg: '#ccfbf1', color: '#0f766e', date: '2026-04-28' },
+        { id: 31, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '11:00 AM', note: 'Routine check-up', left: '31%', width: '14%', bg: '#d1fae5', color: '#047857', date: '2026-04-28' },
+        { id: 32, patientId: 'G-4001', patientName: 'Anita Rao', time: '02:00 PM', note: 'Review vitals', left: '58%', width: '13%', bg: '#ccfbf1', color: '#0f766e', date: '2026-04-26' },
+        { id: 33, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '03:30 PM', note: 'Prescription follow-up', left: '70%', width: '13%', bg: '#d1fae5', color: '#047857', date: '2026-05-02' }
       ]
     }
   };
@@ -202,17 +228,27 @@ export class Dashboard implements OnInit {
   detectLoggedInDoctor(): void {
     const sessionRaw = localStorage.getItem('doctor');
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+
     const storedDept = (session?.dept || '').toLowerCase();
 
-    if (storedDept.includes('neuro')) this.doctorKey = 'neuro';
-    else if (storedDept.includes('ortho')) this.doctorKey = 'ortho';
-    else this.doctorKey = 'cardio';
+    if (storedDept.includes('neuro')) {
+      this.doctorKey = 'neuro';
+    } else if (storedDept.includes('ortho')) {
+      this.doctorKey = 'ortho';
+    } else if (storedDept.includes('general')) {
+      this.doctorKey = 'general';
+    } else {
+      this.doctorKey = 'cardio';
+    }
   }
 
   loadDoctorDashboardData(): void {
     const data = this.doctorSeedData[this.doctorKey];
-    this.doctorName = data.doctorName;
-    this.doctorDepartment = data.department;
+    const sessionRaw = localStorage.getItem('doctor');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+
+    this.doctorName = session?.name || data.doctorName;
+    this.doctorDepartment = session?.dept || data.department;
     this.patientRows = [...data.patients];
     this.allAppointments = [...data.appointments];
     this.allScheduleBlocks = [...data.scheduleBlocks];
@@ -291,7 +327,13 @@ export class Dashboard implements OnInit {
     const days: CalendarDay[] = [];
 
     for (let i = 0; i < offset; i++) {
-      days.push({ date: null, isToday: false, isSelected: false, hasAppointment: false, isPending: false });
+      days.push({
+        date: null,
+        isToday: false,
+        isSelected: false,
+        hasAppointment: false,
+        isPending: false
+      });
     }
 
     for (let d = 1; d <= daysInMonth; d++) {

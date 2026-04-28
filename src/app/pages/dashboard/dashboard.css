@@ -41,6 +41,7 @@
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 20px;
+  gap: 16px;
 }
 
 .hero-head h1 {
@@ -58,6 +59,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dept-badge {
@@ -96,6 +98,7 @@
   color: #94a3b8;
   font-weight: 500;
   margin-top: 4px;
+  white-space: nowrap;
 }
 
 /* ─── Stats grid ─────────────────────────────────────────────────────────── */
@@ -137,6 +140,7 @@
 
 .stat-body {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-title {
@@ -528,6 +532,7 @@
   font-size: 11px;
   color: #64748b;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .legend-item {
@@ -878,6 +883,23 @@
   .hero-head {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .hero-date {
+    white-space: normal;
+  }
+
+  .card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-actions {
+    flex-wrap: wrap;
+  }
+
+  .appt-row {
+    grid-template-columns: 54px 10px 1fr auto;
   }
 
   .incoming-call-popup {

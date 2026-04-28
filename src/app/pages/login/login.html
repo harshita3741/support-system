@@ -1,8 +1,8 @@
 <div class="login-page">
   <div class="login-card">
     <div class="brand">MEDIQUEUE</div>
-    <h1 class="login-title">Doctor Login</h1>
-    <p class="login-sub">Sign in to access your patient dashboard</p>
+    <h1 class="login-title">Staff Login</h1>
+    <p class="login-sub">Sign in to access your dashboard</p>
 
     @if (errorMsg) {
       <div class="error-msg">{{ errorMsg }}</div>
@@ -13,7 +13,7 @@
       <input
         type="text"
         [(ngModel)]="username"
-        placeholder="e.g. dr.smith"
+        placeholder="e.g. dr.smith or nurse.cardio"
         (keyup.enter)="login()" />
     </div>
 

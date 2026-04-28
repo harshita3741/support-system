@@ -18,13 +18,17 @@ export class Login {
   loading = false;
 
   demoAccounts = [
-  { label: 'dr.smith — Cardio', username: 'dr.smith', password: '1234' },
-  { label: 'dr.adams — Neuro', username: 'dr.adams', password: '1234' },
-  { label: 'dr.lee — Ortho', username: 'dr.lee', password: '1234' },
-  { label: 'nurse.cardio', username: 'nurse.cardio', password: '1234' },
-  { label: 'nurse.neuro', username: 'nurse.neuro', password: '1234' },
-  { label: 'nurse.ortho', username: 'nurse.ortho', password: '1234' }
-];
+    { label: 'dr.smith — Cardio', username: 'dr.smith', password: '1234' },
+    { label: 'dr.adams — Neuro', username: 'dr.adams', password: '1234' },
+    { label: 'dr.lee — Ortho', username: 'dr.lee', password: '1234' },
+    { label: 'dr.johnson — General', username: 'dr.johnson', password: '1234' },
+
+    { label: 'nurse.cardio — Cardio Nurse', username: 'nurse.cardio', password: '1234' },
+    { label: 'nurse.neuro — Neuro Nurse', username: 'nurse.neuro', password: '1234' },
+    { label: 'nurse.ortho — Ortho Nurse', username: 'nurse.ortho', password: '1234' },
+    { label: 'nurse.general — General Nurse', username: 'nurse.general', password: '1234' }
+  ];
+
   constructor(private auth: AuthService, private router: Router) {}
 
   fillDemo(acc: any) {
@@ -37,14 +41,21 @@ export class Login {
       this.errorMsg = 'Please enter username and password';
       return;
     }
+
     this.loading = true;
     this.errorMsg = '';
 
     this.auth.login(this.username, this.password).subscribe({
       next: (res) => {
         this.loading = false;
+
         if (res.success) {
           this.auth.saveSession(res);
+
+          localStorage.setItem('doctorDepartment', res.dept || '');
+          localStorage.setItem('doctorRole', res.role || '');
+          localStorage.setItem('doctorName', res.name || '');
+
           this.router.navigate(['/dashboard']);
         } else {
           this.errorMsg = res.message || 'Invalid credentials';

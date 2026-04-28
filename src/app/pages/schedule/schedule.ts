@@ -11,7 +11,7 @@ export interface CalendarEvent {
   endHour: number;
   patientName?: string;
   date?: string;
-  appointmentTime?: string; // ISO string for reminder logic
+  appointmentTime?: string;
   source?: 'backend' | 'leave';
 }
 
@@ -101,12 +101,10 @@ export class Schedule implements OnInit, OnDestroy {
       this.updateCurrentTime();
     }, 60000);
 
-    // Reload appointments every 30 seconds
     this.pollTimer = setInterval(() => {
       this.loadAppointments();
     }, 30000);
 
-    // Check for upcoming appointment reminders every minute
     this.reminderTimer = setInterval(() => {
       this.checkUpcomingReminders();
     }, 60000);
@@ -118,8 +116,6 @@ export class Schedule implements OnInit, OnDestroy {
     if (this.reminderTimer) clearInterval(this.reminderTimer);
   }
 
-  // ─── Notifications ─────────────────────────────────────────────
-
   requestNotificationPermission() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -128,19 +124,19 @@ export class Schedule implements OnInit, OnDestroy {
 
   checkUpcomingReminders() {
     const now = new Date();
+
     for (const event of this.backendAppointments) {
       if (!event.appointmentTime || !event.id) continue;
+
       const apptTime = new Date(event.appointmentTime);
       const diffMs = apptTime.getTime() - now.getTime();
       const diffMins = diffMs / 60000;
 
-      // Notify if appointment is 15–16 minutes away (fires once per appt)
       if (diffMins >= 14 && diffMins <= 16 && !this.notifiedAppointments.has(event.id)) {
         this.notifiedAppointments.add(event.id);
         this.sendReminderNotification(event, 15);
       }
 
-      // Also notify 5 minutes before
       if (diffMins >= 4 && diffMins <= 6 && !this.notifiedAppointments.has(event.id + 100000)) {
         this.notifiedAppointments.add(event.id + 100000);
         this.sendReminderNotification(event, 5);
@@ -152,7 +148,11 @@ export class Schedule implements OnInit, OnDestroy {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
     const time = event.appointmentTime
-      ? new Date(event.appointmentTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      ? new Date(event.appointmentTime).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
       : '';
 
     new Notification(`⏰ Appointment in ${minutesBefore} minutes`, {
@@ -161,24 +161,27 @@ export class Schedule implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Load from backend ─────────────────────────────────────────
-
   loadAppointments() {
     const doctorId = this.authService.getDoctorId();
-    if (!doctorId) return;
+    if (!doctorId) {
+      this.backendAppointments = [];
+      this.mergeAllEvents();
+      return;
+    }
 
     this.appointmentService.getAppointmentsByDoctor(Number(doctorId)).subscribe({
       next: (appointments: Appointment[]) => {
         this.backendAppointments = appointments.map((appt: Appointment, index: number) => {
-          const { date, hour } = this.parseAppointmentTime(appt.appointmentTime);
+          const parsed = this.parseAppointment(appt);
+
           return {
             id: appt.id ?? index + 1,
             title: appt.patientName || 'Patient Appointment',
             type: this.resolveAppointmentType(appt),
-            startHour: hour,
-            endHour: hour + 0.5,
-            date,
-            appointmentTime: appt.appointmentTime,
+            startHour: parsed.hour,
+            endHour: parsed.hour + 0.5,
+            date: parsed.date,
+            appointmentTime: parsed.isoDateTime,
             patientName: appt.patientName,
             source: 'backend'
           };
@@ -189,30 +192,33 @@ export class Schedule implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         console.error('Failed to load appointments', err);
+        this.backendAppointments = [];
+        this.mergeAllEvents();
       }
     });
   }
 
-  /**
-   * Parses ISO appointmentTime "2026-04-22T09:00:00" into { date: "2026-04-22", hour: 9 }
-   */
-  private parseAppointmentTime(iso: string): { date: string; hour: number } {
-    if (!iso) return { date: this.toYMD(new Date()), hour: this.startHour };
-    try {
-      const d = new Date(iso);
-      const date = this.toYMD(d);
-      const hour = d.getHours() + d.getMinutes() / 60;
-      return { date, hour };
-    } catch {
-      return { date: this.toYMD(new Date()), hour: this.startHour };
-    }
+  private parseAppointment(appt: Appointment): { date: string; hour: number; isoDateTime: string } {
+    const date = appt.date || this.toYMD(new Date());
+    const timeSlot = appt.timeSlot || '08:00';
+
+    const [h, m] = timeSlot.split(':').map(Number);
+    const hour = (isNaN(h) ? 8 : h) + ((isNaN(m) ? 0 : m) / 60);
+
+    return {
+      date,
+      hour,
+      isoDateTime: `${date}T${timeSlot}:00`
+    };
   }
 
   private resolveAppointmentType(appt: Appointment): CalendarEvent['type'] {
     const dept = (appt.department || '').toLowerCase();
+
     if (dept.includes('cardio') || dept.includes('video')) return 'video';
     if (dept.includes('neuro')) return 'in-person';
     if (dept.includes('ortho')) return 'hospital';
+    if (dept.includes('general')) return 'meeting';
     return 'in-person';
   }
 

@@ -1,4 +1,16 @@
 <div class="queue-page">
+
+  <!-- New patient notification popup -->
+  <div *ngIf="newCaseNotification" class="new-case-toast" (click)="acceptPatient(newCaseNotification)">
+    <div class="toast-icon">🔔</div>
+    <div class="toast-body">
+      <div class="toast-title">New Patient in Queue</div>
+      <div class="toast-sub">{{ newCaseNotification.patientName }} — {{ newCaseNotification.department }}</div>
+      <div class="toast-sub">{{ newCaseNotification.symptoms }}</div>
+    </div>
+    <button class="toast-close" (click)="$event.stopPropagation(); dismissNewCaseNotification()">✕</button>
+  </div>
+
   <div class="card">
     <div class="card-header">
       <div>
