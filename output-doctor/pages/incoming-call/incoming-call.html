@@ -1,0 +1,354 @@
+<div class="call-page">
+  <div *ngIf="callEnded" class="ended-box">
+    <div class="ended-icon">{{ endedByPatient ? '📞' : '✓' }}</div>
+    <div class="ended-title">
+      {{ endedByPatient ? 'Call Ended by Patient' : 'Consultation Ended' }}
+    </div>
+    <div class="ended-sub">
+      {{ endedReason || 'Returning to queue...' }}
+    </div>
+  </div>
+
+  <div *ngIf="!callEnded" class="call-layout">
+    <div class="patient-panel">
+      <div class="back-btn" (click)="goBack()">← Back to Queue</div>
+
+      <div class="patient-header">
+        <div class="p-avatar">{{ getPatientInitials() }}</div>
+        <div>
+          <div class="p-name">{{ patient?.name || patient?.patientName || 'Patient' }}</div>
+          <div class="p-meta">{{ patient?.dept || patient?.department || 'General' }}</div>
+        </div>
+        <div class="prio-badge medium">
+          {{ patient?.priority || 'Medium Priority' }}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Current Symptoms</div>
+        <div class="symptoms-box">
+          {{ patient?.symptoms || patient?.reason || 'No symptoms available' }}
+        </div>
+      </div>
+
+      <div class="section" *ngIf="callAccepted && !chatConsultationActive">
+        <div class="section-title">Call Duration</div>
+        <div class="call-timer-panel">
+          <span class="live-dot"></span>
+          {{ getCallTime() }}
+        </div>
+      </div>
+
+      <div class="section" *ngIf="parseConditions().length">
+        <div class="section-title">Known Conditions</div>
+        <div class="summary-box">
+          {{ parseConditions().join(', ') }}
+        </div>
+      </div>
+
+      <div class="section" *ngIf="parseVisits().length">
+        <div class="section-title">Previous Visits</div>
+        <div class="summary-box">
+          {{ parseVisits().join(', ') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="video-panel">
+
+      <div *ngIf="!callAccepted" class="incoming-box">
+        <div class="call-top">
+          <span class="pulse"></span>
+          <span class="call-tag">Incoming Consultation</span>
+        </div>
+
+        <div class="call-name">{{ patient?.name || patient?.patientName || 'Patient' }}</div>
+        <div class="call-meta">{{ consultationType }} consultation request</div>
+
+        <div class="ai-box">
+          <div class="ai-label">AI Summary</div>
+          <div class="ai-text">
+            {{ patient?.symptoms || patient?.reason || 'Patient has requested consultation.' }}
+          </div>
+        </div>
+
+        <div class="call-tags">
+          <span class="ctag ctag-b">{{ patient?.dept || 'General' }}</span>
+          <span class="ctag ctag-r">{{ patient?.priority || 'Medium' }}</span>
+          <span class="ctag ctag-chat" *ngIf="isChatConsultation">Chat</span>
+          <span class="ctag ctag-g" *ngIf="!isChatConsultation">Video</span>
+        </div>
+
+        <div class="call-btns">
+          <button *ngIf="isChatConsultation" class="btn-accept" (click)="acceptChatConsultation()">
+            Accept Chat
+          </button>
+          <button *ngIf="!isChatConsultation" class="btn-accept" (click)="startVideoCall()">
+            Accept Call
+          </button>
+          <button class="btn-decline" (click)="goBack()">Decline</button>
+        </div>
+      </div>
+
+      <div *ngIf="callAccepted && chatConsultationActive" class="chat-only-active">
+
+        <!-- Patient upgraded to video — show Join Video Call overlay -->
+        <div *ngIf="videoUpgradeReady" class="video-upgrade-overlay">
+          <div class="vup-icon">📹</div>
+          <div class="vup-title">Patient switched to Video Call</div>
+          <div class="vup-sub">The patient has requested to upgrade to a video call.</div>
+          <button class="join-video-btn" (click)="joinVideoCallFromChat()">Join Video Call</button>
+        </div>
+
+        <div class="chat-only-header">
+          <div class="chat-only-title">
+            <span class="pulse-dot"></span>
+            Chat with {{ patient?.name || patient?.patientName || 'Patient' }}
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="switch-video-btn" (click)="togglePrescription()">
+              {{ prescriptionOpen ? 'Hide Prescription' : 'Prescription' }}
+            </button>
+
+            <button class="switch-video-btn" (click)="switchToVideo()" [disabled]="switchingToVideo">
+              {{ switchingToVideo ? 'Switching...' : 'Switch to Video Call' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-messages-full" *ngIf="!prescriptionOpen">
+          <div *ngIf="messages.length === 0" class="chat-empty">
+            No messages yet
+          </div>
+
+          <div
+            *ngFor="let msg of messages"
+            class="chat-bubble"
+            [ngClass]="msg.sender === 'doctor' ? 'mine' : 'theirs'">
+            <div class="bubble-text">{{ msg.text }}</div>
+            <div class="bubble-time">{{ formatTime(msg.time) }}</div>
+          </div>
+        </div>
+
+        <div class="chat-input-row" *ngIf="!prescriptionOpen">
+          <input
+            class="chat-input"
+            type="text"
+            [(ngModel)]="chatMessage"
+            placeholder="Type a message..."
+            (keyup.enter)="sendMessage()"
+          />
+          <button class="chat-send" (click)="sendMessage()">➤</button>
+        </div>
+
+        <div class="prescription-card" *ngIf="prescriptionOpen">
+          <div class="prescription-body">
+            <form class="rx-form expanded-form">
+              <input
+                class="full-width-input"
+                type="text"
+                [(ngModel)]="prescription.diagnosis"
+                name="diagnosis"
+                placeholder="Diagnosis"
+              />
+
+              <textarea
+                [(ngModel)]="prescription.advice"
+                name="advice"
+                placeholder="Advice / Referrals">
+              </textarea>
+
+              <textarea
+                [(ngModel)]="prescription.investigations"
+                name="investigations"
+                placeholder="Investigations">
+              </textarea>
+
+              <input
+                class="full-width-input"
+                type="date"
+                [(ngModel)]="prescription.followUpDate"
+                name="followUpDate"
+                placeholder="Follow-up Date"
+              />
+
+              <div
+                class="medicine-row-improved"
+                *ngFor="let med of medicines; let i = index">
+                <input [(ngModel)]="med.name" [name]="'name' + i" placeholder="Medicine" />
+                <input [(ngModel)]="med.dosage" [name]="'dosage' + i" placeholder="Dosage" />
+                <input [(ngModel)]="med.frequency" [name]="'frequency' + i" placeholder="Frequency" />
+                <input [(ngModel)]="med.duration" [name]="'duration' + i" placeholder="Duration" />
+                <button type="button" class="remove-med-btn" (click)="removeMedicine(i)">×</button>
+              </div>
+
+              <button type="button" class="add-med-btn" (click)="addMedicine()">+ Add Medicine</button>
+              <button type="button" class="save-rx-btn theme-teal" (click)="savePrescription()">Save Prescription</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="chat-only-controls">
+          <button class="ctrl-btn end-call" (click)="endCall()">End Consultation</button>
+        </div>
+      </div>
+
+      <div *ngIf="callAccepted && !chatConsultationActive" class="video-active">
+        <div class="video-header">
+          <div class="video-title">Video Consultation</div>
+          <div class="video-live">
+            <span class="live-dot"></span>
+            {{ getCallTime() }}
+          </div>
+        </div>
+
+        <div class="video-frame">
+          <div class="remote-video-wrap">
+            <video
+              #remoteVideo
+              class="remote-video"
+              autoplay
+              playsinline
+              [class.hidden]="!remoteStream && webrtcStatus !== 'connected'">
+            </video>
+            <div *ngIf="isRemoteVideoOff && webrtcStatus === 'connected'" class="video-paused-overlay">
+              <div class="video-paused-icon">📷</div>
+              <p class="video-paused-text">Video Paused</p>
+              <p class="video-paused-sub">Patient turned off camera</p>
+            </div>
+          </div>
+
+          <div class="remote-label">
+            <span class="pulse-dot"></span>
+            {{ patient?.name || patient?.patientName || 'Patient' }}
+          </div>
+
+          <div class="local-video-wrap">
+            <video
+              *ngIf="cameraOn"
+              #localVideo
+              class="local-video"
+              autoplay
+              muted
+              playsinline>
+            </video>
+
+            <div *ngIf="!cameraOn" class="video-placeholder">
+              <div class="video-icon">📷</div>
+              <div class="video-text">Camera off</div>
+            </div>
+
+            <div class="local-video-border"></div>
+            <div class="you-label">You</div>
+          </div>
+
+          <div class="webrtc-overlay" *ngIf="webrtcStatus !== 'connected'">
+            <div *ngIf="webrtcStatus !== 'error'" class="overlay-spinner"></div>
+            <div *ngIf="webrtcStatus === 'error'" class="overlay-icon error-icon">!</div>
+            <div class="overlay-msg">{{ webrtcStatusMsg }}</div>
+          </div>
+
+          <div class="chat-panel" *ngIf="chatOpen">
+            <div class="chat-header">
+              <span>Chat</span>
+              <button class="chat-close" (click)="toggleChat()">✕</button>
+            </div>
+
+            <div class="chat-messages">
+              <div *ngIf="messages.length === 0" class="chat-empty">
+                No messages yet
+              </div>
+
+              <div
+                *ngFor="let msg of messages"
+                class="chat-bubble"
+                [ngClass]="msg.sender === 'doctor' ? 'mine' : 'theirs'">
+                <div class="bubble-text">{{ msg.text }}</div>
+                <div class="bubble-time">{{ formatTime(msg.time) }}</div>
+              </div>
+            </div>
+
+            <div class="chat-input-row">
+              <input
+                class="chat-input"
+                type="text"
+                [(ngModel)]="chatMessage"
+                placeholder="Type a message..."
+                (keyup.enter)="sendMessage()"
+              />
+              <button class="chat-send" (click)="sendMessage()">➤</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="call-controls">
+          <button class="ctrl-btn" (click)="toggleMic()" [title]="micOn ? 'Mute' : 'Unmute'">
+            {{ micOn ? '🎤' : '🔇' }}
+          </button>
+
+          <button class="ctrl-btn" (click)="toggleCamera()" [title]="cameraOn ? 'Stop Video' : 'Start Video'">
+            {{ cameraOn ? '📹' : '🚫' }}
+          </button>
+
+          <button class="ctrl-btn" (click)="toggleChat()" title="Chat">
+            💬
+          </button>
+
+          <button class="ctrl-btn" (click)="togglePrescription()" title="Prescription">
+            {{ prescriptionOpen ? '📋' : '🧾' }}
+          </button>
+
+          <button class="ctrl-btn end-call" (click)="endCall()">End Call</button>
+        </div>
+
+        <div class="prescription-card" *ngIf="prescriptionOpen">
+          <div class="prescription-body">
+            <form class="rx-form expanded-form">
+              <input
+                class="full-width-input"
+                type="text"
+                [(ngModel)]="prescription.diagnosis"
+                name="diagnosis"
+                placeholder="Diagnosis"
+              />
+
+              <textarea
+                [(ngModel)]="prescription.advice"
+                name="advice"
+                placeholder="Advice / Referrals">
+              </textarea>
+
+              <textarea
+                [(ngModel)]="prescription.investigations"
+                name="investigations"
+                placeholder="Investigations">
+              </textarea>
+
+              <input
+                class="full-width-input"
+                type="date"
+                [(ngModel)]="prescription.followUpDate"
+                name="followUpDate"
+                placeholder="Follow-up Date"
+              />
+
+              <div
+                class="medicine-row-improved"
+                *ngFor="let med of medicines; let i = index">
+                <input [(ngModel)]="med.name" [name]="'name' + i" placeholder="Medicine" />
+                <input [(ngModel)]="med.dosage" [name]="'dosage' + i" placeholder="Dosage" />
+                <input [(ngModel)]="med.frequency" [name]="'frequency' + i" placeholder="Frequency" />
+                <input [(ngModel)]="med.duration" [name]="'duration' + i" placeholder="Duration" />
+                <button type="button" class="remove-med-btn" (click)="removeMedicine(i)">×</button>
+              </div>
+
+              <button type="button" class="add-med-btn" (click)="addMedicine()">+ Add Medicine</button>
+              <button type="button" class="save-rx-btn theme-teal" (click)="savePrescription()">Save Prescription</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

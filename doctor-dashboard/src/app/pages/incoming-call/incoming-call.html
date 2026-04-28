@@ -69,15 +69,67 @@
               <span class="ctag ctag-b">{{ patient.dept || patient.department }}</span>
             </div>
 
+            <div class="call-tags" style="margin-top:4px;">
+              @if (isChatConsultation) {
+                <span class="ctag ctag-chat">💬 Chat Consultation</span>
+              } @else {
+                <span class="ctag ctag-g">📹 Video Consultation</span>
+              }
+            </div>
+
             <div class="call-btns">
-              <button class="btn-accept" (click)="startVideoCall()">Start Video Call</button>
+              @if (isChatConsultation) {
+                <button class="btn-accept btn-chat-accept" (click)="acceptChatConsultation()">Accept Chat</button>
+              } @else {
+                <button class="btn-accept" (click)="startVideoCall()">Start Video Call</button>
+              }
               <button class="btn-decline" (click)="goBack()">Decline</button>
             </div>
           </div>
         }
 
-        <!-- ACTIVE CALL -->
-        @if (callAccepted) {
+        <!-- ACTIVE CHAT CONSULTATION (no video) -->
+        @if (callAccepted && isChatConsultation) {
+          <div class="chat-only-active">
+            <div class="chat-only-header">
+              <div class="chat-only-title">
+                <span class="live-dot"></span>
+                Chat with {{ patient.name || patient.patientName }}
+              </div>
+              <button class="switch-video-btn" (click)="switchToVideo()" [disabled]="switchingToVideo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                {{ switchingToVideo ? 'Switching...' : 'Switch to Video Call' }}
+              </button>
+            </div>
+
+            <div class="chat-messages chat-messages-full">
+              @if (messages.length === 0) {
+                <div class="chat-empty">No messages yet. The patient can start typing.</div>
+              }
+              @for (msg of messages; track $index) {
+                <div class="chat-bubble" [class.mine]="msg.sender === 'doctor'" [class.theirs]="msg.sender === 'patient'">
+                  <div class="bubble-text">{{ msg.text }}</div>
+                  <div class="bubble-time">{{ formatTime(msg.time) }}</div>
+                </div>
+              }
+            </div>
+
+            <div class="chat-input-row">
+              <input class="chat-input" [(ngModel)]="chatMessage" placeholder="Type a message..."
+                     (keydown.enter)="sendMessage()" />
+              <button class="chat-send" (click)="sendMessage()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+
+            <div class="chat-only-controls">
+              <button class="ctrl-btn end-call" type="button" (click)="endCall()">End Consultation</button>
+            </div>
+          </div>
+        }
+
+        <!-- ACTIVE VIDEO CALL -->
+        @if (callAccepted && !isChatConsultation) {
           <div class="video-active">
             <div class="video-header">
               <div class="video-title">Video Call — {{ patient.name || patient.patientName }}</div>

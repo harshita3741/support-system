@@ -17,6 +17,8 @@ export class Queue implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
   acceptingId: number | null = null;
+  decliningId: number | null = null;
+  doctorDept = '';
   private pollInterval: any;
 
   constructor(
@@ -26,6 +28,8 @@ export class Queue implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    const doctor = this.authService.getSession();
+    this.doctorDept = (doctor?.dept || '').toUpperCase();
     this.loadQueue();
     // Poll every 8s so new patient cases appear automatically
     this.pollInterval = setInterval(() => this.loadQueue(), 8000);
@@ -104,6 +108,32 @@ export class Queue implements OnInit, OnDestroy {
         this.router.navigate(['/call']);
       }
     });
+  }
+
+  declinePatient(patient: any) {
+    this.decliningId = patient.caseId;
+    this.medicalCaseService.declineCase(patient.caseId).subscribe({
+      next: () => {
+        this.decliningId = null;
+        // Remove from queue immediately
+        this.queueItems = this.queueItems.filter(q => q.caseId !== patient.caseId);
+      },
+      error: () => {
+        this.decliningId = null;
+        // Still remove from local view even on error
+        this.queueItems = this.queueItems.filter(q => q.caseId !== patient.caseId);
+      }
+    });
+  }
+
+  getConsultTypeLabel(q: any): string {
+    const t = (q.consultationType || 'VIDEO').toUpperCase();
+    return t === 'CHAT' ? '💬 Chat' : '📹 Video';
+  }
+
+  getConsultTypeClass(q: any): string {
+    const t = (q.consultationType || 'VIDEO').toUpperCase();
+    return t === 'CHAT' ? 'ctag-chat' : 'ctag-video';
   }
 
   getPriorityClass(priority: string) {

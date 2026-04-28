@@ -42,6 +42,14 @@ export class IncomingCall implements OnInit, OnDestroy {
   callAccepted = false;
   callEnded = false;
 
+  // Consultation type
+  get consultationType(): string {
+    return (this.patient?.consultationType || 'VIDEO').toUpperCase();
+  }
+  get isChatConsultation(): boolean {
+    return this.consultationType === 'CHAT';
+  }
+
   // WebRTC state
   webrtcStatus: 'idle' | 'waiting-offer' | 'connecting' | 'connected' | 'error' = 'idle';
   webrtcStatusMsg = '';
@@ -51,6 +59,10 @@ export class IncomingCall implements OnInit, OnDestroy {
   chatOpen = false;
   prescriptionOpen = false;
   callDuration = 0;
+
+  // Chat-only consultation (no video)
+  chatConsultationActive = false;
+  switchingToVideo = false;
 
   localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
@@ -190,6 +202,43 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
+  /** Accept a CHAT consultation (no video, just messaging) */
+  acceptChatConsultation() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    const doctor = this.getDoctorSession();
+    this.callAccepted = true;
+    this.chatConsultationActive = true;
+    this.chatOpen = true;
+    this.cdr.detectChanges();
+
+    // Mark case as ACCEPTED in backend
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, {
+      doctorId: String(doctor.id || '')
+    }).subscribe({ error: () => {} });
+
+    // Start polling messages right away
+    this.startMessagePolling();
+  }
+
+  /** Upgrade this chat consultation to a video call */
+  switchToVideo() {
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.switchingToVideo = true;
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/upgrade-to-video`, {}).subscribe({
+      next: () => {
+        // Clear chat-only state and transition to video
+        this.chatConsultationActive = false;
+        this.switchingToVideo = false;
+        this.callAccepted = false;  // reset so startVideoCall sets it again
+        this.cdr.detectChanges();
+        this.startVideoCall();
+      },
+      error: () => { this.switchingToVideo = false; }
+    });
+  }
+
   /** Poll backend for the patient's SDP offer */
   pollForPatientOffer() {
     const caseId = this.patient?.caseId;
@@ -327,6 +376,7 @@ export class IncomingCall implements OnInit, OnDestroy {
     clearInterval(this.messagePollInterval);
     this.pc?.close();
     this.pc = null;
+    this.chatConsultationActive = false;
     this.stopMediaTracks();
   }
 

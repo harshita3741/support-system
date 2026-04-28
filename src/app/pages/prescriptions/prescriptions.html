@@ -1,0 +1,128 @@
+<div class="layout" (click)="closeMenus()">
+  <div class="sidebar">
+    <div class="logo"><div class="logo-dot">C</div><span class="logo-text">CareAI</span></div>
+    <nav class="nav">
+      <div class="nav-item" routerLink="/dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" routerLink="/appointment">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Appointments
+      </div>
+      <div class="nav-item" routerLink="/symptoms">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Symptoms
+      </div>
+      <div class="nav-item" routerLink="/chatbot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chatbot
+      </div>
+      <div class="nav-item active" routerLink="/prescriptions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Prescriptions
+      </div>
+      <div class="nav-item" routerLink="/profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </div>
+    </nav>
+    <div class="sidebar-logout" (click)="logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left"><h3>My Prescriptions</h3><p>Prescriptions from your consultations</p></div>
+      <div class="topbar-right">
+        <div class="avatar-wrap">
+          <div class="avatar" (click)="$event.stopPropagation(); toggleAvatarMenu()">{{ initials }}</div>
+          <div class="dropdown-menu" *ngIf="showAvatarMenu">
+            <div class="dropdown-item" routerLink="/profile" (click)="closeMenus()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              My Profile
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item logout" (click)="logout()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Logout
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div *ngIf="loading" class="loading-state">Loading your prescriptions...</div>
+
+      <div *ngIf="!loading && prescriptions.length === 0" class="empty-state">
+        <div class="empty-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" width="40" height="40"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h4>No prescriptions yet</h4>
+        <p>Your prescriptions from doctor consultations will appear here.</p>
+        <button class="btn-start" routerLink="/chatbot">Start a Consultation</button>
+      </div>
+
+      <div class="rx-list" *ngIf="!loading && prescriptions.length > 0">
+        <div class="rx-card" *ngFor="let rx of prescriptions">
+          <div class="rx-header">
+            <div class="rx-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+            </div>
+            <div class="rx-title">
+              <div class="rx-doctor">{{ rx.doctorName || 'Doctor' }}</div>
+              <div class="rx-dept">{{ rx.department || 'General' }} · {{ formatDate(rx.createdAt) }}</div>
+            </div>
+            <div class="rx-dept-tag">{{ rx.department || 'GENERAL' }}</div>
+          </div>
+
+          <div class="rx-body">
+            <div class="rx-section" *ngIf="rx.diagnosis">
+              <div class="rx-label">Diagnosis</div>
+              <div class="rx-value">{{ rx.diagnosis }}</div>
+            </div>
+
+            <div class="rx-section" *ngIf="parseMedicines(rx.medicines).length > 0">
+              <div class="rx-label">Medicines</div>
+              <div class="med-list">
+                <div class="med-item" *ngFor="let med of parseMedicines(rx.medicines)">
+                  <span class="med-name">{{ med.name }}</span>
+                  <span class="med-detail" *ngIf="med.dosage">{{ med.dosage }}</span>
+                  <span class="med-detail" *ngIf="med.frequency">· {{ med.frequency }}</span>
+                  <span class="med-detail" *ngIf="med.duration">· {{ med.duration }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rx-section" *ngIf="rx.investigations">
+              <div class="rx-label">Investigations</div>
+              <div class="rx-value">{{ rx.investigations }}</div>
+            </div>
+
+            <div class="rx-section" *ngIf="rx.advice">
+              <div class="rx-label">Advice</div>
+              <div class="rx-value">{{ rx.advice }}</div>
+            </div>
+
+            <div class="rx-footer" *ngIf="rx.followUpDate">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Follow-up: {{ rx.followUpDate }}
+            </div>
+
+            <div class="rx-actions">
+              <button class="btn-pdf" (click)="downloadPdf(rx)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -26,11 +26,21 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   @ViewChild("remoteVideo") remoteVideoRef!: ElementRef<HTMLVideoElement>;
 
   caseId = "";
-  callStatus: "loading" | "waiting" | "connecting" | "connected" | "ended" | "declined" | "error" = "loading";
+
+  // Consultation mode
+  consultationType: "CHAT" | "VIDEO" | "unknown" = "unknown";
+  chatMode = false;           // currently showing chat UI
+  chatConnected = false;      // doctor accepted, chat is live
+  videoUpgradeReady = false;  // doctor switched to video — show patient notification
+  isSwitchingToVideo = false; // patient is initiating video switch
+
+  callStatus: "loading" | "waiting" | "connecting" | "connected" | "ended" | "doctor-ended" | "declined" | "error" = "loading";
   callDuration = 0;
   isMuted = false;
   isVideoOff = false;
-  statusMessage = "Initialising camera...";
+  isRemoteVideoOff = false;
+  statusMessage = "Connecting...";
+  endReason = "";
 
   // Chat
   chatOpen = false;
@@ -41,6 +51,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private pc: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
+  private timerStartedAt = 0;
   private timer: any;
   private answerPollInterval: any;
   private candidatePollInterval: any;
@@ -64,6 +75,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
         return;
       }
+      this.requestNotificationPermission();
       this.initCall();
     });
   }
@@ -72,11 +84,136 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.cleanup();
   }
 
-  async initCall() {
-    try {
-      this.statusMessage = "Accessing camera and microphone...";
-      this.cdr.detectChanges();
+  requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
 
+  sendNotification(title: string, body: string) {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/favicon.ico" });
+    }
+  }
+
+  // ── Initialise: detect consultation type ─────────────────────
+
+  initCall() {
+    this.statusMessage = "Connecting...";
+    this.cdr.detectChanges();
+
+    this.http.get<any>(`http://localhost:8080/cases/${this.caseId}/status`).subscribe({
+      next: (res) => {
+        this.ngZone.run(() => {
+          const ct = (res?.consultationType || "VIDEO").toUpperCase();
+          this.consultationType = ct as "CHAT" | "VIDEO";
+          if (ct === "CHAT") {
+            this.startChatMode();
+          } else {
+            this.startVideoMode();
+          }
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        // Default to video if we can't determine type
+        this.ngZone.run(() => {
+          this.consultationType = "VIDEO";
+          this.startVideoMode();
+        });
+      }
+    });
+  }
+
+  // ── CHAT MODE ─────────────────────────────────────────────────
+
+  startChatMode() {
+    this.chatMode = true;
+    this.chatConnected = true;
+    this.callStatus = "connected";
+    this.chatOpen = true;
+    this.cdr.detectChanges();
+
+    this.startMessagePolling();
+    // Poll for doctor upgrading to video
+    this.pollForVideoUpgrade();
+
+    this.sendNotification("Connected to doctor", "Your chat consultation has started.");
+  }
+
+  pollForVideoUpgrade() {
+    this.statusPollInterval = setInterval(() => {
+      this.http.get<any>(`http://localhost:8080/cases/${this.caseId}/status`).subscribe({
+        next: (res) => {
+          const ct = (res?.consultationType || "VIDEO").toUpperCase();
+          const status = (res?.status || "").toUpperCase();
+
+          if (ct === "VIDEO" && this.consultationType === "CHAT" && !this.videoUpgradeReady && !this.isSwitchingToVideo) {
+            clearInterval(this.statusPollInterval);
+            this.ngZone.run(() => {
+              this.videoUpgradeReady = true;
+              this.cdr.detectChanges();
+              this.sendNotification("Doctor switched to video call", "Click Join Video Call to connect.");
+            });
+          }
+
+          if (status === "ENDED") {
+            clearInterval(this.statusPollInterval);
+            this.ngZone.run(() => { this.handleDoctorEnded(); });
+          }
+        },
+        error: () => {}
+      });
+    }, 3000);
+  }
+
+  /** Patient decides to upgrade from chat to video */
+  patientSwitchToVideo() {
+    if (this.isSwitchingToVideo) return;
+    this.isSwitchingToVideo = true;
+    this.cdr.detectChanges();
+
+    // Patch the case so doctor gets notified
+    this.http.patch(`http://localhost:8080/cases/${this.caseId}/upgrade-to-video`, {}).subscribe({
+      next: () => {
+        // Start video — patient creates the offer
+        this.ngZone.run(() => {
+          this.chatMode = false;
+          this.consultationType = "VIDEO";
+          this.isSwitchingToVideo = false;
+          clearInterval(this.statusPollInterval);
+          clearInterval(this.messagePollInterval);
+          this.startVideoMode();
+        });
+      },
+      error: () => {
+        this.ngZone.run(() => {
+          this.isSwitchingToVideo = false;
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
+
+  /** Doctor switched to video — patient clicks Join */
+  joinVideoFromChat() {
+    this.videoUpgradeReady = false;
+    this.chatMode = false;
+    this.consultationType = "VIDEO";
+    clearInterval(this.statusPollInterval);
+    clearInterval(this.messagePollInterval);
+    this.cdr.detectChanges();
+    this.startVideoMode();
+  }
+
+  // ── VIDEO MODE ────────────────────────────────────────────────
+
+  async startVideoMode() {
+    this.callStatus = "loading";
+    this.statusMessage = "Accessing camera and microphone...";
+    this.cdr.detectChanges();
+
+    try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
       setTimeout(() => {
@@ -89,12 +226,20 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
 
       this.pc.ontrack = (event) => {
-        if (event.streams?.[0]) this.remoteStream = event.streams[0];
+        if (event.streams?.[0]) {
+          this.remoteStream = event.streams[0];
+          event.streams[0].getVideoTracks().forEach(track => {
+            track.onmute = () => this.ngZone.run(() => { this.isRemoteVideoOff = true; this.cdr.detectChanges(); });
+            track.onunmute = () => this.ngZone.run(() => { this.isRemoteVideoOff = false; this.cdr.detectChanges(); });
+            track.onended = () => this.ngZone.run(() => { this.handleDoctorEnded(); });
+          });
+        }
         this.ngZone.run(() => this.attachRemoteStream());
       };
 
       this.pc.onconnectionstatechange = () => {
-        if (this.pc?.connectionState === "connected") {
+        const state = this.pc?.connectionState;
+        if (state === "connected") {
           this.ngZone.run(() => {
             setTimeout(() => {
               if (!this.remoteStream && this.pc) {
@@ -104,6 +249,9 @@ export class VideoCallComponent implements OnInit, OnDestroy {
               this.attachRemoteStream();
             }, 300);
           });
+        }
+        if (state === "disconnected" || state === "failed" || state === "closed") {
+          this.ngZone.run(() => { this.handleDoctorEnded(); });
         }
       };
 
@@ -115,7 +263,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         }
       };
 
-      this.statusMessage = "Creating connection...";
+      this.statusMessage = "Creating connection offer...";
       this.cdr.detectChanges();
 
       const offer = await this.pc.createOffer();
@@ -130,7 +278,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
             this.statusMessage = "Waiting for doctor to join...";
             this.cdr.detectChanges();
             this.pollForAnswer();
-            this.pollCaseStatus(); // detect if doctor declines
+            this.pollCaseStatus();
           });
         },
         error: () => {
@@ -153,19 +301,23 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Poll case status while waiting — stops when doctor declines ──────────
+  // ── Poll case status (video mode: detect DECLINED, ENDED) ─────
 
   pollCaseStatus() {
     this.statusPollInterval = setInterval(() => {
       this.http.get<any>(`http://localhost:8080/cases/${this.caseId}/status`).subscribe({
         next: (res) => {
-          if (res?.status === "DECLINED") {
+          const status = (res?.status || "").toUpperCase();
+          if (status === "DECLINED") {
             clearInterval(this.statusPollInterval);
             clearInterval(this.answerPollInterval);
             this.ngZone.run(() => {
               this.callStatus = "declined";
               this.cdr.detectChanges();
             });
+          } else if (status === "ENDED") {
+            clearInterval(this.statusPollInterval);
+            this.ngZone.run(() => { this.handleDoctorEnded(); });
           }
         },
         error: () => {}
@@ -173,7 +325,15 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }, 4000);
   }
 
-  // ── WebRTC signaling ──────────────────────────────────────────────────────
+  handleDoctorEnded() {
+    if (this.callStatus === "doctor-ended" || this.callStatus === "ended") return;
+    this.cleanup();
+    this.callStatus = "doctor-ended";
+    this.chatMode = false;
+    this.cdr.detectChanges();
+  }
+
+  // ── WebRTC signaling ──────────────────────────────────────────
 
   pollForAnswer() {
     this.answerPollInterval = setInterval(async () => {
@@ -181,7 +341,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         next: async (res) => {
           if (res?.sdp && this.pc) {
             clearInterval(this.answerPollInterval);
-            clearInterval(this.statusPollInterval); // doctor answered, stop decline-check
+            clearInterval(this.statusPollInterval);
             try {
               const answer = JSON.parse(res.sdp);
               await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -191,6 +351,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
               });
               this.pollForCandidates();
+              this.pollCaseStatus();
             } catch (_) {}
           }
         },
@@ -227,13 +388,15 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
     if (this.callStatus !== "connected") {
       this.callStatus = "connected";
+      this.chatMode = false;
       this.startTimer();
       this.startMessagePolling();
+      this.sendNotification("Video call connected", "You are now connected with the doctor.");
       this.cdr.detectChanges();
     }
   }
 
-  // ── Chat ──────────────────────────────────────────────────────────────────
+  // ── Chat ──────────────────────────────────────────────────────
 
   toggleChat() {
     this.chatOpen = !this.chatOpen;
@@ -251,6 +414,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   startMessagePolling() {
+    clearInterval(this.messagePollInterval);
     this.messagePollInterval = setInterval(() => {
       this.http.get(`http://localhost:8080/video-sessions/${this.caseId}/messages`,
         { responseType: "text" }
@@ -262,7 +426,16 @@ export class VideoCallComponent implements OnInit, OnDestroy {
               if (incoming.length !== this.messages.length) {
                 const newOnes = incoming.slice(this.messages.length);
                 this.messages = incoming;
-                if (!this.chatOpen) this.unreadCount += newOnes.filter(m => m.sender === "doctor").length;
+                if (!this.chatOpen) {
+                  const newDoctorMsgs = newOnes.filter(m => m.sender === "doctor");
+                  this.unreadCount += newDoctorMsgs.length;
+                  if (newDoctorMsgs.length > 0) {
+                    this.sendNotification(
+                      "New message from doctor",
+                      newDoctorMsgs[newDoctorMsgs.length - 1].text
+                    );
+                  }
+                }
                 this.cdr.detectChanges();
               }
             });
@@ -273,11 +446,17 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }, 2000);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Timer ─────────────────────────────────────────────────────
 
   startTimer() {
+    clearInterval(this.timer);
+    this.timerStartedAt = Date.now();
+    this.callDuration = 0;
     this.timer = setInterval(() => {
-      this.ngZone.run(() => { this.callDuration++; this.cdr.detectChanges(); });
+      this.ngZone.run(() => {
+        this.callDuration = Math.floor((Date.now() - this.timerStartedAt) / 1000);
+        this.cdr.detectChanges();
+      });
     }, 1000);
   }
 
@@ -305,8 +484,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   endCall() {
+    this.http.patch(`http://localhost:8080/cases/${this.caseId}/end`, {}).subscribe({ error: () => {} });
     this.cleanup();
-    this.ngZone.run(() => { this.callStatus = "ended"; this.cdr.detectChanges(); });
+    this.ngZone.run(() => {
+      this.callStatus = "ended";
+      this.chatMode = false;
+      this.cdr.detectChanges();
+    });
   }
 
   cleanup() {

@@ -32,6 +32,11 @@ export class MedicalCaseService {
     return this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, { doctorId });
   }
 
+  /** Doctor declines a case from the queue → sets status to DECLINED */
+  declineCase(caseId: string | number): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {});
+  }
+
   getAllCases(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/cases`);
   }

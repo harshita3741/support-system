@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterModule, Router } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
@@ -16,14 +16,21 @@ export class CaseHistoryComponent implements OnInit, OnDestroy {
   loading = true;
   error = false;
   initials = "";
+  showAvatarMenu = false;
   pollInterval: any;
 
-  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private auth: AuthService,
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit() {
     this.initials = this.auth.getInitials();
     this.loadCases();
-    this.pollInterval = setInterval(() => this.loadCases(), 5000);
+    this.pollInterval = setInterval(() => this.loadCases(), 8000);
   }
 
   ngOnDestroy() {
@@ -31,23 +38,32 @@ export class CaseHistoryComponent implements OnInit, OnDestroy {
   }
 
   loadCases() {
+    const patientName = this.auth.getPatientName();
     this.http.get<any[]>("http://localhost:8080/cases/queue").subscribe({
       next: (data) => {
-        const patientName = this.auth.getPatientName();
-        this.cases = data.filter(c =>
-          c.patientName === patientName || c.patientName === "ChatUser"
-        );
-        this.loading = false;
-        this.error = false;
+        this.ngZone.run(() => {
+          this.cases = (Array.isArray(data) ? data : []).filter(c =>
+            c.patientName === patientName
+          );
+          this.loading = false;
+          this.error = false;
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        if (this.loading) {
-          this.loading = false;
-          this.error = true;
-        }
+        this.ngZone.run(() => {
+          if (this.loading) {
+            this.loading = false;
+            this.error = true;
+          }
+          this.cdr.detectChanges();
+        });
       }
     });
   }
+
+  toggleAvatarMenu() { this.showAvatarMenu = !this.showAvatarMenu; }
+  closeMenus() { this.showAvatarMenu = false; }
 
   getRoomId(caseId: number): string {
     return "careai-room-" + caseId;
@@ -76,6 +92,6 @@ export class CaseHistoryComponent implements OnInit, OnDestroy {
 
   logout() {
     localStorage.clear();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/']);
   }
 }

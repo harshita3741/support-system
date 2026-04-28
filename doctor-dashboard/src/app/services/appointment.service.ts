@@ -5,13 +5,12 @@ import { Observable } from 'rxjs';
 export interface Appointment {
   id?: number;
   patientName: string;
-  patientEmail: string;
+  patientId?: string;
   doctorId: number;
   doctorName: string;
   department: string;
-  date: string;
-  timeSlot: string;
   reason: string;
+  appointmentTime: string; // ISO: "2026-04-22T09:00:00"
   status?: string;
 }
 
@@ -24,8 +23,8 @@ export class AppointmentService {
 
   constructor(private http: HttpClient) {}
 
-  createAppointment(payload: Appointment): Observable<any> {
-    return this.http.post(`${this.baseUrl}/appointments/create`, payload);
+  createAppointment(payload: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/appointments/book`, payload);
   }
 
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {

@@ -21,4 +21,10 @@
 .wait-medium { color: #f59e0b; font-weight: 600; font-size: 12px; }
 .wait-low { color: #9ca3af; font-weight: 500; font-size: 12px; }
 .accept-btn { background: #0d6e6e; color: #fff; border: none; border-radius: 7px; padding: 6px 14px; font-size: 11px; font-weight: 500; cursor: pointer; text-decoration: none; }
-.accept-btn:hover { background: #0a5a5a; }
+.accept-btn:hover { background: #0a5a5a; }.decline-btn { background: #fff; color: #dc2626; border: 1px solid #fca5a5; border-radius: 7px; padding: 6px 14px; font-size: 11px; font-weight: 500; cursor: pointer; }
+.decline-btn:hover { background: #fef2f2; }
+.action-btns { display: flex; gap: 6px; align-items: center; }
+.accept-btn:disabled, .decline-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ctag { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+.ctag-chat { background: #f0fdfa; color: #0d9488; border: 1px solid #99f6e4; }
+.ctag-video { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }

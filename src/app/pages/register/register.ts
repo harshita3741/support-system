@@ -16,10 +16,10 @@ export class RegisterComponent {
   patient: any = {
     fullName: "", email: "", phone: "", password: "", gender: "",
     dob: "", emergencyContact: "",
-    bloodGroup: "A+", height: null, weight: null, bmi: null, allergies: "",
+    bloodGroup: "", height: null, weight: null, bmi: null, allergies: "",
     chronicConditions: "",
-    smokingHabit: "Never", alcoholConsumption: "No", activityLevel: "Moderate",
-    sleepHours: "", dietType: "Vegetarian", waterIntake: "",
+    smokingHabit: "", alcoholConsumption: "", activityLevel: "",
+    sleepHours: "", dietType: "", waterIntake: "",
     isPregnant: false, lastMenstrual: "",
     pastIllness: "", previousSurgeries: "", familyHistory: "",
     ongoingTreatments: "", hospitalizations: "",
@@ -75,7 +75,7 @@ export class RegisterComponent {
         next: (res: any) => {
           localStorage.setItem("patientId", res.patientId);
           localStorage.setItem("patientName", res.fullName);
-          alert("Registration successful! Your Patient ID: " + res.patientId + " — Please save this ID for login!");
+          alert("Registration successful! Your Patient ID: " + res.patientId + " ï¿½ Please save this ID for login!");
           this.router.navigate(["/dashboard"]);
         },
         error: () => alert("Registration failed. Please check if backend is running.")

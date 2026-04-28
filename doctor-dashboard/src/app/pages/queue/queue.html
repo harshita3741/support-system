@@ -2,7 +2,7 @@
   <div class="card">
     <div class="card-header">
       <div>
-        <div class="card-title">Live Queue — Cardiology</div>
+        <div class="card-title">Live Queue — {{ doctorDept || 'All Departments' }}</div>
         <div class="card-sub">Patients waiting for assignment</div>
       </div>
       <span class="waiting-badge">{{ queueItems.length }} waiting</span>
@@ -20,6 +20,7 @@
           <tr>
             <th>Patient</th>
             <th>Symptoms</th>
+            <th>Type</th>
             <th>Priority</th>
             <th>Status</th>
             <th>Action</th>
@@ -46,6 +47,12 @@
               <td class="muted">{{ q.symptoms }}</td>
 
               <td>
+                <span class="ctag" [ngClass]="getConsultTypeClass(q)">
+                  {{ getConsultTypeLabel(q) }}
+                </span>
+              </td>
+
+              <td>
                 <span class="prio" [ngClass]="getPriorityClass(q.priority)">
                   {{ q.priority || 'Medium' }}
                 </span>
@@ -58,9 +65,18 @@
               </td>
 
               <td>
-                <button class="accept-btn" (click)="acceptPatient(q)">
-                  Accept
-                </button>
+                <div class="action-btns">
+                  <button class="accept-btn"
+                    (click)="acceptPatient(q)"
+                    [disabled]="acceptingId === q.caseId || decliningId === q.caseId">
+                    {{ acceptingId === q.caseId ? 'Accepting...' : 'Accept' }}
+                  </button>
+                  <button class="decline-btn"
+                    (click)="declinePatient(q)"
+                    [disabled]="acceptingId === q.caseId || decliningId === q.caseId">
+                    {{ decliningId === q.caseId ? '...' : 'Decline' }}
+                  </button>
+                </div>
               </td>
             </tr>
           }

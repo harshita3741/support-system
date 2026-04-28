@@ -1,4 +1,4 @@
-<div class="schedule-page">
+<div class="schedule-page" (click)="closeModal()">
   <div class="sch-card">
 
     <div class="sch-header">
@@ -75,6 +75,7 @@
                     [style.background]="getEventBg(event.type)"
                     [style.color]="getEventColor(event.type)"
                     [style.border-color]="getEventBorder(event.type)"
+                    (click)="openAppointmentModal(event, $event)"
                   >
                     @if (canDeleteEvent(event)) {
                       <button
@@ -113,13 +114,7 @@
     @if (viewMode === 'month') {
       <div class="month-wrap">
         <div class="month-weekdays">
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
-          <div>Sun</div>
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
         </div>
 
         <div class="month-grid">
@@ -145,3 +140,77 @@
 
   </div>
 </div>
+
+<!-- 5-Minute Reminder Popup -->
+@if (showReminder && reminderEvent) {
+  <div class="reminder-backdrop">
+    <div class="reminder-popup">
+      <div class="reminder-pulse"></div>
+      <div class="reminder-icon">⏰</div>
+      <div class="reminder-content">
+        <div class="reminder-title">Appointment in 5 minutes!</div>
+        <div class="reminder-patient">{{ reminderEvent.patientName || reminderEvent.title }}</div>
+        @if (reminderEvent.department) {
+          <div class="reminder-dept">{{ reminderEvent.department }}</div>
+        }
+        @if (reminderEvent.appointmentTime) {
+          <div class="reminder-time">{{ formatApptDateTime(reminderEvent.appointmentTime) }}</div>
+        }
+      </div>
+      <div class="reminder-actions">
+        <button class="reminder-join-btn" (click)="joinCall(reminderEvent)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="14" height="14"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Join Call
+        </button>
+        <button class="reminder-dismiss-btn" (click)="dismissReminder()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Appointment Detail Modal -->
+@if (showModal && selectedEvent) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="appt-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-icon">{{ getEventIcon(selectedEvent.type) }}</div>
+        <div class="modal-title-group">
+          <div class="modal-title">{{ selectedEvent.patientName || selectedEvent.title }}</div>
+          <div class="modal-subtitle">{{ selectedEvent.appointmentTime ? formatApptDateTime(selectedEvent.appointmentTime) : formatHour(selectedEvent.startHour) }}</div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (selectedEvent.department) {
+          <div class="modal-row">
+            <span class="modal-label">Department</span>
+            <span class="modal-val">{{ selectedEvent.department }}</span>
+          </div>
+        }
+        @if (selectedEvent.reason) {
+          <div class="modal-row">
+            <span class="modal-label">Reason</span>
+            <span class="modal-val">{{ selectedEvent.reason }}</span>
+          </div>
+        }
+        <div class="modal-row">
+          <span class="modal-label">Type</span>
+          <span class="modal-val appt-type-badge">{{ selectedEvent.type }}</span>
+        </div>
+        <div class="modal-row">
+          <span class="modal-label">Status</span>
+          <span class="modal-val status-booked">Booked</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="join-call-btn" (click)="joinCall(selectedEvent)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="16" height="16"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Join Call
+        </button>
+        <button class="cancel-modal-btn" (click)="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+}
