@@ -22,22 +22,32 @@ public class Doctor {
 
   public Doctor() {}
 
-  public Doctor(String name, String specialty, boolean available, int activeCases) {
-    this.name = name;
-    this.specialty = specialty;
-    this.available = available;
+  /** Constructor used by DoctorService in-memory list (ID set explicitly). */
+  public Doctor(Long doctorId, String name, String specialty, boolean available, int activeCases) {
+    this.doctorId   = doctorId;
+    this.name       = name;
+    this.specialty  = specialty;
+    this.available  = available;
     this.activeCases = activeCases;
   }
 
-  public Long getDoctorId() { return doctorId; }
-  public String getName() { return name; }
+  /** Constructor used when persisting a new doctor without a pre-assigned ID. */
+  public Doctor(String name, String specialty, boolean available, int activeCases) {
+    this.name       = name;
+    this.specialty  = specialty;
+    this.available  = available;
+    this.activeCases = activeCases;
+  }
+
+  public Long getDoctorId()  { return doctorId; }
+  public String getName()    { return name; }
   public String getSpecialty() { return specialty; }
   public boolean isAvailable() { return available; }
-  public int getActiveCases() { return activeCases; }
+  public int getActiveCases()  { return activeCases; }
 
-  public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
-  public void setName(String name) { this.name = name; }
+  public void setDoctorId(Long doctorId)     { this.doctorId = doctorId; }
+  public void setName(String name)           { this.name = name; }
   public void setSpecialty(String specialty) { this.specialty = specialty; }
-  public void setAvailable(boolean available) { this.available = available; }
-  public void setActiveCases(int activeCases) { this.activeCases = activeCases; }
+  public void setAvailable(boolean available){ this.available = available; }
+  public void setActiveCases(int activeCases){ this.activeCases = activeCases; }
 }
