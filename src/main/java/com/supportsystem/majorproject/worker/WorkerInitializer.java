@@ -10,10 +10,10 @@ import java.util.concurrent.Executors;
 @Component
 public class WorkerInitializer {
 
-  @Autowired private CardioWorker  cardioWorker;
-  @Autowired private NeuroWorker   neuroWorker;
-  @Autowired private OrthoWorker   orthoWorker;
-  @Autowired private GeneralWorker generalWorker;
+  @Autowired private CardioWorker   cardioWorker;
+  @Autowired private NeuroWorker    neuroWorker;
+  @Autowired private OrthoWorker    orthoWorker;
+  @Autowired private GeneralWorker  generalWorker;
 
   @PostConstruct
   public void startWorkers() {

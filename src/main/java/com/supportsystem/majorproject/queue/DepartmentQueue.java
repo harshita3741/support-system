@@ -19,12 +19,13 @@ public class DepartmentQueue {
       case "CARDIO":   cardioQueue.add(medicalCase);  break;
       case "NEURO":    neuroQueue.add(medicalCase);   break;
       case "ORTHO":    orthoQueue.add(medicalCase);   break;
-      default:         generalQueue.add(medicalCase); break; // GENERAL + fallback
+      case "GENERAL":  generalQueue.add(medicalCase); break;
+      default:         generalQueue.add(medicalCase); break;
     }
   }
 
-  public MedicalCase getCardioCase()   throws InterruptedException { return cardioQueue.take();  }
-  public MedicalCase getNeuroCase()    throws InterruptedException { return neuroQueue.take();   }
-  public MedicalCase getOrthoCase()    throws InterruptedException { return orthoQueue.take();   }
+  public MedicalCase getCardioCase()   throws InterruptedException { return cardioQueue.take(); }
+  public MedicalCase getNeuroCase()    throws InterruptedException { return neuroQueue.take(); }
+  public MedicalCase getOrthoCase()    throws InterruptedException { return orthoQueue.take(); }
   public MedicalCase getGeneralCase()  throws InterruptedException { return generalQueue.take(); }
 }
