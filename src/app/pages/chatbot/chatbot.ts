@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { RouterModule, Router } from "@angular/router";
+import { RouterModule, Router, ActivatedRoute } from "@angular/router";
 import { FormsModule } from "@angular/forms";
 import { HttpClient } from "@angular/common/http";
 import { AuthService } from "../../core/auth";
@@ -23,6 +23,8 @@ interface Message {
   pendingSymptoms?: string;
 }
 
+const CHAT_STORAGE_KEY = 'chatbot_messages';
+
 @Component({
   selector: "app-chatbot",
   standalone: true,
@@ -31,16 +33,14 @@ interface Message {
   styleUrls: ["./chatbot.css"]
 })
 export class ChatbotComponent implements OnInit, OnDestroy {
-  messages: Message[] = [
-    { text: "Hello! I am your CareAI health assistant. Describe your symptoms and I will help you.", sender: "bot", time: this.getTime() }
-  ];
+  messages: Message[] = [];
   userInput = "";
   isTyping = false;
   initials = "";
   patientName = "";
   patientId = "";
   showAvatarMenu = false;
-  suggestions = ["I have a headache", "Chest pain", "I have fever", "Bone fracture"];
+  suggestions = ["I have a fever", "Chest pain", "Head injury", "Bone fracture"];
   private pollingIntervals: Map<string, any> = new Map();
 
   // ─── Quick-add details state (keyed by caseId) ────────────────
@@ -56,6 +56,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
   ) {}
@@ -64,9 +65,123 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     this.initials = this.auth.getInitials();
     this.patientName = this.auth.getPatientName();
     this.patientId = localStorage.getItem("patientId") || "";
+
+    // Restore previous chat history from sessionStorage
+    const saved = sessionStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      try {
+        this.messages = JSON.parse(saved);
+      } catch {
+        this.messages = [];
+      }
+    }
+    if (this.messages.length === 0) {
+      this.messages = [{ text: "Hello! I am your CareAI health assistant. Describe your symptoms and I will help you.", sender: "bot", time: this.getTime() }];
+    }
+
+    // Handle redirect from symptoms page
+    this.route.queryParams.subscribe(params => {
+      // ── New flow: symptoms form → chatbot shows consultation-type picker ──
+      if (params["fromSymptoms"] === "true") {
+        const stored = sessionStorage.getItem("pendingSymptoms");
+        let symptoms = "";
+        let dept = "GENERAL";
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            symptoms = parsed.symptoms || "";
+            dept = parsed.dept || "GENERAL";
+            sessionStorage.removeItem("pendingSymptoms");
+          } catch {}
+        }
+        const alreadyInjected = this.messages.some(m => m.showConsultationChoice && m.pendingSymptoms === symptoms);
+        if (!alreadyInjected) {
+          this.injectSymptomsChoice(symptoms, dept);
+        }
+        return;
+      }
+
+      // ── Legacy flow: symptoms form created case first, chatbot shows pending ──
+      const pendingCase = params["pendingCase"];
+      const dept = params["dept"] || "GENERAL";
+      const consultationType = params["consultationType"] || "VIDEO";
+      if (pendingCase) {
+        // Only inject if not already in messages (avoid duplicates on hot reload)
+        const alreadyInjected = this.messages.some(m => m.caseId === pendingCase);
+        if (!alreadyInjected) {
+          this.injectPendingCase(pendingCase, dept, consultationType);
+        } else {
+          // Resume polling for existing pending case
+          const msgIndex = this.messages.findIndex(m => m.caseId === pendingCase);
+          if (msgIndex !== -1 && this.messages[msgIndex].showVideoCallPending) {
+            if (consultationType === "CHAT") {
+              this.pollForChatApproval(msgIndex, pendingCase);
+            } else {
+              this.pollForApproval(msgIndex, pendingCase);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  private saveMessages() {
+    try { sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.messages)); } catch {}
+  }
+
+  injectPendingCase(caseId: string, dept: string, consultationType = "VIDEO") {
+    const deptLabel = this.getDeptLabel(dept);
+    const msgIndex = this.messages.length;
+    if (consultationType === "CHAT") {
+      this.messages = [...this.messages, {
+        text: `✅ Chat consultation request sent to ${deptLabel}. Waiting for a doctor to accept...`,
+        sender: "bot",
+        time: this.getTime(),
+        caseBadge: `Chat Case — ${dept} dept`,
+        showVideoCallPending: true,
+        showChatConsultation: false,
+        caseId
+      }];
+      this.saveMessages();
+      this.cdr.detectChanges();
+      this.pollForChatApproval(msgIndex, caseId);
+    } else {
+      this.messages = [...this.messages, {
+        text: `✅ Video call request sent to ${deptLabel}. Waiting for a doctor to accept...`,
+        sender: "bot",
+        time: this.getTime(),
+        caseBadge: `Case created — ${dept} dept`,
+        showVideoCallPending: true,
+        showVideoCall: false,
+        showQuickDetails: true,
+        quickDetailsCaseId: caseId,
+        doctorName: deptLabel,
+        caseId
+      }];
+      this.saveMessages();
+      this.cdr.detectChanges();
+      this.pollForApproval(msgIndex, caseId);
+    }
+  }
+
+  /** Called when arriving from the symptoms form — shows the consultation-type picker.
+   *  The case is NOT yet created; chooseConsultationType() creates it when the user picks. */
+  injectSymptomsChoice(symptoms: string, dept: string) {
+    const deptLabel = this.getDeptLabel(dept);
+    this.messages = [...this.messages, {
+      text: `I understand you're feeling unwell. Our ${deptLabel} can help with these symptoms. Please choose how you'd like to connect:`,
+      sender: "bot",
+      time: this.getTime(),
+      showConsultationChoice: true,
+      department: dept,
+      pendingSymptoms: symptoms
+    }];
+    this.saveMessages();
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy() {
+    this.saveMessages();
     this.pollingIntervals.forEach(interval => clearInterval(interval));
   }
 
@@ -85,6 +200,16 @@ export class ChatbotComponent implements OnInit, OnDestroy {
   logout() { localStorage.clear(); this.router.navigate(["/"]); }
   onEnter(event: any) { if (event.key === "Enter") this.send(); }
 
+  clearChat() {
+    // Stop any active polling intervals
+    this.pollingIntervals.forEach(interval => clearInterval(interval));
+    this.pollingIntervals.clear();
+    // Reset to just the welcome message
+    this.messages = [{ text: "Hello! I am your CareAI health assistant. Describe your symptoms and I will help you.", sender: "bot", time: this.getTime() }];
+    sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    this.cdr.detectChanges();
+  }
+
   joinVideoCall(caseId: string) {
     this.router.navigate(["/video-call"], { queryParams: { caseId } });
   }
@@ -93,15 +218,23 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     this.router.navigate(["/chat-consultation"], { queryParams: { caseId } });
   }
 
-  // ─── Consultation type choice ─────────────────────────────────
-
+  // ─── Consultation type choice — creates case directly, no redirect ──────
   chooseConsultationType(msgIndex: number, type: "VIDEO" | "CHAT") {
     const msg = this.messages[msgIndex];
     if (!msg) return;
 
     const department = msg.department || "GENERAL";
-    const symptoms = msg.pendingSymptoms || "";
+    const symptoms   = msg.pendingSymptoms || "";
+    const deptLabel  = this.getDeptLabel(department);
 
+    // Hide the choice buttons
+    const updated = [...this.messages];
+    updated[msgIndex] = { ...updated[msgIndex], showConsultationChoice: false };
+    this.messages = updated;
+    this.saveMessages();
+    this.cdr.detectChanges();
+
+    // Create case immediately
     this.http.post<any>("http://localhost:8080/cases/create-with-type", {
       patientName: this.patientName || "Patient",
       symptoms,
@@ -109,18 +242,12 @@ export class ChatbotComponent implements OnInit, OnDestroy {
       consultationType: type
     }).subscribe({
       next: (res: any) => {
-        const caseId = String(res.caseId || "");
         this.ngZone.run(() => {
-          // Hide the choice buttons on that message
-          const updated = [...this.messages];
-          updated[msgIndex] = { ...updated[msgIndex], showConsultationChoice: false };
-
-          const deptLabel = this.getDeptLabel(department);
+          const caseId = String(res?.caseId || "");
+          const newIdx = this.messages.length;
 
           if (type === "VIDEO") {
-            // Show pending badge and poll for doctor acceptance
-            const newIdx = updated.length;
-            updated.push({
+            this.messages = [...this.messages, {
               text: `✅ Video call request sent to ${deptLabel}. Waiting for a doctor to accept...`,
               sender: "bot",
               time: this.getTime(),
@@ -131,14 +258,12 @@ export class ChatbotComponent implements OnInit, OnDestroy {
               quickDetailsCaseId: caseId,
               doctorName: deptLabel,
               caseId
-            });
-            this.messages = updated;
+            }];
+            this.saveMessages();
             this.cdr.detectChanges();
             this.pollForApproval(newIdx, caseId);
           } else {
-            // CHAT — show "Join Chat" button, wait for doctor to accept before entering
-            const newIdx = updated.length;
-            updated.push({
+            this.messages = [...this.messages, {
               text: `✅ Chat consultation request sent to ${deptLabel}. Waiting for a doctor to accept...`,
               sender: "bot",
               time: this.getTime(),
@@ -148,8 +273,8 @@ export class ChatbotComponent implements OnInit, OnDestroy {
               showQuickDetails: true,
               quickDetailsCaseId: caseId,
               caseId
-            });
-            this.messages = updated;
+            }];
+            this.saveMessages();
             this.cdr.detectChanges();
             this.pollForChatApproval(newIdx, caseId);
           }
@@ -162,6 +287,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             sender: "bot",
             time: this.getTime()
           }];
+          this.saveMessages();
           this.cdr.detectChanges();
         });
       }
@@ -201,6 +327,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
                 showVideoCallPending: false
               };
               this.messages = updated;
+              this.saveMessages();
               this.cdr.detectChanges();
             });
           } else if (status === "DECLINED") {
@@ -216,6 +343,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
                 caseBadge: "Request Declined"
               };
               this.messages = updated;
+              this.saveMessages();
               this.cdr.detectChanges();
             });
           }
@@ -245,6 +373,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
                 text: "✅ A doctor has accepted your chat request. Click below to join the chat."
               };
               this.messages = updated;
+              this.saveMessages();
               this.cdr.detectChanges();
             });
           } else if (status === "DECLINED") {
@@ -259,6 +388,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
                 caseBadge: "Request Declined"
               };
               this.messages = updated;
+              this.saveMessages();
               this.cdr.detectChanges();
             });
           }
@@ -320,6 +450,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
         sender: "bot",
         time: this.getTime()
       }];
+      this.saveMessages();
       this.cdr.detectChanges();
     });
   }
@@ -342,6 +473,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     if (!text || this.isTyping) return;
 
     this.messages = [...this.messages, { text, sender: "user", time: this.getTime() }];
+    this.saveMessages();
     this.userInput = "";
     this.isTyping = true;
 
@@ -356,6 +488,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             time: this.getTime(),
             showSymptomsPrompt: true
           }];
+          this.saveMessages();
           this.cdr.detectChanges();
         });
       }, 600);
@@ -387,7 +520,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
           const msgIndex = this.messages.length;
 
           if (awaitingConsultationType && department) {
-            // Ask patient how they want to consult
+            // Show bot message + Video/Chat choice buttons — no redirect, no auto case creation
             this.messages = [...this.messages, {
               text: responseText,
               sender: "bot",
@@ -396,6 +529,9 @@ export class ChatbotComponent implements OnInit, OnDestroy {
               department,
               pendingSymptoms
             }];
+            this.saveMessages();
+            this.cdr.detectChanges();
+
           } else if (caseId) {
             // Emergency auto-created video case
             const deptLabel = this.getDeptLabel(department);
@@ -406,9 +542,13 @@ export class ChatbotComponent implements OnInit, OnDestroy {
               caseBadge: department ? `Case created — ${department} dept` : "",
               showVideoCallPending: true,
               showVideoCall: false,
+              showQuickDetails: true,
+              quickDetailsCaseId: caseId,
               doctorName: deptLabel,
               caseId
             }];
+            this.saveMessages();
+            this.cdr.detectChanges();
             this.pollForApproval(msgIndex, caseId);
           } else {
             this.messages = [...this.messages, {
@@ -416,9 +556,9 @@ export class ChatbotComponent implements OnInit, OnDestroy {
               sender: "bot",
               time: this.getTime()
             }];
+            this.saveMessages();
+            this.cdr.detectChanges();
           }
-
-          this.cdr.detectChanges();
         });
       },
       error: () => {
@@ -429,6 +569,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             sender: "bot",
             time: this.getTime()
           }];
+          this.saveMessages();
           this.cdr.detectChanges();
         });
       }

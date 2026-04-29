@@ -117,7 +117,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.joiningCall = false;
           this.showReminder = false;
           this.cdr.detectChanges();
-          this.router.navigate(['/video-call']);
+          this.router.navigate(['/video-call'], { queryParams: { caseId } });
         });
       },
       error: () => {
@@ -133,8 +133,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.ngZone.run(() => {
           const now = new Date();
+          const grace = 15 * 60 * 1000; // show 15 min after start
           this.appointments = (res || [])
-            .filter(a => new Date(a.appointmentTime) >= now && a.status !== 'CANCELLED')
+            .filter(a => new Date(a.appointmentTime).getTime() + grace >= now.getTime() && a.status !== 'CANCELLED')
             .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())
             .slice(0, 5);
           this.loadingAppts = false;

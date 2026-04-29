@@ -12,6 +12,9 @@ export interface Appointment {
   reason: string;
   appointmentTime: string; // ISO: "2026-04-22T09:00:00"
   status?: string;
+  // Derived fields (computed from appointmentTime)
+  date?: string;      // YYYY-MM-DD
+  timeSlot?: string;  // HH:MM AM/PM
 }
 
 @Injectable({

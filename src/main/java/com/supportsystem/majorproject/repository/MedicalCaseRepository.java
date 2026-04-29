@@ -8,4 +8,6 @@ import java.util.List;
 public interface MedicalCaseRepository extends JpaRepository<MedicalCase, Long> {
 
     List<MedicalCase> findByAssignedDoctorId(Long doctorId);
+
+    List<MedicalCase> findByStatus(String status);
 }

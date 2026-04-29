@@ -67,11 +67,16 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" width="32" height="32"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <h2>Symptoms Submitted</h2>
-          <p>Your case has been registered and sent to the appropriate doctor. You will be notified when a doctor is ready to consult.</p>
-          <div class="success-actions">
-            <button class="btn-primary" routerLink="/chatbot">Start AI Chat</button>
-            <button class="btn-secondary" routerLink="/dashboard">Back to Dashboard</button>
-          </div>
+          @if (redirecting) {
+            <p class="redirect-msg">
+              <span class="redirect-dots">
+                <span></span><span></span><span></span>
+              </span>
+              Now redirecting to doctor...
+            </p>
+          } @else {
+            <p>Your case has been registered. Please wait while we connect you.</p>
+          }
         </div>
       }
 

@@ -191,9 +191,17 @@ export class Dashboard implements OnInit {
     if (!doctorIdNum) return;
 
     this.appointmentService.getAppointmentsByDoctor(doctorIdNum).subscribe({
-      next: (appointments: Appointment[]) => {
-        this.realAppointments = appointments || [];
-        this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date))];
+      next: (raw: Appointment[]) => {
+        // Derive date and timeSlot from appointmentTime ISO string
+        this.realAppointments = (raw || []).map(a => {
+          const d = a.appointmentTime ? new Date(a.appointmentTime) : null;
+          return {
+            ...a,
+            date: d ? this.toYMD(d) : '',
+            timeSlot: d ? d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''
+          };
+        });
+        this.calendarAppointmentDates = [...new Set(this.realAppointments.map(a => a.date || ''))];
 
         this.syncTimelineWithAppointments();
         this.buildCalendarForCurrentData();

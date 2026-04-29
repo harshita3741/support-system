@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
+
 const STUN_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -29,6 +30,7 @@ const STUN_SERVERS = {
   ]
 };
 
+
 @Component({
   selector: 'app-incoming-call',
   standalone: true,
@@ -41,16 +43,20 @@ export class IncomingCall implements OnInit, OnDestroy {
   patient: any = null;
   callAccepted = false;
   callEnded = false;
+  endedByPatient = false;
+  endedReason = '';
+  private endHandled = false;
+  isRemoteVideoOff = false;
+  videoUpgradeReady = false;
 
-  // Consultation type
   get consultationType(): string {
     return (this.patient?.consultationType || 'VIDEO').toUpperCase();
   }
+
   get isChatConsultation(): boolean {
     return this.consultationType === 'CHAT';
   }
 
-  // WebRTC state
   webrtcStatus: 'idle' | 'waiting-offer' | 'connecting' | 'connected' | 'error' = 'idle';
   webrtcStatusMsg = '';
 
@@ -60,12 +66,11 @@ export class IncomingCall implements OnInit, OnDestroy {
   prescriptionOpen = false;
   callDuration = 0;
 
-  // Chat-only consultation (no video)
   chatConsultationActive = false;
   switchingToVideo = false;
 
   localStream: MediaStream | null = null;
-  private remoteStream: MediaStream | null = null;
+  remoteStream: MediaStream | null = null;
   private pc: RTCPeerConnection | null = null;
   private offerPollInterval: any;
   private candidatePollInterval: any;
@@ -85,7 +90,7 @@ export class IncomingCall implements OnInit, OnDestroy {
     advice: '',
     investigations: '',
     followUpDate: '',
-    duration: ''
+    followUpTime: ''
   };
 
   private baseUrl = 'http://192.168.1.76:8080';
@@ -100,12 +105,18 @@ export class IncomingCall implements OnInit, OnDestroy {
     private ngZone: NgZone
   ) {}
 
-  // ─── LIFECYCLE ───────────────────────────────────────────────
-
   ngOnInit() {
-    const data = localStorage.getItem('activePatient');
-    if (data) {
-      this.patient = JSON.parse(data);
+    const raw = localStorage.getItem('activePatient');
+    if (!raw) {
+      this.router.navigate(['/queue']);
+      return;
+    }
+    this.patient = JSON.parse(raw);
+
+    if (this.consultationType === 'CHAT') {
+      this.startChatConsultation();
+    } else {
+      this.startVideoConsultation();
     }
   }
 
@@ -113,211 +124,241 @@ export class IncomingCall implements OnInit, OnDestroy {
     this.cleanup();
   }
 
-  // ─── CALL CONTROLS ───────────────────────────────────────────
-
-  async startVideoCall() {
-    this.callAccepted = true;
-    this.webrtcStatus = 'waiting-offer';
-    this.webrtcStatusMsg = 'Accessing camera...';
-    this.cdr.detectChanges();
-
+  getDoctorSession(): any {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
+      const raw = localStorage.getItem('doctor');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { id: null, name: 'Doctor', dept: 'GENERAL' };
+  }
 
-      // Small delay to ensure @if(callAccepted) has rendered the video element
+  getDoctorName(): string {
+    const s = this.getDoctorSession();
+    return s?.name || 'Doctor';
+  }
+
+  // ── CHAT CONSULTATION ──────────────────────────────────────────
+
+  startChatConsultation() {
+    this.callAccepted = true;
+    this.chatConsultationActive = true;
+    const caseId = this.patient?.caseId;
+    if (!caseId) return;
+    this.acceptCase(caseId);
+    this.startMessagePolling(caseId);
+    this.pollForVideoUpgrade(caseId);
+    this.cdr.detectChanges();
+  }
+
+  acceptCase(caseId: string) {
+    const doctorId = this.getDoctorSession()?.id || '1';
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, { doctorId: String(doctorId) }).subscribe();
+  }
+
+  startMessagePolling(caseId: string) {
+    this.messagePollInterval = setInterval(() => {
+      this.http.get<any[]>(`${this.baseUrl}/chat/messages/${caseId}`).subscribe({
+        next: (msgs) => {
+          this.ngZone.run(() => {
+            if (msgs && msgs.length !== this.messages.length) {
+              this.messages = msgs.map((m: any) => ({
+                sender: m.senderType === 'DOCTOR' ? 'doctor' : 'patient',
+                text: m.message,
+                time: m.timestamp || new Date().toISOString()
+              }));
+              if (!this.chatOpen) this.unreadCount = msgs.filter((m: any) => m.senderType !== 'DOCTOR').length;
+              this.cdr.detectChanges();
+            }
+          });
+        }
+      });
+    }, 2000);
+  }
+
+  pollForVideoUpgrade(caseId: string) {
+    const interval = setInterval(() => {
+      this.http.get<any>(`${this.baseUrl}/cases/${caseId}/status`).subscribe({
+        next: (res) => {
+          const status = (res?.status || '').toUpperCase();
+          const type = (res?.consultationType || 'CHAT').toUpperCase();
+          this.ngZone.run(() => {
+            if (status === 'ENDED' || status === 'DECLINED') {
+              clearInterval(interval);
+              this.callEnded = true;
+              this.endedByPatient = true;
+              this.cdr.detectChanges();
+            }
+            if (type === 'VIDEO' && !this.videoUpgradeReady) {
+              this.videoUpgradeReady = true;
+              this.cdr.detectChanges();
+            }
+          });
+        }
+      });
+    }, 3000);
+  }
+
+  sendMessage() {
+    const text = this.chatMessage.trim();
+    if (!text) return;
+    const caseId = this.patient?.caseId;
+    this.http.post(`${this.baseUrl}/chat/send`, {
+      caseId,
+      message: text,
+      senderType: 'DOCTOR'
+    }).subscribe();
+    this.messages = [...this.messages, {
+      sender: 'doctor',
+      text,
+      time: new Date().toISOString()
+    }];
+    this.chatMessage = '';
+    this.cdr.detectChanges();
+  }
+
+  switchToVideo() {
+    if (this.switchingToVideo) return;
+    this.switchingToVideo = true;
+    const caseId = this.patient?.caseId;
+    this.http.patch(`${this.baseUrl}/cases/${caseId}/upgrade-to-video`, {}).subscribe({
+      next: () => {
+        this.ngZone.run(() => {
+          this.switchingToVideo = false;
+          this.startVideoConsultation();
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.ngZone.run(() => { this.switchingToVideo = false; this.cdr.detectChanges(); });
+      }
+    });
+  }
+
+  formatTime(ts: string): string {
+    try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
+  }
+
+  // ── VIDEO CONSULTATION ─────────────────────────────────────────
+
+  async startVideoConsultation() {
+    this.chatConsultationActive = false;
+    this.callAccepted = true;
+    try {
+      this.webrtcStatus = 'waiting-offer';
+      this.webrtcStatusMsg = 'Waiting for patient to connect...';
+      this.cdr.detectChanges();
+
+      this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setTimeout(() => {
-        if (this.localVideoRef?.nativeElement && this.localStream) {
+        if (this.localVideoRef?.nativeElement) {
           this.localVideoRef.nativeElement.srcObject = this.localStream;
-          this.localVideoRef.nativeElement.muted = true;
-          this.localVideoRef.nativeElement.play().catch(() => {});
         }
       }, 100);
 
-      this.micOn = true;
-      this.cameraOn = true;
-
-      // Set up WebRTC peer connection
-      this.pc = new RTCPeerConnection(STUN_SERVERS);
-      this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
-
-      // Store remote stream when tracks arrive
-      this.pc.ontrack = (event) => {
-        if (event.streams?.[0]) {
-          this.remoteStream = event.streams[0];
-        }
-        this.ngZone.run(() => {
-          this.attachRemoteStream();
-        });
-      };
-
-      // Fallback: when peer connection fully establishes, force-attach stream
-      this.pc.onconnectionstatechange = () => {
-        if (this.pc?.connectionState === 'connected') {
-          this.ngZone.run(() => {
-            setTimeout(() => {
-              if (!this.remoteStream && this.pc) {
-                const tracks = this.pc.getReceivers().map(r => r.track).filter(t => t);
-                if (tracks.length) this.remoteStream = new MediaStream(tracks);
-              }
-              this.attachRemoteStream();
-            }, 300);
-          });
-        }
-      };
-
-      this.pc.oniceconnectionstatechange = () => {
-        console.log('[ICE]', this.pc?.iceConnectionState);
-      };
-
-      // Send our ICE candidates to backend
-      this.pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          const caseId = this.patient?.caseId;
-          if (caseId) {
-            this.http.post(
-              `${this.baseUrl}/video-sessions/${caseId}/candidate/doctor`,
-              { candidate: JSON.stringify(event.candidate) }
-            ).subscribe({ error: () => {} });
-          }
-        }
-      };
-
-      this.webrtcStatusMsg = 'Waiting for patient to join...';
-      this.cdr.detectChanges();
-
-      // Poll for patient's WebRTC offer
       this.pollForPatientOffer();
-
-    } catch (err: any) {
+    } catch (err) {
       this.ngZone.run(() => {
         this.webrtcStatus = 'error';
-        this.webrtcStatusMsg = err.name === 'NotAllowedError'
-          ? 'Camera/microphone access denied. Please allow access and try again.'
-          : 'Could not start video: ' + (err.message || 'Unknown error');
+        this.webrtcStatusMsg = 'Could not access camera/microphone';
         this.cdr.detectChanges();
       });
     }
   }
 
-  /** Accept a CHAT consultation (no video, just messaging) */
-  acceptChatConsultation() {
-    const caseId = this.patient?.caseId;
-    if (!caseId) return;
-    const doctor = this.getDoctorSession();
-    this.callAccepted = true;
-    this.chatConsultationActive = true;
-    this.chatOpen = true;
-    this.cdr.detectChanges();
-
-    // Mark case as ACCEPTED in backend
-    this.http.patch(`${this.baseUrl}/cases/${caseId}/accept`, {
-      doctorId: String(doctor.id || '')
-    }).subscribe({ error: () => {} });
-
-    // Start polling messages right away
-    this.startMessagePolling();
-  }
-
-  /** Upgrade this chat consultation to a video call */
-  switchToVideo() {
-    const caseId = this.patient?.caseId;
-    if (!caseId) return;
-    this.switchingToVideo = true;
-    this.http.patch(`${this.baseUrl}/cases/${caseId}/upgrade-to-video`, {}).subscribe({
-      next: () => {
-        // Clear chat-only state and transition to video
-        this.chatConsultationActive = false;
-        this.switchingToVideo = false;
-        this.callAccepted = false;  // reset so startVideoCall sets it again
-        this.cdr.detectChanges();
-        this.startVideoCall();
-      },
-      error: () => { this.switchingToVideo = false; }
-    });
-  }
-
-  /** Poll backend for the patient's SDP offer */
   pollForPatientOffer() {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
 
     this.offerPollInterval = setInterval(async () => {
-      this.http.get<any>(`${this.baseUrl}/video-sessions/${caseId}/offer`).subscribe({
+      this.http.get<any>(`${this.baseUrl}/video/offer/${caseId}`).subscribe({
         next: async (res) => {
-          if (res?.sdp && this.pc) {
+          if (res?.sdp) {
             clearInterval(this.offerPollInterval);
-            try {
-              const offer = JSON.parse(res.sdp);
-              await this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
-
-              const answer = await this.pc!.createAnswer();
-              await this.pc!.setLocalDescription(answer);
-
-              // Send answer back to backend so patient can pick it up
-              this.http.post(
-                `${this.baseUrl}/video-sessions/${caseId}/answer`,
-                { sdp: JSON.stringify(answer) }
-              ).subscribe({ error: () => {} });
-
-              this.ngZone.run(() => {
-                this.webrtcStatus = 'connecting';
-                this.webrtcStatusMsg = 'Establishing connection...';
-                this.cdr.detectChanges();
-              });
-
-              // Start polling for patient's ICE candidates
-              this.pollForPatientCandidates();
-            } catch (e) {
-              console.error('WebRTC answer error:', e);
-            }
+            await this.handlePatientOffer(res, caseId);
           }
-        },
-        error: () => {}
+        }
       });
-    }, 3000);
-  }
+    }, 2000);
 
-  /** Poll for patient's ICE candidates and add them */
-  pollForPatientCandidates() {
-    const caseId = this.patient?.caseId;
-    if (!caseId) return;
-
-    this.candidatePollInterval = setInterval(() => {
-      this.http.get(
-        `${this.baseUrl}/video-sessions/${caseId}/candidates/patient`,
-        { responseType: 'text' }
-      ).subscribe({
-        next: async (raw: string) => {
-          try {
-            const candidates: any[] = JSON.parse(raw);
-            for (const c of candidates) {
-              const candidate = typeof c === 'string' ? JSON.parse(c) : c;
-              if (this.pc && candidate?.candidate) {
-                await this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-              }
+    // Also poll for patient-ended call
+    const statusInterval = setInterval(() => {
+      this.http.get<any>(`${this.baseUrl}/cases/${caseId}/status`).subscribe({
+        next: (res) => {
+          const status = (res?.status || '').toUpperCase();
+          this.ngZone.run(() => {
+            if ((status === 'ENDED' || status === 'DECLINED') && !this.endHandled) {
+              clearInterval(statusInterval);
+              this.endHandled = true;
+              this.callEnded = true;
+              this.endedByPatient = true;
+              this.endedReason = 'Patient ended the consultation.';
+              this.cdr.detectChanges();
             }
-          } catch (_) {}
-        },
-        error: () => {}
+          });
+        }
       });
     }, 3000);
   }
 
-  attachRemoteStream() {
-    if (this.remoteVideoRef?.nativeElement && this.remoteStream) {
-      this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
-      this.remoteVideoRef.nativeElement.play().catch(() => {});
-    }
-    if (this.webrtcStatus !== 'connected') {
-      this.webrtcStatus = 'connected';
-      this.webrtcStatusMsg = '';
-      this.startCallTimer();
-      this.startMessagePolling();
-      this.cdr.detectChanges();
-    }
+  async handlePatientOffer(offer: any, caseId: string) {
+    this.pc = new RTCPeerConnection(STUN_SERVERS);
+
+    this.remoteStream = new MediaStream();
+    this.pc.ontrack = (event) => {
+      event.streams[0].getTracks().forEach(track => {
+        this.remoteStream!.addTrack(track);
+      });
+      this.ngZone.run(() => {
+        if (this.remoteVideoRef?.nativeElement) {
+          this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
+        }
+        this.webrtcStatus = 'connected';
+        this.webrtcStatusMsg = 'Connected';
+        this.startCallTimer();
+        this.cdr.detectChanges();
+      });
+    };
+
+    this.pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        this.http.post(`${this.baseUrl}/video/candidate/doctor/${caseId}`, {
+          candidate: event.candidate.candidate,
+          sdpMid: event.candidate.sdpMid,
+          sdpMLineIndex: event.candidate.sdpMLineIndex
+        }).subscribe();
+      }
+    };
+
+    this.localStream?.getTracks().forEach(track => {
+      this.pc!.addTrack(track, this.localStream!);
+    });
+
+    await this.pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer.sdp }));
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(answer);
+
+    this.http.post(`${this.baseUrl}/video/answer/${caseId}`, { sdp: answer.sdp }).subscribe();
+    this.pollForCandidates(caseId);
+  }
+
+  pollForCandidates(caseId: string) {
+    this.candidatePollInterval = setInterval(() => {
+      this.http.get<any[]>(`${this.baseUrl}/video/candidates/patient/${caseId}`).subscribe({
+        next: (candidates) => {
+          if (!candidates?.length) return;
+          candidates.forEach(c => {
+            if (c?.candidate && this.pc) {
+              this.pc.addIceCandidate(new RTCIceCandidate({
+                candidate: c.candidate,
+                sdpMid: c.sdpMid,
+                sdpMLineIndex: c.sdpMLineIndex
+              })).catch(() => {});
+            }
+          });
+        }
+      });
+    }, 2000);
   }
 
   startCallTimer() {
@@ -327,30 +368,28 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   getCallTime(): string {
-    const m = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
-    const s = (this.callDuration % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+    const m = Math.floor(this.callDuration / 60);
+    const s = this.callDuration % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
   toggleMic() {
-    if (!this.localStream) return;
     this.micOn = !this.micOn;
-    this.localStream.getAudioTracks().forEach(t => t.enabled = this.micOn);
+    this.localStream?.getAudioTracks().forEach(t => t.enabled = this.micOn);
   }
 
   toggleCamera() {
-    if (!this.localStream) return;
     this.cameraOn = !this.cameraOn;
-    this.localStream.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
-
-    if (this.cameraOn) {
-      setTimeout(() => {
-        if (this.localVideoRef?.nativeElement) {
-          this.localVideoRef.nativeElement.srcObject = this.localStream;
-          this.localVideoRef.nativeElement.play().catch(() => {});
-        }
-      }, 50);
+    this.localStream?.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.post(`${this.baseUrl}/video/camera-state/${caseId}/doctor`, { on: this.cameraOn }).subscribe();
     }
+  }
+
+  toggleChat() {
+    this.chatOpen = !this.chatOpen;
+    if (this.chatOpen) this.unreadCount = 0;
   }
 
   togglePrescription() {
@@ -359,14 +398,13 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   endCall() {
-    this.cleanup();
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.patch(`${this.baseUrl}/cases/${caseId}/end`, {}).subscribe();
+    }
     this.callEnded = true;
-    this.callAccepted = false;
-    localStorage.removeItem('activePatient');
-
-    setTimeout(() => {
-      this.router.navigate(['/queue']);
-    }, 2000);
+    this.cleanup();
+    this.cdr.detectChanges();
   }
 
   cleanup() {
@@ -375,82 +413,8 @@ export class IncomingCall implements OnInit, OnDestroy {
     clearInterval(this.callTimer);
     clearInterval(this.messagePollInterval);
     this.pc?.close();
-    this.pc = null;
-    this.chatConsultationActive = false;
-    this.stopMediaTracks();
+    this.localStream?.getTracks().forEach(t => t.stop());
   }
-
-  stopMediaTracks() {
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
-      this.localStream = null;
-    }
-  }
-
-  goBack() {
-    // Decline the case so patient sees it on their side
-    const caseId = this.patient?.caseId;
-    if (caseId) {
-      this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {}).subscribe({ error: () => {} });
-    }
-    this.cleanup();
-    this.router.navigate(['/queue']);
-  }
-
-  // ─── CHAT ────────────────────────────────────────────────────
-
-  toggleChat() {
-    this.chatOpen = !this.chatOpen;
-    if (this.chatOpen) {
-      this.prescriptionOpen = false;
-      this.unreadCount = 0;
-    }
-  }
-
-  sendMessage() {
-    const text = this.chatMessage.trim();
-    if (!text) return;
-    this.chatMessage = '';
-    const caseId = this.patient?.caseId;
-    if (!caseId) return;
-    this.http.post(`${this.baseUrl}/video-sessions/${caseId}/messages`,
-      { sender: 'doctor', text }
-    ).subscribe({ error: () => {} });
-  }
-
-  startMessagePolling() {
-    const caseId = this.patient?.caseId;
-    if (!caseId) return;
-    this.messagePollInterval = setInterval(() => {
-      this.http.get(`${this.baseUrl}/video-sessions/${caseId}/messages`,
-        { responseType: 'text' }
-      ).subscribe({
-        next: (raw: string) => {
-          try {
-            const incoming: any[] = JSON.parse(raw);
-            this.ngZone.run(() => {
-              if (incoming.length !== this.messages.length) {
-                const newOnes = incoming.slice(this.messages.length);
-                this.messages = incoming;
-                if (!this.chatOpen) this.unreadCount += newOnes.filter((m: any) => m.sender === 'patient').length;
-                this.cdr.detectChanges();
-              }
-            });
-          } catch (_) {}
-        },
-        error: () => {}
-      });
-    }, 2000);
-  }
-
-  formatTime(iso: string): string {
-    try {
-      const d = new Date(iso);
-      return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-    } catch { return ''; }
-  }
-
-  // ─── MEDICINES ───────────────────────────────────────────────
 
   addMedicine() {
     this.medicines.push({ name: '', dosage: '', frequency: '', duration: '' });
@@ -462,92 +426,163 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
   }
 
-  // ─── PRESCRIPTION SAVE + PDF ──────────────────────────────────
-
   savePrescription() {
     const doctor = this.getDoctorSession();
-    const date = new Date().toLocaleDateString('en-IN');
+    const now = new Date();
+    const date = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'numeric', year: 'numeric' });
 
     const payload = {
-      caseId:         this.patient?.caseId || null,
-      doctorId:       doctor.id,
-      doctorName:     this.getDoctorName(),
-      department:     doctor.dept || this.patient?.dept || 'General',
-      patientName:    this.patient?.name || this.patient?.patientName || '',
-      symptoms:       this.patient?.symptoms || '',
-      diagnosis:      this.prescription.diagnosis,
-      medicines:      JSON.stringify(this.medicines),
+      caseId: this.patient?.caseId || null,
+      doctorId: doctor.id,
+      doctorName: this.getDoctorName(),
+      department: doctor.dept || this.patient?.dept || 'GENERAL',
+      patientName: this.patient?.name || this.patient?.patientName || '',
+      symptoms: this.patient?.symptoms || '',
+      diagnosis: this.prescription.diagnosis,
+      medicines: JSON.stringify(this.medicines),
       investigations: this.prescription.investigations,
-      advice:         this.prescription.advice,
-      followUpDate:   this.prescription.followUpDate,
-      createdAt:      new Date().toISOString()
+      advice: this.prescription.advice,
+      followUpDate: this.prescription.followUpDate && this.prescription.followUpTime
+        ? `${this.prescription.followUpDate}T${this.prescription.followUpTime}`
+        : this.prescription.followUpDate,
+      createdAt: now.toISOString()
     };
 
     this.http.post(`${this.baseUrl}/prescriptions`, payload).subscribe({
-      next: () => this.generatePDF(payload, date),
-      error: ()  => this.generatePDF(payload, date)
+      next: () => {
+        this.autoBookFollowUp(payload);
+        this.generatePDF(payload, date);
+      },
+      error: () => {
+        this.autoBookFollowUp(payload);
+        this.generatePDF(payload, date);
+      }
     });
+  }
+
+  autoBookFollowUp(payload: any) {
+    if (!payload.followUpDate || !payload.followUpTime) return;
+    const dateStr = payload.followUpDate; // YYYY-MM-DD
+    const timeStr = payload.followUpTime; // HH:MM
+    if (!dateStr || !timeStr) return;
+    const appointmentTime = `${dateStr}T${timeStr}:00`;
+    const doctor = this.getDoctorSession();
+    const appt = {
+      patientName: payload.patientName,
+      doctorId: doctor.id || payload.doctorId,
+      doctorName: this.getDoctorName(),
+      department: payload.department,
+      reason: `Follow-up: ${payload.diagnosis || 'Consultation'}`,
+      appointmentTime,
+      status: 'BOOKED'
+    };
+    this.http.post(`${this.baseUrl}/appointments/book`, appt).subscribe();
+  }
+
+  formatFollowUpDateDisplay(dateStr: string): string {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    } catch { return dateStr; }
   }
 
   generatePDF(data: any, date: string) {
     const doctor = this.getDoctorSession();
+    const followUpDisplay = this.formatFollowUpDateDisplay(data.followUpDate);
+    const followUpWithTime = followUpDisplay && data.followUpTime
+      ? `${followUpDisplay} at ${data.followUpTime}`
+      : followUpDisplay;
 
     let medsHtml = '';
     try {
       const meds = typeof data.medicines === 'string' ? JSON.parse(data.medicines) : data.medicines;
-      meds.forEach((m: any) => {
-        if (m.name) {
-          medsHtml += `<div style="margin:6px 0 2px 16px;font-size:14px">&bull; Tab. ${m.name} ${m.dosage || ''} ${m.frequency || ''} ${m.duration ? 'for ' + m.duration : ''}</div>`;
-        }
-      });
+      const validMeds = (meds || []).filter((m: any) => m.name?.trim());
+      if (validMeds.length > 0) {
+        medsHtml = `
+          <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+            <thead>
+              <tr style="border-bottom:1px solid #ccc;">
+                <th style="text-align:left;padding:4px 8px 4px 0;font-size:12px;color:#666;font-weight:600;">MEDICINE</th>
+                <th style="text-align:left;padding:4px 8px;font-size:12px;color:#666;font-weight:600;">DOSAGE</th>
+                <th style="text-align:left;padding:4px 8px;font-size:12px;color:#666;font-weight:600;">FREQUENCY</th>
+                <th style="text-align:left;padding:4px 0;font-size:12px;color:#666;font-weight:600;">DURATION</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${validMeds.map((m: any) => `
+                <tr>
+                  <td style="padding:5px 8px 5px 0;font-size:13px;">${m.name || ''}</td>
+                  <td style="padding:5px 8px;font-size:13px;color:#444;">${m.dosage || '—'}</td>
+                  <td style="padding:5px 8px;font-size:13px;color:#444;">${m.frequency || '—'}</td>
+                  <td style="padding:5px 0;font-size:13px;color:#444;">${m.duration || '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+      } else {
+        medsHtml = '<p style="font-size:13px;color:#555;margin-left:2px;">No medicines prescribed</p>';
+      }
     } catch {
-      medsHtml = `<div style="margin-left:16px">${data.medicines}</div>`;
+      medsHtml = `<p style="font-size:13px;margin-left:2px;">${data.medicines || ''}</p>`;
     }
 
-    const html = `<html><head><title>Prescription — ${data.patientName}</title><style>
-      *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:48px 56px;max-width:720px;margin:auto;color:#111}
-      .date{text-align:center;font-style:italic;font-size:13px;margin-bottom:12px}.hosp{font-size:22px;font-weight:bold;text-align:center}
-      .docname{font-size:16px;font-weight:bold;text-align:center;margin-top:4px}.center{text-align:center;font-size:13px;color:#444;line-height:1.6}
-      .divider{border:none;border-top:2.5px solid #0d6e6e;margin:16px 0}.patient-block{font-size:14px;line-height:1.9;margin-bottom:4px}
-      .rx-symbol{font-size:30px;font-style:italic;font-weight:bold;margin:20px 0 8px;font-family:Georgia,serif}
-      .section-title{font-weight:bold;margin-top:18px;font-size:14px}.section-body{font-size:14px;margin-left:8px;line-height:1.7}
-      .footer{margin-top:64px;display:flex;justify-content:space-between;font-size:13px;border-top:1px solid #ddd;padding-top:12px}
-    </style></head><body>
-      <div class="date">Date: ${date}</div>
-      <div class="hosp">MediQueue Hospital</div>
-      <div class="docname">${data.doctorName}</div>
-      <div class="center">${data.department} Department<br/>Reg. No. MQ/${doctor.id || '001'}</div>
-      <hr class="divider"/>
-      <div class="patient-block"><b>Patient: ${data.patientName}</b><br/>Symptoms: ${data.symptoms}<br/>Diagnosis: ${data.diagnosis || '—'}</div>
-      <hr class="divider"/>
-      <div class="rx-symbol">R<sub>x</sub></div>
-      ${medsHtml || '<div style="margin-left:16px;font-size:14px">No medicines prescribed</div>'}
-      ${data.investigations ? `<div class="section-title">Investigations</div><div class="section-body">${data.investigations}</div>` : ''}
-      <div class="section-title">Advice / Referrals</div><div class="section-body">${data.advice || '—'}</div>
-      <div class="section-title">Follow-up Date</div><div class="section-body">${data.followUpDate || 'Not specified'}</div>
-      <div class="footer"><div><b>${data.doctorName}</b><br/>${data.department}</div><div style="text-align:right">MediQueue Hospital<br/>${date}</div></div>
-    </body></html>`;
+    const html = `<!DOCTYPE html><html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Prescription — ${data.patientName}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Times New Roman',Times,serif;color:#111;background:white;padding:48px 56px;max-width:760px;margin:0 auto;}
+    .date-line{text-align:center;font-style:italic;font-size:13px;margin-bottom:14px;}
+    .hosp{font-size:24px;font-weight:bold;text-align:center;margin-bottom:4px;}
+    .doc-name{font-size:15px;font-weight:bold;text-align:center;margin-bottom:2px;}
+    .center-sm{text-align:center;font-size:13px;color:#444;line-height:1.7;}
+    hr{border:none;border-top:1.5px solid #222;margin:14px 0;}
+    .patient-name{font-weight:bold;font-size:14px;margin-bottom:6px;}
+    .info-line{font-size:13px;margin-bottom:3px;line-height:1.6;}
+    .rx-symbol{font-size:44px;font-weight:bold;font-style:italic;font-family:Georgia,serif;margin:16px 0 8px;}
+    .section-head{font-weight:bold;font-size:14px;margin-top:16px;margin-bottom:4px;}
+    .section-val{font-size:13px;margin-left:2px;line-height:1.7;}
+    .footer{margin-top:56px;display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid #ccc;font-size:13px;}
+    @media print{body{padding:32px 40px;}}
+  </style>
+</head>
+<body>
+  <div class="date-line">Date: ${date}</div>
+  <div class="hosp">MediQueue Hospital</div>
+  <div class="doc-name">${data.doctorName}</div>
+  <div class="center-sm">${data.department} Department<br/>Reg. No. MQ/${doctor.id || '001'}</div>
+  <hr/>
+  <div class="patient-name">Patient: ${data.patientName}</div>
+  ${data.symptoms ? `<div class="info-line">Symptoms: ${data.symptoms}</div>` : ''}
+  ${data.diagnosis ? `<div class="info-line">Diagnosis: ${data.diagnosis}</div>` : ''}
+  <hr/>
+  <div class="rx-symbol"><i>R<sub>x</sub></i></div>
+  ${medsHtml}
+  ${data.investigations?.trim() ? `<div class="section-head">Investigations</div><div class="section-val">${data.investigations}</div>` : ''}
+  ${data.advice?.trim() ? `<div class="section-head">Advice / Referrals</div><div class="section-val">${data.advice}</div>` : ''}
+  ${followUpWithTime ? `<div class="section-head">Follow-up Date</div><div class="section-val">${followUpWithTime}</div>` : ''}
+  <div class="footer">
+    <div><strong>${data.doctorName}</strong><br/>${data.department}</div>
+    <div style="text-align:right">MediQueue Hospital<br/>${date}</div>
+  </div>
+  <script>window.onload=function(){window.print();}</script>
+</body></html>`;
 
     const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => win.print(), 500);
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
+  goBack() {
+    const caseId = this.patient?.caseId;
+    if (caseId) {
+      this.http.patch(`${this.baseUrl}/cases/${caseId}/decline`, {}).subscribe({ error: () => {} });
     }
+    this.cleanup();
+    this.router.navigate(['/queue']);
   }
 
-  // ─── HELPERS ─────────────────────────────────────────────────
-
-  getDoctorSession() {
-    try { return JSON.parse(localStorage.getItem('doctor') || '{}'); }
-    catch { return {}; }
-  }
-
-  getDoctorName(): string {
-    return this.getDoctorSession().name || 'Doctor';
-  }
-
-  getPatientInitials() {
+  getPatientInitials(): string {
     if (this.patient?.initials) return this.patient.initials;
     const fullName = this.patient?.name || this.patient?.patientName || '';
     if (!fullName) return 'P';
@@ -558,18 +593,19 @@ export class IncomingCall implements OnInit, OnDestroy {
   }
 
   getMedicinesSummary(): string {
-    return this.medicines.filter(m => m.name)
+    return this.medicines
+      .filter(m => m.name)
       .map(m => `${m.name}${m.dosage ? ' ' + m.dosage : ''}`)
       .join(', ') || '—';
   }
 
-  parseConditions() {
+  parseConditions(): string[] {
     if (this.patient?.conditions && Array.isArray(this.patient.conditions)) return this.patient.conditions;
     if (!this.patient?.knownConditions) return [];
     return this.patient.knownConditions.split(',').map((x: string) => x.trim());
   }
 
-  parseVisits() {
+  parseVisits(): any[] {
     if (this.patient?.previousVisits && Array.isArray(this.patient.previousVisits)) return this.patient.previousVisits;
     return [];
   }

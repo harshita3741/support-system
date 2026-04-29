@@ -21,6 +21,7 @@ export class Login {
   { label: 'dr.smith — Cardio', username: 'dr.smith', password: '1234' },
   { label: 'dr.adams — Neuro', username: 'dr.adams', password: '1234' },
   { label: 'dr.lee — Ortho', username: 'dr.lee', password: '1234' },
+  { label: 'dr.johnson — General', username: 'dr.johnson', password: '1234' },
   { label: 'nurse.cardio', username: 'nurse.cardio', password: '1234' },
   { label: 'nurse.neuro', username: 'nurse.neuro', password: '1234' },
   { label: 'nurse.ortho', username: 'nurse.ortho', password: '1234' }

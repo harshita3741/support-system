@@ -23,6 +23,9 @@ public class MedicalCase {
     @Column(name = "assigned_doctor_id")
     private Long assignedDoctorId;
 
+    @Column(name = "consultation_type")
+    private String consultationType;
+
     public Long getCaseId() {
         return caseId;
     }
@@ -69,5 +72,13 @@ public class MedicalCase {
 
     public void setAssignedDoctorId(Long assignedDoctorId) {
         this.assignedDoctorId = assignedDoctorId;
+    }
+
+    public String getConsultationType() {
+        return consultationType;
+    }
+
+    public void setConsultationType(String consultationType) {
+        this.consultationType = consultationType;
     }
 }

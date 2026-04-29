@@ -1,8 +1,7 @@
-import { Component, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-symptoms',
@@ -11,12 +10,15 @@ import { HttpClient } from '@angular/common/http';
   templateUrl: './symptoms.html',
   styleUrls: ['./symptoms.css']
 })
-export class SymptomsComponent {
+export class SymptomsComponent implements OnInit {
 
   initials = '';
   showAvatarMenu = false;
   submitted = false;
   submitting = false;
+  redirecting = false;
+  fromChatbot = false;
+  consultationType: 'VIDEO' | 'CHAT' = 'VIDEO';
 
   form = {
     chiefComplaint: '',
@@ -32,14 +34,31 @@ export class SymptomsComponent {
   departments = ['CARDIO', 'NEURO', 'ORTHO', 'GENERAL'];
 
   constructor(
-    private http: HttpClient,
     private router: Router,
-    private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {
     const name = localStorage.getItem('patientName') || '';
     this.initials = name.split('@')[0].split('.')
       .map((p: string) => p[0]?.toUpperCase()).join('').slice(0, 2) || 'PT';
+  }
+
+  ngOnInit() {
+    // Pre-fill when navigated from chatbot
+    this.route.queryParams.subscribe(params => {
+      if (params['complaint']) {
+        this.form.chiefComplaint = params['complaint'];
+      }
+      if (params['dept']) {
+        this.form.department = params['dept'];
+      }
+      this.fromChatbot = params['fromChatbot'] === 'true';
+      if (params['consultationType'] === 'CHAT') {
+        this.consultationType = 'CHAT';
+      } else {
+        this.consultationType = 'VIDEO';
+      }
+    });
   }
 
   toggleAvatarMenu() { this.showAvatarMenu = !this.showAvatarMenu; }
@@ -65,10 +84,7 @@ export class SymptomsComponent {
       alert('Please describe your main symptom.');
       return;
     }
-    this.submitting = true;
-    this.cdr.detectChanges();
 
-    const patientName = localStorage.getItem('patientName') || 'Patient';
     const symptoms = [
       this.form.chiefComplaint,
       this.form.duration ? `Duration: ${this.form.duration}` : '',
@@ -79,42 +95,24 @@ export class SymptomsComponent {
 
     const dept = this.form.department || this.autoDetectDept(this.form.chiefComplaint);
 
-    this.http.post<any>('http://localhost:8080/cases/create-with-type', {
-      patientName,
-      symptoms,
-      department: dept,
-      consultationType: 'VIDEO'
-    }).subscribe({
-      next: (res: any) => {
-        this.ngZone.run(() => {
-          this.submitting = false;
-          this.cdr.detectChanges();
-          const caseId = res?.caseId ? String(res.caseId) : '';
-          if (caseId) {
-            // Go to waiting queue, not a direct call
-            this.router.navigate(['/chat-consultation'], { queryParams: { caseId, type: 'VIDEO' } });
-          } else {
-            this.submitted = true;
-            this.cdr.detectChanges();
-          }
-        });
-      },
-      error: () => {
-        // Even on error, show success screen — doctor queue still notified
-        this.ngZone.run(() => {
-          this.submitting = false;
-          this.submitted = true;
-          this.cdr.detectChanges();
-        });
-      }
-    });
+    // Store data for chatbot to create the case with the correct type
+    sessionStorage.setItem('pendingSymptoms', JSON.stringify({ symptoms, dept }));
+
+    // Show success screen with redirect message, then navigate
+    this.submitted = true;
+    this.redirecting = true;
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.router.navigate(['/chatbot'], { queryParams: { fromSymptoms: 'true' } });
+    }, 2500);
   }
 
   autoDetectDept(complaint: string): string {
     const c = complaint.toLowerCase();
     if (/chest|heart|cardio|palpitat/.test(c)) return 'CARDIO';
-    if (/head|migrain|dizzy|neuro|brain|nerve/.test(c)) return 'NEURO';
+    if (/numbness|paralysis|head.?injury|stroke|seizure|convuls|head trauma/.test(c)) return 'NEURO';
     if (/bone|joint|knee|back|fracture|ortho|muscle/.test(c)) return 'ORTHO';
-    return 'GENERAL';
+    return 'GENERAL'; // headache, fever, cold → GENERAL
   }
 }

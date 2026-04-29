@@ -57,6 +57,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private candidatePollInterval: any;
   private statusPollInterval: any;
   private messagePollInterval: any;
+  private lastDoctorCandidateIdx = 0;  // tracks already-added doctor ICE candidates
 
   constructor(
     private http: HttpClient,
@@ -279,6 +280,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
             this.pollForAnswer();
             this.pollCaseStatus();
+            this.startMessagePolling(); // Start chat polling immediately (don't wait for video to connect)
           });
         },
         error: () => {
@@ -361,6 +363,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   pollForCandidates() {
+    this.lastDoctorCandidateIdx = 0;
     this.candidatePollInterval = setInterval(() => {
       this.http.get(`http://localhost:8080/video-sessions/${this.caseId}/candidates/doctor`,
         { responseType: "text" }
@@ -368,7 +371,10 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         next: async (raw: string) => {
           try {
             const candidates: any[] = JSON.parse(raw);
-            for (const c of candidates) {
+            // Only process candidates we haven't added yet
+            const newCandidates = candidates.slice(this.lastDoctorCandidateIdx);
+            this.lastDoctorCandidateIdx = candidates.length;
+            for (const c of newCandidates) {
               const candidate = typeof c === "string" ? JSON.parse(c) : c;
               if (this.pc && candidate?.candidate) {
                 await this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
@@ -499,6 +505,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     clearInterval(this.candidatePollInterval);
     clearInterval(this.statusPollInterval);
     clearInterval(this.messagePollInterval);
+    this.lastDoctorCandidateIdx = 0;
     this.localStream?.getTracks().forEach(t => t.stop());
     this.localStream = null;
     this.pc?.close();

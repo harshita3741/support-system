@@ -73,13 +73,20 @@ export class PrescriptionsComponent implements OnInit {
     const regNo = rx.doctorId ? `MQ/${rx.doctorId}` : 'MQ/1';
 
     const medRows = medicines.length > 0
-      ? medicines.map((m: any) => `
+      ? `<thead><tr>
+            <th style="text-align:left;padding:4px 8px 4px 0;font-size:11px;color:#666;font-weight:600;border-bottom:1px solid #ccc;">MEDICINE</th>
+            <th style="text-align:left;padding:4px 8px;font-size:11px;color:#666;font-weight:600;border-bottom:1px solid #ccc;">DOSAGE</th>
+            <th style="text-align:left;padding:4px 8px;font-size:11px;color:#666;font-weight:600;border-bottom:1px solid #ccc;">FREQUENCY</th>
+            <th style="text-align:left;padding:4px 0;font-size:11px;color:#666;font-weight:600;border-bottom:1px solid #ccc;">DURATION</th>
+          </tr></thead><tbody>` +
+        medicines.map((m: any) => `
           <tr>
-            <td style="padding:6px 0; font-size:13px;">${m.name || ''}${m.dosage ? ' – ' + m.dosage : ''}</td>
-            <td style="padding:6px 0; font-size:13px; color:#555;">${m.frequency || ''}</td>
-            <td style="padding:6px 0; font-size:13px; color:#555;">${m.duration || ''}</td>
-          </tr>`).join('')
-      : `<tr><td colspan="3" style="padding:6px 0; font-size:13px; color:#555;">No medicines prescribed</td></tr>`;
+            <td style="padding:5px 8px 5px 0; font-size:13px;">${m.name || ''}</td>
+            <td style="padding:5px 8px; font-size:13px; color:#444;">${m.dosage || '—'}</td>
+            <td style="padding:5px 8px; font-size:13px; color:#444;">${m.frequency || '—'}</td>
+            <td style="padding:5px 0; font-size:13px; color:#444;">${m.duration || '—'}</td>
+          </tr>`).join('') + '</tbody>'
+      : `<tr><td colspan="4" style="padding:6px 0; font-size:13px; color:#555;">No medicines prescribed</td></tr>`;
 
     const html = `<!DOCTYPE html>
 <html>
