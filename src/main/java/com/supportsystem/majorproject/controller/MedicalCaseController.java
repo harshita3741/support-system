@@ -30,8 +30,8 @@ public class MedicalCaseController {
   @PostMapping("/create-with-type")
   public ResponseEntity<Map<String, Object>> createWithType(@RequestBody Map<String, String> body) {
     MedicalCase mc = new MedicalCase();
-    // Generate a simple caseId
-    mc.setCaseId(System.currentTimeMillis() % 1_000_000_000L);
+    // Use full millisecond timestamp — avoids duplicate-key collisions (modulo wrapped every ~11 days)
+    mc.setCaseId(System.currentTimeMillis());
     mc.setPatientName(body.getOrDefault("patientName", "Patient"));
     mc.setSymptoms(body.getOrDefault("symptoms", ""));
     mc.setDepartment(body.getOrDefault("department", "GENERAL"));

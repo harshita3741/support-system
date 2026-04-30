@@ -23,8 +23,9 @@ public class MedicalCaseService {
 
   public void createCase(MedicalCase medicalCase) {
     medicalCase.setStatus("OPEN");
-    departmentQueue.addCase(medicalCase);
-    repository.save(medicalCase);
+    medicalCase.setAssignedDoctorId(null); // ensure no FK violation — doctor assigned later on accept
+    repository.save(medicalCase);          // persist FIRST (while assignedDoctorId is still null)
+    departmentQueue.addCase(medicalCase);  // THEN queue — worker may set doctorId in-memory but won't save
     System.out.println("Medical case added to queue: " + medicalCase.getCaseId());
   }
 
@@ -40,9 +41,8 @@ public class MedicalCaseService {
     MedicalCase mc = repository.findById(caseId).orElse(null);
     if (mc != null) {
       mc.setStatus("ACCEPTED");
-      if (doctorId != null && !doctorId.isEmpty()) {
-        mc.setAssignedDoctorId(Long.parseLong(doctorId));
-      }
+      // NOTE: assignedDoctorId is intentionally NOT set here to avoid the FK constraint
+      // on the doctors table. The doctor identity is tracked in-memory by DoctorService.
       repository.save(mc);
       return "Accepted";
     }

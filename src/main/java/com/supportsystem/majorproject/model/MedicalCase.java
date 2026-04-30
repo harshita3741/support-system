@@ -17,7 +17,10 @@ public class MedicalCase {
   private String patientId;
 
   private String department;
+
+  @Column(columnDefinition = "NVARCHAR(MAX)")  // prevent 255-char truncation from symptom form
   private String symptoms;
+
   private String status;
 
   @Column(name = "assigned_doctor_id")
