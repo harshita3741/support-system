@@ -1,6 +1,5 @@
 <div class="queue-page">
 
-  <!-- New patient notification popup -->
   <div *ngIf="newCaseNotification" class="new-case-toast" (click)="acceptPatient(newCaseNotification)">
     <div class="toast-icon">🔔</div>
     <div class="toast-body">
@@ -39,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (q of queueItems; track q.caseId) {
+          @for (q of queueItems; track (q.caseId ?? q.id ?? ($index + '-' + q.patientName))) {
             <tr>
               <td>
                 <div class="name-cell">

@@ -4,34 +4,45 @@ import { Observable } from 'rxjs';
 
 export interface Appointment {
   id?: number;
+  patientId?: string | number;
   patientName: string;
-  patientId?: string;
+  patientEmail?: string;
   doctorId: number;
-  doctorName: string;
-  department: string;
-  reason: string;
-  appointmentTime: string; // ISO: "2026-04-22T09:00:00"
+  doctorName?: string;
+  department?: string;
+  date?: string;
+  timeSlot?: string;
+  reason?: string;
   status?: string;
+  consultationType?: string;
+  appointmentTime?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppointmentService {
-
-  private baseUrl = 'http://localhost:8080';
+  private baseUrl = 'http://192.168.1.76:8080';
 
   constructor(private http: HttpClient) {}
 
   createAppointment(payload: Appointment): Observable<any> {
-    return this.http.post(`${this.baseUrl}/appointments/book`, payload);
+    return this.http.post(`${this.baseUrl}/appointments/create`, payload);
   }
 
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
     return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/doctor/${doctorId}`);
   }
 
-  getAppointmentsByPatient(patientName: string): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/patient/${patientName}`);
+  getAppointmentsByDoctorAndDate(doctorId: number, date: string): Observable<Appointment[]> {
+    return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/doctor/${doctorId}/date/${date}`);
+  }
+
+  updateAppointmentStatus(id: number, status: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/appointments/${id}/status`, { status });
+  }
+
+  deleteAppointment(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/appointments/${id}`);
   }
 }

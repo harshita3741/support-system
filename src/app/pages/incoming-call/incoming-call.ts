@@ -76,6 +76,7 @@ export class IncomingCall implements OnInit, OnDestroy {
   private candidatePollInterval: any;
   private callTimer: any;
   private messagePollInterval: any;
+  private lastPatientCandidateIdx = 0;  // tracks already-added patient ICE candidates
   unreadCount = 0;
 
   chatMessage = '';
@@ -357,6 +358,7 @@ export class IncomingCall implements OnInit, OnDestroy {
     const caseId = this.patient?.caseId;
     if (!caseId) return;
 
+    this.lastPatientCandidateIdx = 0;
     this.candidatePollInterval = setInterval(() => {
       this.http.get(
         `${this.baseUrl}/video-sessions/${caseId}/candidates/patient`,
@@ -365,7 +367,10 @@ export class IncomingCall implements OnInit, OnDestroy {
         next: async (raw: string) => {
           try {
             const candidates: any[] = JSON.parse(raw);
-            for (const c of candidates) {
+            // Only process candidates we haven't added yet
+            const newCandidates = candidates.slice(this.lastPatientCandidateIdx);
+            this.lastPatientCandidateIdx = candidates.length;
+            for (const c of newCandidates) {
               const candidate = typeof c === 'string' ? JSON.parse(c) : c;
               if (this.pc && candidate?.candidate) {
                 await this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
@@ -531,6 +536,7 @@ export class IncomingCall implements OnInit, OnDestroy {
 
     this.pc?.close();
     this.pc = null;
+    this.lastPatientCandidateIdx = 0;
     this.chatConsultationActive = false;
     this.stopMediaTracks();
 
@@ -657,13 +663,34 @@ export class IncomingCall implements OnInit, OnDestroy {
     let medsHtml = '';
     try {
       const meds = typeof data.medicines === 'string' ? JSON.parse(data.medicines) : data.medicines;
-      meds.forEach((m: any) => {
-        if (m.name) {
-          medsHtml += `<div style="margin:6px 0 2px 16px;font-size:14px">&bull; Tab. ${m.name} ${m.dosage || ''} ${m.frequency || ''} ${m.duration ? 'for ' + m.duration : ''}</div>`;
-        }
-      });
+      const filteredMeds = meds.filter((m: any) => m.name);
+      if (filteredMeds.length > 0) {
+        medsHtml = `
+          <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px">
+            <thead>
+              <tr style="background:#f0fafa">
+                <th style="border:1px solid #ccc;padding:7px 10px;text-align:left;font-weight:bold">MEDICINE</th>
+                <th style="border:1px solid #ccc;padding:7px 10px;text-align:left;font-weight:bold">DOSAGE</th>
+                <th style="border:1px solid #ccc;padding:7px 10px;text-align:left;font-weight:bold">FREQUENCY</th>
+                <th style="border:1px solid #ccc;padding:7px 10px;text-align:left;font-weight:bold">DURATION</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredMeds.map((m: any) => `
+                <tr>
+                  <td style="border:1px solid #ccc;padding:7px 10px">${m.name}</td>
+                  <td style="border:1px solid #ccc;padding:7px 10px">${m.dosage || '—'}</td>
+                  <td style="border:1px solid #ccc;padding:7px 10px">${m.frequency || '—'}</td>
+                  <td style="border:1px solid #ccc;padding:7px 10px">${m.duration || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      } else {
+        medsHtml = `<div style="margin-left:8px;font-size:14px">No medicines prescribed</div>`;
+      }
     } catch {
-      medsHtml = `<div style="margin-left:16px">${data.medicines}</div>`;
+      medsHtml = `<div style="margin-left:8px">${data.medicines}</div>`;
     }
 
     const html = `<html><head><title>Prescription — ${data.patientName}</title><style>
@@ -683,7 +710,7 @@ export class IncomingCall implements OnInit, OnDestroy {
       <div class="patient-block"><b>Patient: ${data.patientName}</b><br/>Symptoms: ${data.symptoms}<br/>Diagnosis: ${data.diagnosis || '—'}</div>
       <hr class="divider"/>
       <div class="rx-symbol">R<sub>x</sub></div>
-      ${medsHtml || '<div style="margin-left:16px;font-size:14px">No medicines prescribed</div>'}
+      ${medsHtml}
       ${data.investigations ? `<div class="section-title">Investigations</div><div class="section-body">${data.investigations}</div>` : ''}
       <div class="section-title">Advice / Referrals</div><div class="section-body">${data.advice || '—'}</div>
       <div class="section-title">Follow-up Date</div><div class="section-body">${data.followUpDate || 'Not specified'}</div>

@@ -56,7 +56,13 @@ export class Login {
           localStorage.setItem('doctorRole', res.role || '');
           localStorage.setItem('doctorName', res.name || '');
 
-          this.router.navigate(['/dashboard']);
+          if (res.role === 'NURSE') {
+            this.router.navigate(['/dashboard']);
+          } else if (res.role === 'DOCTOR') {
+            this.router.navigate(['/dashboard']);
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
         } else {
           this.errorMsg = res.message || 'Invalid credentials';
         }

@@ -55,7 +55,6 @@
     </div>
 
     <div class="video-panel">
-
       <div *ngIf="!callAccepted" class="incoming-box">
         <div class="call-top">
           <span class="pulse"></span>
@@ -91,8 +90,6 @@
       </div>
 
       <div *ngIf="callAccepted && chatConsultationActive" class="chat-only-active">
-
-        <!-- Patient upgraded to video — show Join Video Call overlay -->
         <div *ngIf="videoUpgradeReady" class="video-upgrade-overlay">
           <div class="vup-icon">📹</div>
           <div class="vup-title">Patient switched to Video Call</div>
@@ -165,13 +162,16 @@
                 placeholder="Investigations">
               </textarea>
 
-              <input
-                class="full-width-input"
-                type="date"
-                [(ngModel)]="prescription.followUpDate"
-                name="followUpDate"
-                placeholder="Follow-up Date"
-              />
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input
+                  style="flex:1;"
+                  class="full-width-input"
+                  type="date"
+                  [(ngModel)]="prescription.followUpDate"
+                  name="followUpDate"
+                  placeholder="Follow-up Date"
+                />
+              </div>
 
               <div
                 class="medicine-row-improved"
@@ -325,13 +325,16 @@
                 placeholder="Investigations">
               </textarea>
 
-              <input
-                class="full-width-input"
-                type="date"
-                [(ngModel)]="prescription.followUpDate"
-                name="followUpDate"
-                placeholder="Follow-up Date"
-              />
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input
+                  style="flex:1;"
+                  class="full-width-input"
+                  type="date"
+                  [(ngModel)]="prescription.followUpDate"
+                  name="followUpDate"
+                  placeholder="Follow-up Date"
+                />
+              </div>
 
               <div
                 class="medicine-row-improved"

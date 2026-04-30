@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppointmentService, Appointment } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth';
+import { Router } from '@angular/router';
 
 export interface CalendarEvent {
   id: number;
@@ -13,6 +14,9 @@ export interface CalendarEvent {
   date?: string;
   appointmentTime?: string;
   source?: 'backend' | 'leave';
+  department?: string;
+  status?: string;
+  note?: string;
 }
 
 export interface DayColumn {
@@ -72,21 +76,23 @@ export class Schedule implements OnInit, OnDestroy {
   backendAppointments: CalendarEvent[] = [];
   leaveBlocks: CalendarEvent[] = [];
   allEvents: CalendarEvent[] = [];
+  selectedDayEvents: CalendarEvent[] = [];
 
   typeConfig: Record<string, { icon: string; bg: string; color: string; border: string }> = {
-    video: { icon: '📹', bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
-    hospital: { icon: '🏥', bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
-    home: { icon: '🏠', bg: '#fef9c3', color: '#854d0e', border: '#fde68a' },
-    audio: { icon: '📞', bg: '#fce7f3', color: '#9d174d', border: '#f9a8d4' },
-    'in-person': { icon: '👤', bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' },
-    break: { icon: '☕', bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
-    meeting: { icon: '📋', bg: '#f0fdf4', color: '#166534', border: '#86efac' },
-    leave: { icon: '🚫', bg: '#fff7ed', color: '#9a3412', border: '#fdba74' }
+    video: { icon: '📹', bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
+    hospital: { icon: '🏥', bg: '#dcfce7', color: '#166534', border: '#86efac' },
+    home: { icon: '🏠', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+    audio: { icon: '📞', bg: '#fce7f3', color: '#be185d', border: '#f9a8d4' },
+    'in-person': { icon: '👤', bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
+    break: { icon: '☕', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+    meeting: { icon: '📋', bg: '#ecfeff', color: '#0f766e', border: '#99f6e4' },
+    leave: { icon: '🚫', bg: '#fff7ed', color: '#c2410c', border: '#fdba74' }
   };
 
   constructor(
     private appointmentService: AppointmentService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -129,6 +135,8 @@ export class Schedule implements OnInit, OnDestroy {
       if (!event.appointmentTime || !event.id) continue;
 
       const apptTime = new Date(event.appointmentTime);
+      if (isNaN(apptTime.getTime())) continue;
+
       const diffMs = apptTime.getTime() - now.getTime();
       const diffMins = diffMs / 60000;
 
@@ -171,7 +179,7 @@ export class Schedule implements OnInit, OnDestroy {
 
     this.appointmentService.getAppointmentsByDoctor(Number(doctorId)).subscribe({
       next: (appointments: Appointment[]) => {
-        this.backendAppointments = appointments.map((appt: Appointment, index: number) => {
+        this.backendAppointments = (appointments || []).map((appt: Appointment, index: number) => {
           const parsed = this.parseAppointment(appt);
 
           return {
@@ -183,7 +191,10 @@ export class Schedule implements OnInit, OnDestroy {
             date: parsed.date,
             appointmentTime: parsed.isoDateTime,
             patientName: appt.patientName,
-            source: 'backend'
+            source: 'backend',
+            department: appt.department,
+            status: appt.status,
+            note: appt.reason
           };
         });
 
@@ -199,25 +210,40 @@ export class Schedule implements OnInit, OnDestroy {
   }
 
   private parseAppointment(appt: Appointment): { date: string; hour: number; isoDateTime: string } {
-    const date = appt.date || this.toYMD(new Date());
-    const timeSlot = appt.timeSlot || '08:00';
+    if ((appt as any).appointmentTime) {
+      const d = new Date((appt as any).appointmentTime);
+      if (!isNaN(d.getTime())) {
+        return {
+          date: this.toYMD(d),
+          hour: d.getHours() + d.getMinutes() / 60,
+          isoDateTime: d.toISOString()
+        };
+      }
+    }
 
-    const [h, m] = timeSlot.split(':').map(Number);
-    const hour = (isNaN(h) ? 8 : h) + ((isNaN(m) ? 0 : m) / 60);
+    const normalizedDate = appt.date && /^\d{4}-\d{2}-\d{2}$/.test(appt.date)
+      ? appt.date
+      : this.toYMD(new Date());
+
+    const hour = this.parseTimeSlotToHour(appt.timeSlot || '09:00 AM');
+    const isoDateTime = new Date(`${normalizedDate}T${this.to24Hour(appt.timeSlot || '09:00 AM')}`).toISOString();
 
     return {
-      date,
+      date: normalizedDate,
       hour,
-      isoDateTime: `${date}T${timeSlot}:00`
+      isoDateTime
     };
   }
 
   private resolveAppointmentType(appt: Appointment): CalendarEvent['type'] {
     const dept = (appt.department || '').toLowerCase();
+    const slot = (appt.timeSlot || '').toLowerCase();
+    const consult = (appt.consultationType || '').toLowerCase();
 
-    if (dept.includes('cardio') || dept.includes('video')) return 'video';
-    if (dept.includes('neuro')) return 'in-person';
+    if (consult.includes('chat') || consult.includes('audio')) return 'audio';
+    if (consult.includes('video') || dept.includes('cardio') || slot.includes('video')) return 'video';
     if (dept.includes('ortho')) return 'hospital';
+    if (dept.includes('neuro')) return 'in-person';
     if (dept.includes('general')) return 'meeting';
     return 'in-person';
   }
@@ -225,6 +251,7 @@ export class Schedule implements OnInit, OnDestroy {
   private mergeAllEvents() {
     this.allEvents = [...this.backendAppointments, ...this.leaveBlocks];
     this.refreshView();
+    this.updateSelectedDayEvents();
   }
 
   addLeave(fullDate: string) {
@@ -290,6 +317,52 @@ export class Schedule implements OnInit, OnDestroy {
     return h + m / 60;
   }
 
+  private parseTimeSlotToHour(value: string): number {
+    const t = (value || '').trim().toUpperCase();
+    const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+
+    if (ampm) {
+      let h = Number(ampm[1]);
+      const m = Number(ampm[2]);
+      const suffix = ampm[3];
+
+      if (suffix === 'PM' && h !== 12) h += 12;
+      if (suffix === 'AM' && h === 12) h = 0;
+
+      return h + m / 60;
+    }
+
+    const plain = t.match(/(\d{1,2}):(\d{2})/);
+    if (plain) {
+      return Number(plain[1]) + Number(plain[2]) / 60;
+    }
+
+    return this.startHour;
+  }
+
+  private to24Hour(value: string): string {
+    const t = (value || '').trim().toUpperCase();
+    const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+
+    if (ampm) {
+      let h = Number(ampm[1]);
+      const m = ampm[2];
+      const suffix = ampm[3];
+
+      if (suffix === 'PM' && h !== 12) h += 12;
+      if (suffix === 'AM' && h === 12) h = 0;
+
+      return `${String(h).padStart(2, '0')}:${m}:00`;
+    }
+
+    const plain = t.match(/(\d{1,2}):(\d{2})/);
+    if (plain) {
+      return `${String(Number(plain[1])).padStart(2, '0')}:${plain[2]}:00`;
+    }
+
+    return '09:00:00';
+  }
+
   buildHours() {
     this.hours = [];
     this.hourCount = this.endHour - this.startHour;
@@ -342,6 +415,8 @@ export class Schedule implements OnInit, OnDestroy {
           .sort((a, b) => a.startHour - b.startHour)
       };
     });
+
+    this.updateSelectedDayEvents();
   }
 
   buildMonth(baseDate: Date) {
@@ -376,10 +451,19 @@ export class Schedule implements OnInit, OnDestroy {
         eventCount: this.allEvents.filter(e => e.date === fullDate).length
       });
     }
+
+    this.updateSelectedDayEvents();
   }
 
   selectDay(fullDate: string) {
     this.selectedDate = fullDate;
+
+    if (this.viewMode === 'month') {
+      const d = new Date(fullDate);
+      if (!isNaN(d.getTime())) {
+        this.currentDate = d;
+      }
+    }
 
     if (this.viewMode === 'week') {
       this.days = this.days.map(day => ({
@@ -395,12 +479,21 @@ export class Schedule implements OnInit, OnDestroy {
         isSelected: day.fullDate === fullDate
       }));
     }
+
+    this.updateSelectedDayEvents();
+  }
+
+  updateSelectedDayEvents() {
+    this.selectedDayEvents = this.allEvents
+      .filter(e => e.date === this.selectedDate)
+      .sort((a, b) => a.startHour - b.startHour);
   }
 
   setView(v: 'week' | 'month') {
     this.viewMode = v;
     this.refreshView();
     this.updateCurrentTime();
+    this.updateSelectedDayEvents();
   }
 
   prevWeek() {
@@ -469,10 +562,39 @@ export class Schedule implements OnInit, OnDestroy {
 
   formatHour(h: number): string {
     const hour = Math.floor(h);
-    const min = h % 1 === 0.5 ? '30' : '00';
+    const mins = h % 1 === 0.5 ? '30' : '00';
     const suffix = hour < 12 ? 'AM' : 'PM';
     const display = hour <= 12 ? (hour === 0 ? 12 : hour) : hour - 12;
-    return `${display}:${min} ${suffix}`;
+    return `${display}:${mins} ${suffix}`;
+  }
+
+  openPatient(patientId: string): void {
+    const event = this.allEvents.find(e => e.id.toString() === patientId) || this.backendAppointments.find(e => e.id.toString() === patientId);
+    if (!event) return;
+
+    const activePatient = {
+      id: event.id,
+      patientId: patientId,
+      name: event.patientName || event.title || 'Patient',
+      patientName: event.patientName || event.title || 'Patient',
+      reason: event.note || event.title || 'Consultation',
+      symptoms: event.note || event.title || 'Consultation',
+      department: this.authService.getDepartment() || 'GENERAL',
+      dept: this.authService.getDepartment() || 'GENERAL',
+      consultationType: event.type === 'audio' ? 'AUDIO' : event.type === 'hospital' ? 'IN_PERSON' : 'VIDEO',
+      priority: 'MEDIUM',
+      date: event.date,
+      appointmentTime: event.appointmentTime
+    };
+
+    localStorage.setItem('activePatient', JSON.stringify(activePatient));
+    this.router.navigate(['/call']);
+  }
+
+  getSelectedDateLabel(): string {
+    if (!this.selectedDate) return 'Selected Day';
+    const d = new Date(this.selectedDate);
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   private fmt(d: Date): string {

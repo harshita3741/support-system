@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { Appointment, AppointmentService } from '../../services/appointment.service';
+import { AuthService } from '../../services/auth';
 
-type DoctorKey = 'cardio' | 'neuro' | 'ortho' | 'general';
 type PriorityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
 
 type PatientRow = {
@@ -13,9 +14,14 @@ type PatientRow = {
   priority: PriorityLevel | string;
   startDate: string;
   endDate: string;
-  age: number;
+  age: number | string;
   gender: string;
   reason: string;
+  consultationType?: 'VIDEO' | 'AUDIO' | 'CHAT' | 'IN_PERSON';
+  appointmentId?: number;
+  appointmentTime?: string;
+  department?: string;
+  raw?: Appointment;
 };
 
 type AppointmentItem = {
@@ -27,6 +33,9 @@ type AppointmentItem = {
   color: string;
   status: 'scheduled' | 'pending' | 'completed' | 'cancelled';
   date: string;
+  department?: string;
+  consultationType?: 'VIDEO' | 'AUDIO' | 'CHAT' | 'IN_PERSON';
+  raw?: Appointment;
 };
 
 type ScheduleBlock = {
@@ -40,6 +49,7 @@ type ScheduleBlock = {
   bg: string;
   color: string;
   date: string;
+  raw?: Appointment;
 };
 
 type CalendarDay = {
@@ -50,14 +60,6 @@ type CalendarDay = {
   isPending: boolean;
 };
 
-type IncomingCallPatient = {
-  id: string;
-  name: string;
-  reason: string;
-  time: string;
-  avatar: string;
-};
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -65,10 +67,9 @@ type IncomingCallPatient = {
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
-export class Dashboard implements OnInit {
-  doctorKey: DoctorKey = 'cardio';
-  doctorName = 'Dr. Smith';
-  doctorDepartment = 'CARDIO';
+export class Dashboard implements OnInit, OnDestroy {
+  doctorName = '';
+  doctorDepartment = '';
 
   greeting = 'Good Morning';
   isLoading = false;
@@ -76,146 +77,81 @@ export class Dashboard implements OnInit {
   patientRows: PatientRow[] = [];
   allAppointments: AppointmentItem[] = [];
   allScheduleBlocks: ScheduleBlock[] = [];
+  sourceAppointments: Appointment[] = [];
 
   todayAppointments: AppointmentItem[] = [];
   todaySchedule: ScheduleBlock[] = [];
 
-  private readonly today = new Date();
-
-  calendarViewYear = this.today.getFullYear();
-  calendarViewMonth = this.today.getMonth();
+  calendarViewYear = new Date().getFullYear();
+  calendarViewMonth = new Date().getMonth();
   calendarDays: CalendarDay[] = [];
-  selectedDate = this.toYMD(this.today);
+  selectedDate = this.toYMD(new Date());
 
   sortAsc = true;
+  private refreshTimer: any;
 
-  showIncomingCallPopup = true;
-  incomingCallPatient: IncomingCallPatient = {
-    id: 'C-1042',
-    name: 'Priya Mehta',
-    reason: 'Follow-up consultation',
-    time: 'Incoming now',
-    avatar: 'PM'
-  };
-
-  get calendarMonth(): string {
-    const names = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return `${names[this.calendarViewMonth]} ${this.calendarViewYear}`;
-  }
-
-  doctorSeedData: Record<DoctorKey, {
-    doctorName: string;
-    department: string;
-    patients: PatientRow[];
-    appointments: AppointmentItem[];
-    scheduleBlocks: ScheduleBlock[];
-  }> = {
-    cardio: {
-      doctorName: 'Dr. Smith',
-      department: 'CARDIO',
-      patients: [
-        { id: 'C-1042', name: 'Priya Mehta', initials: 'PM', caseId: 'CASE-1001', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 52, gender: 'Female', reason: 'Cardiac follow-up' },
-        { id: 'C-1043', name: 'Rohan Verma', initials: 'RV', caseId: 'CASE-1002', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 48, gender: 'Male', reason: 'Post-op check' }
-      ],
-      appointments: [
-        { id: 1, patientId: 'C-1042', patientName: 'Priya Mehta', time: '09:00 AM', note: 'Follow-up consultation', color: '#3b82f6', status: 'scheduled', date: '2026-04-16' },
-        { id: 2, patientId: 'C-1043', patientName: 'Rohan Verma', time: '02:30 PM', note: 'Post-op check', color: '#2563eb', status: 'pending', date: '2026-04-16' },
-        { id: 3, patientId: 'C-1042', patientName: 'Priya Mehta', time: '11:00 AM', note: 'ECG review', color: '#3b82f6', status: 'scheduled', date: '2026-04-19' },
-        { id: 4, patientId: 'C-1043', patientName: 'Rohan Verma', time: '03:00 PM', note: 'Medication review', color: '#2563eb', status: 'pending', date: '2026-04-23' },
-        { id: 5, patientId: 'C-1042', patientName: 'Priya Mehta', time: '10:00 AM', note: 'Final discharge check', color: '#3b82f6', status: 'scheduled', date: '2026-05-05' }
-      ],
-      scheduleBlocks: [
-        { id: 1, patientId: 'C-1042', patientName: 'Priya Mehta', time: '09:00 AM', note: 'Follow-up consultation', left: '11%', width: '14%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-04-16' },
-        { id: 2, patientId: 'C-1043', patientName: 'Rohan Verma', time: '02:30 PM', note: 'Post-op check', left: '66%', width: '13%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-04-16' },
-        { id: 3, patientId: 'C-1042', patientName: 'Priya Mehta', time: '11:00 AM', note: 'ECG review', left: '30%', width: '14%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-04-19' },
-        { id: 4, patientId: 'C-1043', patientName: 'Rohan Verma', time: '03:00 PM', note: 'Medication review', left: '70%', width: '13%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-04-23' },
-        { id: 5, patientId: 'C-1042', patientName: 'Priya Mehta', time: '10:00 AM', note: 'Final discharge check', left: '20%', width: '14%', bg: '#dbeafe', color: '#1d4ed8', date: '2026-05-05' }
-      ]
-    },
-
-    neuro: {
-      doctorName: 'Dr. Adams',
-      department: 'NEURO',
-      patients: [
-        { id: 'N-2011', name: 'Amit Sharma', initials: 'AS', caseId: 'CASE-2001', priority: 'HIGH', startDate: 'Today', endDate: '—', age: 45, gender: 'Male', reason: 'Migraine review' },
-        { id: 'N-2012', name: 'Neha Sharma', initials: 'NS', caseId: 'CASE-2002', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 39, gender: 'Female', reason: 'MRI review' }
-      ],
-      appointments: [
-        { id: 10, patientId: 'N-2011', patientName: 'Amit Sharma', time: '10:00 AM', note: 'Migraine consultation', color: '#8b5cf6', status: 'scheduled', date: '2026-04-17' },
-        { id: 11, patientId: 'N-2012', patientName: 'Neha Sharma', time: '11:30 AM', note: 'MRI review', color: '#f59e0b', status: 'pending', date: '2026-04-17' },
-        { id: 12, patientId: 'N-2011', patientName: 'Amit Sharma', time: '09:00 AM', note: 'EEG scan follow-up', color: '#8b5cf6', status: 'scheduled', date: '2026-04-22' },
-        { id: 13, patientId: 'N-2012', patientName: 'Neha Sharma', time: '02:00 PM', note: 'Neuro assessment', color: '#f59e0b', status: 'completed', date: '2026-04-14' }
-      ],
-      scheduleBlocks: [
-        { id: 10, patientId: 'N-2011', patientName: 'Amit Sharma', time: '10:00 AM', note: 'Migraine consultation', left: '20%', width: '13%', bg: '#ede9fe', color: '#6d28d9', date: '2026-04-17' },
-        { id: 11, patientId: 'N-2012', patientName: 'Neha Sharma', time: '11:30 AM', note: 'MRI review', left: '35%', width: '14%', bg: '#fef3c7', color: '#b45309', date: '2026-04-17' },
-        { id: 12, patientId: 'N-2011', patientName: 'Amit Sharma', time: '09:00 AM', note: 'EEG scan follow-up', left: '11%', width: '13%', bg: '#ede9fe', color: '#6d28d9', date: '2026-04-22' },
-        { id: 13, patientId: 'N-2012', patientName: 'Neha Sharma', time: '02:00 PM', note: 'Neuro assessment', left: '55%', width: '14%', bg: '#fef3c7', color: '#b45309', date: '2026-04-14' }
-      ]
-    },
-
-    ortho: {
-      doctorName: 'Dr. Patel',
-      department: 'ORTHO',
-      patients: [
-        { id: 'O-3001', name: 'Vikram Singh', initials: 'VS', caseId: 'CASE-3001', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 56, gender: 'Male', reason: 'Knee pain review' },
-        { id: 'O-3002', name: 'Pooja Nair', initials: 'PN', caseId: 'CASE-3002', priority: 'HIGH', startDate: 'Today', endDate: '—', age: 34, gender: 'Female', reason: 'Fracture follow-up' }
-      ],
-      appointments: [
-        { id: 20, patientId: 'O-3001', patientName: 'Vikram Singh', time: '09:30 AM', note: 'Knee pain review', color: '#10b981', status: 'scheduled', date: '2026-04-18' },
-        { id: 21, patientId: 'O-3002', patientName: 'Pooja Nair', time: '03:00 PM', note: 'Fracture follow-up', color: '#ef4444', status: 'pending', date: '2026-04-18' },
-        { id: 22, patientId: 'O-3001', patientName: 'Vikram Singh', time: '11:00 AM', note: 'Physio assessment', color: '#10b981', status: 'scheduled', date: '2026-04-25' },
-        { id: 23, patientId: 'O-3002', patientName: 'Pooja Nair', time: '10:30 AM', note: 'X-ray review', color: '#ef4444', status: 'completed', date: '2026-04-15' }
-      ],
-      scheduleBlocks: [
-        { id: 20, patientId: 'O-3001', patientName: 'Vikram Singh', time: '09:30 AM', note: 'Knee pain review', left: '15%', width: '14%', bg: '#d1fae5', color: '#047857', date: '2026-04-18' },
-        { id: 21, patientId: 'O-3002', patientName: 'Pooja Nair', time: '03:00 PM', note: 'Fracture follow-up', left: '70%', width: '13%', bg: '#fee2e2', color: '#b91c1c', date: '2026-04-18' },
-        { id: 22, patientId: 'O-3001', patientName: 'Vikram Singh', time: '11:00 AM', note: 'Physio assessment', left: '30%', width: '14%', bg: '#d1fae5', color: '#047857', date: '2026-04-25' },
-        { id: 23, patientId: 'O-3002', patientName: 'Pooja Nair', time: '10:30 AM', note: 'X-ray review', left: '22%', width: '13%', bg: '#fee2e2', color: '#b91c1c', date: '2026-04-15' }
-      ]
-    },
-
-    general: {
-      doctorName: 'Dr. Johnson',
-      department: 'GENERAL',
-      patients: [
-        { id: 'G-4001', name: 'Anita Rao', initials: 'AR', caseId: 'CASE-4001', priority: 'MEDIUM', startDate: 'Today', endDate: '—', age: 41, gender: 'Female', reason: 'General consultation' },
-        { id: 'G-4002', name: 'Manoj Kumar', initials: 'MK', caseId: 'CASE-4002', priority: 'LOW', startDate: 'Today', endDate: '—', age: 50, gender: 'Male', reason: 'Routine check-up' }
-      ],
-      appointments: [
-        { id: 30, patientId: 'G-4001', patientName: 'Anita Rao', time: '09:30 AM', note: 'General consultation', color: '#14b8a6', status: 'scheduled', date: '2026-04-28' },
-        { id: 31, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '11:00 AM', note: 'Routine check-up', color: '#0f766e', status: 'pending', date: '2026-04-28' },
-        { id: 32, patientId: 'G-4001', patientName: 'Anita Rao', time: '02:00 PM', note: 'Review vitals', color: '#14b8a6', status: 'completed', date: '2026-04-26' },
-        { id: 33, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '03:30 PM', note: 'Prescription follow-up', color: '#0f766e', status: 'scheduled', date: '2026-05-02' }
-      ],
-      scheduleBlocks: [
-        { id: 30, patientId: 'G-4001', patientName: 'Anita Rao', time: '09:30 AM', note: 'General consultation', left: '14%', width: '14%', bg: '#ccfbf1', color: '#0f766e', date: '2026-04-28' },
-        { id: 31, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '11:00 AM', note: 'Routine check-up', left: '31%', width: '14%', bg: '#d1fae5', color: '#047857', date: '2026-04-28' },
-        { id: 32, patientId: 'G-4001', patientName: 'Anita Rao', time: '02:00 PM', note: 'Review vitals', left: '58%', width: '13%', bg: '#ccfbf1', color: '#0f766e', date: '2026-04-26' },
-        { id: 33, patientId: 'G-4002', patientName: 'Manoj Kumar', time: '03:30 PM', note: 'Prescription follow-up', left: '70%', width: '13%', bg: '#d1fae5', color: '#047857', date: '2026-05-02' }
-      ]
-    }
-  };
-
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private appointmentService: AppointmentService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.setGreeting();
-    this.detectLoggedInDoctor();
-    this.loadDoctorDashboardData();
-    this.buildCalendarDays();
-    this.filterByDate(this.selectedDate);
-    this.setIncomingCallPatient();
+    this.doctorName = this.authService.getDoctorName() || 'Doctor';
+    this.doctorDepartment = this.authService.getDepartment() || 'GENERAL';
+
+    const now = new Date();
+    this.calendarViewYear = now.getFullYear();
+    this.calendarViewMonth = now.getMonth();
+    this.selectedDate = this.toYMD(now);
+
+    this.loadDoctorDashboardData(true);
+    this.refreshTimer = setInterval(() => this.loadDoctorDashboardData(false), 30000);
   }
 
-  private toYMD(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  ngOnDestroy(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+    }
+  }
+
+  get calendarMonth(): string {
+    const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return `${names[this.calendarViewMonth]} ${this.calendarViewYear}`;
+  }
+
+  get totalCases(): number {
+    return this.todayAppointments.length;
+  }
+
+  get resolvedCases(): number {
+    return this.sourceAppointments.filter(a => {
+      const dateKey = this.extractDate(a);
+      return dateKey === this.selectedDate && (a.status || '').toLowerCase() === 'completed';
+    }).length;
+  }
+
+  get urgentCount(): number {
+    return this.patientRows.filter(p => this.priorityClass(String(p.priority)) === 'high').length;
+  }
+
+  get avgResponse(): string {
+    return 'Live';
+  }
+
+  get inQueue(): number {
+    return this.sourceAppointments.filter(a => this.isQueueVisible(a)).length;
+  }
+
+  get sortLabel(): string {
+    return this.sortAsc ? 'A–Z' : 'Z–A';
+  }
+
+  get formattedSelectedDate(): string {
+    const [y, m, d] = this.selectedDate.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
   }
 
   setGreeting(): void {
@@ -225,59 +161,119 @@ export class Dashboard implements OnInit {
     else this.greeting = 'Good Evening';
   }
 
-  detectLoggedInDoctor(): void {
-    const sessionRaw = localStorage.getItem('doctor');
-    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  loadDoctorDashboardData(showLoader: boolean = true): void {
+    const doctorId = this.authService.getDoctorId();
 
-    const storedDept = (session?.dept || '').toLowerCase();
-
-    if (storedDept.includes('neuro')) {
-      this.doctorKey = 'neuro';
-    } else if (storedDept.includes('ortho')) {
-      this.doctorKey = 'ortho';
-    } else if (storedDept.includes('general')) {
-      this.doctorKey = 'general';
-    } else {
-      this.doctorKey = 'cardio';
-    }
-  }
-
-  loadDoctorDashboardData(): void {
-    const data = this.doctorSeedData[this.doctorKey];
-    const sessionRaw = localStorage.getItem('doctor');
-    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-
-    this.doctorName = session?.name || data.doctorName;
-    this.doctorDepartment = session?.dept || data.department;
-    this.patientRows = [...data.patients];
-    this.allAppointments = [...data.appointments];
-    this.allScheduleBlocks = [...data.scheduleBlocks];
-    this.isLoading = false;
-  }
-
-  setIncomingCallPatient(): void {
-    const firstPatient = this.patientRows[0];
-    if (!firstPatient) {
-      this.showIncomingCallPopup = false;
+    if (!doctorId) {
+      this.patientRows = [];
+      this.allAppointments = [];
+      this.allScheduleBlocks = [];
+      this.todayAppointments = [];
+      this.todaySchedule = [];
+      this.calendarDays = [];
       return;
     }
 
-    this.incomingCallPatient = {
-      id: firstPatient.id,
-      name: firstPatient.name,
-      reason: firstPatient.reason,
-      time: 'Incoming now',
-      avatar: firstPatient.initials
+    if (showLoader) this.isLoading = true;
+
+    this.appointmentService.getAppointmentsByDoctor(doctorId).subscribe({
+      next: (appointments: Appointment[]) => {
+        const cleaned = (appointments || []).filter(appt => this.belongsToLoggedInDoctor(appt));
+        const visible = cleaned.filter(appt => this.isVisibleAppointment(appt));
+
+        this.sourceAppointments = visible;
+        this.allAppointments = visible.map((appt, index) => this.mapAppointmentItem(appt, index));
+        this.allScheduleBlocks = visible.map((appt, index) => this.mapScheduleBlock(appt, index));
+        this.patientRows = this.buildPatientRows(visible);
+
+        this.buildCalendarDays();
+        this.filterByDate(this.selectedDate);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load dashboard appointments', error);
+        this.sourceAppointments = [];
+        this.patientRows = [];
+        this.allAppointments = [];
+        this.allScheduleBlocks = [];
+        this.todayAppointments = [];
+        this.todaySchedule = [];
+        this.buildCalendarDays();
+        this.isLoading = false;
+      }
+    });
+  }
+
+  buildPatientRows(appointments: Appointment[]): PatientRow[] {
+    const map = new Map<string, PatientRow>();
+
+    appointments
+      .filter(appt => this.isUpcomingOrLive(appt))
+      .forEach((appt, index) => {
+        const patientKey = String(appt.patientId || appt.id || `${appt.patientName}-${index}`);
+
+        if (!map.has(patientKey)) {
+          map.set(patientKey, {
+            id: patientKey,
+            name: appt.patientName || 'Patient',
+            initials: this.getInitials(appt.patientName || 'Patient'),
+            caseId: `CASE-${appt.id ?? index + 1}`,
+            priority: this.mapPriority(appt.status),
+            startDate: this.extractDate(appt) === this.toYMD(new Date())
+              ? 'Today'
+              : this.formatShortDate(this.extractDate(appt)),
+            endDate: '—',
+            age: '--',
+            gender: '--',
+            reason: appt.reason || 'Consultation',
+            consultationType: this.resolveConsultationType(appt),
+            appointmentId: appt.id ?? index + 1,
+            appointmentTime: this.extractAppointmentDateTimeISO(appt),
+            department: appt.department,
+            raw: appt
+          });
+        }
+      });
+
+    const rows = Array.from(map.values());
+    return rows.sort((a, b) => this.sortAsc
+      ? a.name.localeCompare(b.name)
+      : b.name.localeCompare(a.name)
+    );
+  }
+
+  mapAppointmentItem(appt: Appointment, index: number): AppointmentItem {
+    return {
+      id: appt.id ?? index + 1,
+      patientId: String(appt.patientId || appt.id || index + 1),
+      patientName: appt.patientName || 'Patient',
+      time: this.normalizeDisplayTime(appt),
+      note: appt.reason || 'Consultation',
+      color: this.getStatusColor(appt.status),
+      status: this.normalizeStatus(appt.status),
+      date: this.extractDate(appt),
+      department: appt.department,
+      consultationType: this.resolveConsultationType(appt),
+      raw: appt
     };
   }
 
-  acceptIncomingCall(): void {
-    this.showIncomingCallPopup = false;
-    this.router.navigate(['/incoming-call', this.incomingCallPatient.id]);
-  }
+  mapScheduleBlock(appt: Appointment, index: number): ScheduleBlock {
+    const hour = this.extractHour(appt);
 
-  dismissIncomingCall(): void {
-    this.showIncomingCallPopup = false;
+    return {
+      id: appt.id ?? index + 1,
+      patientId: String(appt.patientId || appt.id || index + 1),
+      patientName: appt.patientName || 'Patient',
+      time: this.normalizeDisplayTime(appt),
+      note: appt.reason || 'Consultation',
+      left: this.getTimelineLeft(hour),
+      width: '13%',
+      bg: this.getStatusBg(appt.status),
+      color: this.getStatusColor(appt.status),
+      date: this.extractDate(appt),
+      raw: appt
+    };
   }
 
   prevMonth(): void {
@@ -303,15 +299,13 @@ export class Dashboard implements OnInit {
   buildCalendarDays(): void {
     const year = this.calendarViewYear;
     const month = this.calendarViewMonth;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const now = new Date();
 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDow = new Date(year, month, 1).getDay();
     const offset = firstDow === 0 ? 6 : firstDow - 1;
 
-    const selectedParts = this.selectedDate.split('-');
-    const selYear = parseInt(selectedParts[0], 10);
-    const selMonth = parseInt(selectedParts[1], 10) - 1;
-    const selDate = parseInt(selectedParts[2], 10);
+    const [selYear, selMonth, selDate] = this.selectedDate.split('-').map(Number);
 
     const apptDates = new Set<number>();
     const pendingDates = new Set<number>();
@@ -339,8 +333,8 @@ export class Dashboard implements OnInit {
     for (let d = 1; d <= daysInMonth; d++) {
       days.push({
         date: d,
-        isToday: d === this.today.getDate() && month === this.today.getMonth() && year === this.today.getFullYear(),
-        isSelected: d === selDate && month === selMonth && year === selYear,
+        isToday: d === now.getDate() && month === now.getMonth() && year === now.getFullYear(),
+        isSelected: d === selDate && month === (selMonth - 1) && year === selYear,
         hasAppointment: apptDates.has(d),
         isPending: pendingDates.has(d)
       });
@@ -351,9 +345,11 @@ export class Dashboard implements OnInit {
 
   selectDate(day: CalendarDay): void {
     if (!day.date) return;
+
     const m = String(this.calendarViewMonth + 1).padStart(2, '0');
     const d = String(day.date).padStart(2, '0');
     this.selectedDate = `${this.calendarViewYear}-${m}-${d}`;
+
     this.buildCalendarDays();
     this.filterByDate(this.selectedDate);
   }
@@ -370,9 +366,11 @@ export class Dashboard implements OnInit {
     return 'medium';
   }
 
-  openPatient(patientId: string): void {
-    if (!patientId) return;
-    this.router.navigate(['/monitor', patientId]);
+  sortPatients(): void {
+    this.sortAsc = !this.sortAsc;
+    this.patientRows = [...this.patientRows].sort((a, b) =>
+      this.sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    );
   }
 
   goToQueue(): void {
@@ -383,40 +381,229 @@ export class Dashboard implements OnInit {
     this.router.navigate(['/schedule']);
   }
 
-  get totalCases(): number {
-    return this.patientRows.length;
+  openPatient(patientId: string): void {
+    if (!patientId) return;
+    this.router.navigate(['/monitor', patientId]);
   }
 
-  get resolvedCases(): number {
-    return Math.max(this.patientRows.length - 1, 0);
+  acceptFromDashboard(patient: PatientRow): void {
+    const activePatient = {
+      id: patient.appointmentId ?? patient.id,
+      patientId: patient.id,
+      name: patient.name,
+      patientName: patient.name,
+      reason: patient.reason || 'Consultation',
+      symptoms: patient.reason || 'Consultation',
+      department: patient.department || this.doctorDepartment,
+      dept: patient.department || this.doctorDepartment,
+      consultationType: patient.consultationType || 'VIDEO',
+      priority: patient.priority || 'MEDIUM',
+      appointmentTime: patient.appointmentTime || null
+    };
+
+    localStorage.setItem('activePatient', JSON.stringify(activePatient));
+    this.router.navigate(['/call']);
   }
 
-  get urgentCount(): number {
-    return this.patientRows.filter(p => this.priorityClass(p.priority) === 'high').length;
+  private belongsToLoggedInDoctor(appt: Appointment): boolean {
+    const doctorId = this.authService.getDoctorId();
+    return Number(appt.doctorId) === Number(doctorId);
   }
 
-  get avgResponse(): string {
-    return 'Live';
+  private isVisibleAppointment(appt: Appointment): boolean {
+    const status = (appt.status || 'scheduled').toLowerCase();
+
+    if (status === 'cancelled') return false;
+    if (status === 'completed') return false;
+
+    const appointmentDateTime = this.getAppointmentDateTime(appt);
+    if (!appointmentDateTime) return true;
+
+    const now = new Date();
+    if (appointmentDateTime.getTime() < now.getTime()) return false;
+
+    return true;
   }
 
-  get inQueue(): number {
-    return Math.max(this.patientRows.length - 1, 0);
+  private isUpcomingOrLive(appt: Appointment): boolean {
+    const dt = this.getAppointmentDateTime(appt);
+    if (!dt) return false;
+    return dt.getTime() >= Date.now();
   }
 
-  get sortLabel(): string {
-    return this.sortAsc ? 'A–Z' : 'Z–A';
+  private isQueueVisible(appt: Appointment): boolean {
+    const status = (appt.status || '').toLowerCase();
+    if (status === 'completed' || status === 'cancelled') return false;
+
+    const dt = this.getAppointmentDateTime(appt);
+    if (!dt) return true;
+
+    return Date.now() - dt.getTime() <= 2 * 60 * 60 * 1000;
   }
 
-  sortPatients(): void {
-    this.sortAsc = !this.sortAsc;
-    this.patientRows = [...this.patientRows].sort((a, b) =>
-      this.sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
-    );
+  private normalizeStatus(status?: string): 'scheduled' | 'pending' | 'completed' | 'cancelled' {
+    const s = (status || 'scheduled').toLowerCase();
+    if (s === 'pending' || s === 'completed' || s === 'cancelled') return s;
+    return 'scheduled';
   }
 
-  get formattedSelectedDate(): string {
-    const [y, m, d] = this.selectedDate.split('-');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
+  private resolveConsultationType(appt: Appointment): 'VIDEO' | 'AUDIO' | 'CHAT' | 'IN_PERSON' {
+    const type = (appt.consultationType || '').toLowerCase();
+    if (type.includes('chat')) return 'CHAT';
+    if (type.includes('audio') || type.includes('call')) return 'AUDIO';
+    if (type.includes('person') || type.includes('hospital')) return 'IN_PERSON';
+    return 'VIDEO';
+  }
+
+  private mapPriority(status?: string): PriorityLevel | string {
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') return 'HIGH';
+    if (s === 'scheduled') return 'MEDIUM';
+    return 'LOW';
+  }
+
+  private extractDate(appt: Appointment): string {
+    if (appt.appointmentTime) {
+      const d = new Date(appt.appointmentTime);
+      if (!isNaN(d.getTime())) return this.toYMD(d);
+    }
+
+    if (appt.date && /^\d{4}-\d{2}-\d{2}$/.test(appt.date)) {
+      return appt.date;
+    }
+
+    return this.toYMD(new Date());
+  }
+
+  private extractHour(appt: Appointment): number {
+    if (appt.appointmentTime) {
+      const d = new Date(appt.appointmentTime);
+      if (!isNaN(d.getTime())) return d.getHours() + d.getMinutes() / 60;
+    }
+
+    return this.parseTimeSlotToHour(appt.timeSlot || '09:00 AM');
+  }
+
+  private extractAppointmentDateTimeISO(appt: Appointment): string {
+    const dt = this.getAppointmentDateTime(appt);
+    return dt ? dt.toISOString() : new Date().toISOString();
+  }
+
+  private normalizeDisplayTime(appt: Appointment): string {
+    const dt = this.getAppointmentDateTime(appt);
+    if (dt) {
+      return dt.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+    return appt.timeSlot || '09:00 AM';
+  }
+
+  private getAppointmentDateTime(appt: Appointment): Date | null {
+    if (appt.appointmentTime) {
+      const d = new Date(appt.appointmentTime);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    if (appt.date && appt.timeSlot) {
+      const iso = this.to24Hour(appt.timeSlot);
+      const d = new Date(`${appt.date}T${iso}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    return null;
+  }
+
+  private parseTimeSlotToHour(value: string): number {
+    const t = (value || '').trim().toUpperCase();
+    const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+
+    if (ampm) {
+      let h = Number(ampm[1]);
+      const m = Number(ampm[2]);
+      const suffix = ampm[3];
+
+      if (suffix === 'PM' && h !== 12) h += 12;
+      if (suffix === 'AM' && h === 12) h = 0;
+
+      return h + m / 60;
+    }
+
+    const plain = t.match(/(\d{1,2}):(\d{2})/);
+    if (plain) {
+      return Number(plain[1]) + Number(plain[2]) / 60;
+    }
+
+    return 9;
+  }
+
+  private to24Hour(value: string): string {
+    const t = (value || '').trim().toUpperCase();
+    const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+
+    if (ampm) {
+      let h = Number(ampm[1]);
+      const m = ampm[2];
+      const suffix = ampm[3];
+
+      if (suffix === 'PM' && h !== 12) h += 12;
+      if (suffix === 'AM' && h === 12) h = 0;
+
+      return `${String(h).padStart(2, '0')}:${m}:00`;
+    }
+
+    const plain = t.match(/(\d{1,2}):(\d{2})/);
+    if (plain) {
+      return `${String(Number(plain[1])).padStart(2, '0')}:${plain[2]}:00`;
+    }
+
+    return '09:00:00';
+  }
+
+  private getTimelineLeft(hour: number): string {
+    const start = 8;
+    const end = 18;
+    const usable = end - start;
+    const safeHour = Math.max(start, Math.min(hour, end));
+    const pct = ((safeHour - start) / usable) * 84;
+    return `${11 + pct}%`;
+  }
+
+  private getStatusColor(status?: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') return '#d97706';
+    if (s === 'completed') return '#64748b';
+    if (s === 'cancelled') return '#dc2626';
+    return '#16a34a';
+  }
+
+  private getStatusBg(status?: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') return '#fef3c7';
+    if (s === 'completed') return '#f1f5f9';
+    if (s === 'cancelled') return '#fee2e2';
+    return '#dcfce7';
+  }
+
+  private getInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  private formatShortDate(dateStr: string): string {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  private toYMD(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
