@@ -2,6 +2,7 @@ package com.supportsystem.majorproject.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 public class Appointment {
@@ -16,7 +17,10 @@ public class Appointment {
   private String doctorName;
   private String department;
   private String reason;
+
+  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
   private LocalDateTime appointmentTime;
+
   private String status; // BOOKED, CANCELLED, COMPLETED
 
   public Long getId() { return id; }

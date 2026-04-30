@@ -69,4 +69,15 @@ public class AppointmentService {
       .map(a -> a.getAppointmentTime().toLocalTime().format(fmt).toUpperCase())
       .collect(Collectors.toList());
   }
+
+  public void deleteAppointment(Long id) {
+    repo.deleteById(id);
+  }
+
+  public void cancelAppointment(Long id) {
+    repo.findById(id).ifPresent(appt -> {
+      appt.setStatus("CANCELLED");
+      repo.save(appt);
+    });
+  }
 }

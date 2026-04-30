@@ -33,6 +33,7 @@ public class MedicalCaseController {
     // Use full millisecond timestamp — avoids duplicate-key collisions (modulo wrapped every ~11 days)
     mc.setCaseId(System.currentTimeMillis());
     mc.setPatientName(body.getOrDefault("patientName", "Patient"));
+    mc.setPatientId(body.getOrDefault("patientId", ""));
     mc.setSymptoms(body.getOrDefault("symptoms", ""));
     mc.setDepartment(body.getOrDefault("department", "GENERAL"));
     mc.setConsultationType(body.getOrDefault("consultationType", "VIDEO").toUpperCase());

@@ -3,6 +3,7 @@ package com.supportsystem.majorproject.controller;
 import com.supportsystem.majorproject.model.Appointment;
 import com.supportsystem.majorproject.model.AppointmentSlot;
 import com.supportsystem.majorproject.service.AppointmentService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -48,5 +49,17 @@ public class AppointmentController {
     @PathVariable Long doctorId,
     @RequestParam String date) {
     return service.getBookedSlotStrings(doctorId, date);
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<String> deleteAppointment(@PathVariable Long id) {
+    service.deleteAppointment(id);
+    return ResponseEntity.ok("Appointment deleted");
+  }
+
+  @PatchMapping("/{id}/cancel")
+  public ResponseEntity<String> cancelAppointment(@PathVariable Long id) {
+    service.cancelAppointment(id);
+    return ResponseEntity.ok("Appointment cancelled");
   }
 }
