@@ -181,6 +181,7 @@ export class ChatConsultationComponent implements OnInit, OnDestroy {
     this.http.patch(`http://localhost:8080/cases/${this.caseId}/end`, {}).subscribe({ error: () => {} });
     clearInterval(this.statusPollInterval);
     clearInterval(this.messagePollInterval);
+    sessionStorage.removeItem('chatbot_messages');
     this.ngZone.run(() => { this.status = "ended"; this.cdr.detectChanges(); });
     setTimeout(() => this.router.navigate(["/chatbot"]), 2000);
   }

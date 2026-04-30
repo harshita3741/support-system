@@ -67,28 +67,68 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  playAlertSound() {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const beep = (startTime: number, freq: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.35, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+        osc.start(startTime); osc.stop(startTime + 0.35);
+      };
+      beep(ctx.currentTime, 880);
+      beep(ctx.currentTime + 0.4, 1046);
+      beep(ctx.currentTime + 0.8, 880);
+    } catch {}
+  }
+
   scheduleReminders(appointments: any[]) {
     this.reminderTimers.forEach(t => clearTimeout(t));
     this.reminderTimers = [];
     const now = Date.now();
-    const FIVE_MIN = 5 * 60 * 1000;
 
     appointments.forEach(appt => {
       if (!appt.appointmentTime) return;
       const apptMs = new Date(appt.appointmentTime).getTime();
-      const delay = apptMs - FIVE_MIN - now;
-      if (delay > 0 && delay < 24 * 60 * 60 * 1000) {
+
+      // ── 15-minute-before reminder ──────────────────────────────
+      const delay15 = apptMs - 15 * 60 * 1000 - now;
+      if (delay15 > 0) {
         const t = setTimeout(() => {
           this.sendNotification(
-            '⏰ Appointment in 5 minutes!',
-            `Dr. ${appt.doctorName || 'Doctor'} · ${appt.department || ''}`
+            '⏰ Appointment in 15 minutes!',
+            `${appt.doctorName || 'Doctor'} · ${appt.reason || appt.department || ''}`
           );
           this.ngZone.run(() => {
-            this.reminderAppt = appt;
+            this.reminderAppt = { ...appt, reminderLabel: '15 minutes' };
             this.showReminder = true;
+            this.playAlertSound();
             this.cdr.detectChanges();
           });
-        }, delay);
+        }, delay15);
+        this.reminderTimers.push(t);
+      }
+
+      // ── At-appointment-time reminder ──────────────────────────
+      const delayAtTime = apptMs - now;
+      if (delayAtTime > 0) {
+        const t = setTimeout(() => {
+          this.sendNotification(
+            '🏥 Appointment Started! Join now.',
+            `${appt.doctorName || 'Doctor'} · ${appt.reason || appt.department || ''}`
+          );
+          this.ngZone.run(() => {
+            this.reminderAppt = { ...appt, reminderLabel: 'now' };
+            this.showReminder = true;
+            this.playAlertSound();
+            this.cdr.detectChanges();
+          });
+        }, delayAtTime);
         this.reminderTimers.push(t);
       }
     });
@@ -133,7 +173,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.ngZone.run(() => {
           const now = new Date();
-          const grace = 15 * 60 * 1000; // show 15 min after start
+          const grace = 30 * 60 * 1000; // show up to 30 min after start time
           this.appointments = (res || [])
             .filter(a => new Date(a.appointmentTime).getTime() + grace >= now.getTime() && a.status !== 'CANCELLED')
             .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())

@@ -78,6 +78,11 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     if (this.messages.length === 0) {
       this.messages = [{ text: "Hello! I am your CareAI health assistant. Describe your symptoms and I will help you.", sender: "bot", time: this.getTime() }];
     }
+    // Restore quick-details submission state so "Add Details" doesn't re-appear after navigation
+    const savedQD = sessionStorage.getItem('chatbot_qd_state');
+    if (savedQD) {
+      try { this.quickDetailsState = JSON.parse(savedQD); } catch {}
+    }
 
     // Handle redirect from symptoms page
     this.route.queryParams.subscribe(params => {
@@ -94,6 +99,38 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             sessionStorage.removeItem("pendingSymptoms");
           } catch {}
         }
+
+        // ── If user already has a pending/active case, they came from the "Open full symptom
+        //    form →" link inside the quick-details card.  Don't show the type picker again;
+        //    instead mark the quick-details as submitted and forward the new symptoms. ──
+        const hasActivePendingCase = this.messages.some(m =>
+          m.showVideoCallPending || m.showChatConsultation || m.showVideoCall
+        );
+        if (hasActivePendingCase && symptoms) {
+          const activeCaseMsg = this.messages.find(m =>
+            (m.showVideoCallPending || m.showChatConsultation || m.showVideoCall) && m.quickDetailsCaseId
+          );
+          if (activeCaseMsg?.quickDetailsCaseId) {
+            const caseId = activeCaseMsg.quickDetailsCaseId;
+            if (!this.quickDetailsState[caseId]?.submitted) {
+              this.initQuickDetails(caseId);
+              this.quickDetailsState[caseId].submitted = true;
+              this.saveMessages();
+              // Forward full symptoms to backend
+              this.http.patch(`http://localhost:8080/cases/${caseId}/add-details`, { notes: symptoms })
+                .subscribe({ error: () => {} });
+              this.messages = [...this.messages, {
+                text: "✅ Symptom details submitted. The doctor can now see your full symptoms.",
+                sender: "bot",
+                time: this.getTime()
+              }];
+              this.saveMessages();
+              this.cdr.detectChanges();
+            }
+          }
+          return;
+        }
+
         const alreadyInjected = this.messages.some(m => m.showConsultationChoice && m.pendingSymptoms === symptoms);
         if (!alreadyInjected) {
           this.injectSymptomsChoice(symptoms, dept);
@@ -126,7 +163,10 @@ export class ChatbotComponent implements OnInit, OnDestroy {
   }
 
   private saveMessages() {
-    try { sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.messages)); } catch {}
+    try {
+      sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(this.messages));
+      sessionStorage.setItem('chatbot_qd_state', JSON.stringify(this.quickDetailsState));
+    } catch {}
   }
 
   injectPendingCase(caseId: string, dept: string, consultationType = "VIDEO") {
@@ -206,7 +246,9 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     this.pollingIntervals.clear();
     // Reset to just the welcome message
     this.messages = [{ text: "Hello! I am your CareAI health assistant. Describe your symptoms and I will help you.", sender: "bot", time: this.getTime() }];
+    this.quickDetailsState = {};
     sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    sessionStorage.removeItem('chatbot_qd_state');
     this.cdr.detectChanges();
   }
 
@@ -237,6 +279,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     // Create case immediately
     this.http.post<any>("http://localhost:8080/cases/create-with-type", {
       patientName: this.patientName || "Patient",
+      patientId:   this.patientId || "",
       symptoms,
       department,
       consultationType: type

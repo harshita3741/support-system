@@ -17,15 +17,21 @@ export class AppointmentComponent implements OnInit, OnDestroy {
   slots: any[] = [];
   selectedDoctor = 0;
   selectedSlot = '';
+  selectedReason = 'Routine check-up';
   initials = '';
   showAvatarMenu = false;
   slotsLoading = false;
   showToast = false;
   toastMsg = '';
 
+  // ─── Upcoming appointments ─────────────────────────────────────
+  upcomingAppts: any[] = [];
+  private upcomingInterval: any;
+
   // ─── Reminder popup ───────────────────────────────────────────
   showReminderPopup = false;
   reminderPopupMsg = '';
+  reminderApptId = '';     // appointment ID shown in current popup (for join button)
   private reminderTimeouts: any[] = [];
 
   // ─── Calendar ─────────────────────────────────────────────────
@@ -90,10 +96,17 @@ export class AppointmentComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadDoctors();
     this.loadExistingReminders();
+    this.loadUpcomingAppts();
+    // Refresh upcoming list every minute so join button activates on time
+    this.upcomingInterval = setInterval(() => {
+      this.loadUpcomingAppts();
+      this.cdr.detectChanges();
+    }, 60000);
   }
 
   ngOnDestroy() {
     this.reminderTimeouts.forEach(t => clearTimeout(t));
+    clearInterval(this.upcomingInterval);
   }
 
   // ─── Reminder at appointment time ─────────────────────────────
@@ -106,7 +119,7 @@ export class AppointmentComponent implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           (appts || []).forEach(a => {
             if (a.appointmentTime) {
-              this.scheduleApptReminder(a.doctorName, a.appointmentTime);
+              this.scheduleApptReminder(a.doctorName, a.appointmentTime, a.id || a.appointmentId);
             }
           });
         });
@@ -115,34 +128,109 @@ export class AppointmentComponent implements OnInit, OnDestroy {
     });
   }
 
-  scheduleApptReminder(doctorName: string, appointmentTime: string) {
+  scheduleApptReminder(doctorName: string, appointmentTime: string, apptId?: any) {
     const apptMs = new Date(appointmentTime).getTime();
     const nowMs = Date.now();
     const diffMs = apptMs - nowMs;
 
-    // Only schedule if appointment is in the future and within 24 hours
-    if (diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000) {
-      const t = setTimeout(() => {
-        this.ngZone.run(() => {
-          const timeStr = new Date(appointmentTime).toLocaleTimeString('en-US', {
-            hour: 'numeric', minute: '2-digit', hour12: true
-          });
-          this.reminderPopupMsg = `Your appointment with ${doctorName} is right now (${timeStr})`;
-          this.showReminderPopup = true;
-          this.cdr.detectChanges();
-          this.playAlertSound();
-
-          // Also fire browser notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('⏰ CareAI — Appointment Now!', {
-              body: `${doctorName} · ${timeStr}`,
-              icon: '/favicon.ico'
-            });
-          }
+    const showPopup = (msg: string, notifTitle: string) => {
+      this.ngZone.run(() => {
+        const timeStr = new Date(appointmentTime).toLocaleTimeString('en-US', {
+          hour: 'numeric', minute: '2-digit', hour12: true
         });
-      }, diffMs);
-      this.reminderTimeouts.push(t);
+        this.reminderPopupMsg = msg.replace('{time}', timeStr);
+        this.reminderApptId = String(apptId || '');
+        this.showReminderPopup = true;
+        this.cdr.detectChanges();
+        this.playAlertSound();
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(notifTitle, { body: `${doctorName} · ${timeStr}`, icon: '/favicon.ico' });
+        }
+      });
+    };
+
+    // ── 15-minute-before reminder ──────────────────────────────────
+    const diff15 = diffMs - 15 * 60 * 1000;
+    if (diff15 > 0) {
+      const t15 = setTimeout(() =>
+        showPopup(
+          `Your appointment with ${doctorName} is in 15 minutes ({time}). Please be ready.`,
+          '⏰ CareAI — Appointment in 15 minutes!'
+        ), diff15);
+      this.reminderTimeouts.push(t15);
     }
+
+    // ── At-appointment-time reminder ──────────────────────────────
+    if (diffMs > 0) {
+      const t = setTimeout(() =>
+        showPopup(
+          `Your appointment with ${doctorName} has started ({time}). Join now!`,
+          '🏥 CareAI — Appointment Started!'
+        ), diffMs);
+      this.reminderTimeouts.push(t);
+    } else if (diffMs >= -5 * 60 * 1000) {
+      // Missed by < 5 min — show immediately on page load
+      showPopup(
+        `Your appointment with ${doctorName} has started ({time}). Join now!`,
+        '🏥 CareAI — Appointment Started!'
+      );
+    }
+  }
+
+  // ─── Upcoming appointments ─────────────────────────────────────
+
+  loadUpcomingAppts() {
+    const patientName = localStorage.getItem('patientName') || '';
+    if (!patientName) return;
+    this.http.get<any[]>(`http://localhost:8080/appointments/patient/${patientName}`).subscribe({
+      next: (appts) => {
+        this.ngZone.run(() => {
+          let completed: string[] = [];
+          try { completed = JSON.parse(localStorage.getItem('completedApptIds') || '[]'); } catch {}
+          const now = new Date();
+          this.upcomingAppts = (appts || [])
+            .filter(a => !completed.includes(String(a.id || a.appointmentId || '')))
+            .filter(a => {
+              const apptTime = new Date(a.appointmentTime);
+              // Show appointments until 30 min after their start time
+              return apptTime.getTime() + 30 * 60 * 1000 > now.getTime();
+            })
+            .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())
+            .slice(0, 5); // show max 5
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {}
+    });
+  }
+
+  /** Returns true if appointment time is within 5 minutes or already passed (up to 2h) */
+  canJoin(appt: any): boolean {
+    const apptMs = new Date(appt.appointmentTime).getTime();
+    const nowMs = Date.now();
+    return nowMs >= apptMs - 5 * 60 * 1000;
+  }
+
+  joinAppointmentCall(appt: any) {
+    const apptId = String(appt.id || appt.appointmentId || '');
+    localStorage.setItem('currentAppointmentId', apptId);
+    // Navigate to video call using appointment ID as the case ID
+    this.router.navigate(['/video-call'], { queryParams: { caseId: apptId } });
+  }
+
+  formatApptTime(appointmentTime: string): string {
+    try {
+      const d = new Date(appointmentTime);
+      const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      return `${date} at ${time}`;
+    } catch { return appointmentTime; }
+  }
+
+  formatApptTimeOnly(appointmentTime: string): string {
+    try {
+      return new Date(appointmentTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch { return ''; }
   }
 
   playAlertSound() {
@@ -323,12 +411,12 @@ export class AppointmentComponent implements OnInit, OnDestroy {
       doctorId:        doc?.id,
       doctorName:      doc?.name || '',
       department:      doc?.spec || '',
-      reason:          'Routine appointment - ' + (doc?.spec || ''),
+      reason:          this.selectedReason,
       appointmentTime: parseTime(selected.time, dateStr)
     };
 
-    this.http.post('http://localhost:8080/appointments/book', payload).subscribe({
-      next: () => {
+    this.http.post<any>('http://localhost:8080/appointments/book', payload).subscribe({
+      next: (res) => {
         this.ngZone.run(() => {
           selected.taken = true;
           this.selectedSlot = '';
@@ -336,8 +424,10 @@ export class AppointmentComponent implements OnInit, OnDestroy {
           this.showBookingConfirmation(
             this.doctors[this.selectedDoctor]?.name,
             dateStr,
-            selected.time
+            selected.time,
+            res?.id || res?.appointmentId
           );
+          this.loadUpcomingAppts(); // refresh upcoming list after new booking
         });
       },
       error: () => {
@@ -351,12 +441,13 @@ export class AppointmentComponent implements OnInit, OnDestroy {
             dateStr,
             selected.time
           );
+          this.loadUpcomingAppts();
         });
       }
     });
   }
 
-  showBookingConfirmation(doctorName: string, date: string, time: string) {
+  showBookingConfirmation(doctorName: string, date: string, time: string, apptId?: any) {
     // Parse "09:00 AM" + "2026-04-22" → full ISO for reminder
     try {
       const [hm, ampm] = time.split(' ');
@@ -364,7 +455,7 @@ export class AppointmentComponent implements OnInit, OnDestroy {
       if (ampm === 'PM' && hh !== 12) hh += 12;
       if (ampm === 'AM' && hh === 12) hh = 0;
       const isoStr = `${date}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`;
-      this.scheduleApptReminder(doctorName, isoStr);
+      this.scheduleApptReminder(doctorName, isoStr, apptId);
     } catch {}
 
     this.toastMsg = `Appointment confirmed with ${doctorName} on ${date} at ${time}`;

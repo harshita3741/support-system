@@ -41,6 +41,9 @@ const STUN_SERVERS = {
 export class IncomingCall implements OnInit, OnDestroy {
 
   patient: any = null;
+  patientProfile: any = null;
+  patientDocuments: any[] = [];
+  showPatientProfile = false;
   callAccepted = false;
   callEnded = false;
   endedByPatient = false;
@@ -113,11 +116,49 @@ export class IncomingCall implements OnInit, OnDestroy {
     }
     this.patient = JSON.parse(raw);
 
+    // Fetch patient profile for side-panel
+    const patientId = this.patient?.patientId || this.patient?.patientID;
+    if (patientId) {
+      this.http.get<any>(`${this.baseUrl}/patients/${patientId}`).subscribe({
+        next: (profile) => {
+          this.ngZone.run(() => {
+            this.patientProfile = profile;
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {}
+      });
+      // Fetch uploaded documents
+      this.http.get<any[]>(`${this.baseUrl}/documents/patient/${patientId}`).subscribe({
+        next: (docs) => {
+          this.ngZone.run(() => {
+            this.patientDocuments = docs || [];
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {}
+      });
+    }
+
     if (this.consultationType === 'CHAT') {
       this.startChatConsultation();
     } else {
       this.startVideoConsultation();
     }
+  }
+
+  togglePatientProfile() {
+    this.showPatientProfile = !this.showPatientProfile;
+    this.cdr.detectChanges();
+  }
+
+  calcAge(dob: string): string {
+    if (!dob) return '—';
+    try {
+      const d = new Date(dob);
+      const age = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
+      return isNaN(age) ? '—' : String(age);
+    } catch { return '—'; }
   }
 
   ngOnDestroy() {

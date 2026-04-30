@@ -332,6 +332,17 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.cleanup();
     this.callStatus = "doctor-ended";
     this.chatMode = false;
+    sessionStorage.removeItem('chatbot_messages');
+    // Mark appointment as completed so it disappears from upcoming list
+    const apptId = localStorage.getItem('currentAppointmentId');
+    if (apptId) {
+      try {
+        const completed: string[] = JSON.parse(localStorage.getItem('completedApptIds') || '[]');
+        if (!completed.includes(apptId)) completed.push(apptId);
+        localStorage.setItem('completedApptIds', JSON.stringify(completed));
+      } catch {}
+      localStorage.removeItem('currentAppointmentId');
+    }
     this.cdr.detectChanges();
   }
 
@@ -492,6 +503,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   endCall() {
     this.http.patch(`http://localhost:8080/cases/${this.caseId}/end`, {}).subscribe({ error: () => {} });
     this.cleanup();
+    sessionStorage.removeItem('chatbot_messages');
     this.ngZone.run(() => {
       this.callStatus = "ended";
       this.chatMode = false;

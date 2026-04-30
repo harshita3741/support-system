@@ -24,10 +24,17 @@
         </div>
       </div>
 
+      <div class="section" *ngIf="patient?.reason">
+        <div class="section-title">Reason for Visit</div>
+        <div class="symptoms-box" style="color:#a5b4fc;">
+          {{ patient?.reason }}
+        </div>
+      </div>
+
       <div class="section">
-        <div class="section-title">Current Symptoms</div>
+        <div class="section-title">Symptoms / Details</div>
         <div class="symptoms-box">
-          {{ patient?.symptoms || patient?.reason || 'No symptoms available' }}
+          {{ patient?.symptoms || 'No symptoms provided' }}
         </div>
       </div>
 
@@ -50,6 +57,59 @@
         <div class="section-title">Previous Visits</div>
         <div class="summary-box">
           {{ parseVisits().join(', ') }}
+        </div>
+      </div>
+
+      <!-- Patient Profile Toggle -->
+      <button class="profile-toggle-btn" (click)="togglePatientProfile()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        {{ showPatientProfile ? 'Hide Patient Details' : 'View Patient Details' }}
+      </button>
+
+      <!-- Patient Profile Panel -->
+      <div class="patient-profile-panel" *ngIf="showPatientProfile">
+        <div *ngIf="!patientProfile" class="profile-loading">Loading profile...</div>
+
+        <ng-container *ngIf="patientProfile">
+          <div class="profile-row">
+            <span class="profile-label">Age</span>
+            <span class="profile-value">{{ calcAge(patientProfile.dateOfBirth || patientProfile.dob) }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Gender</span>
+            <span class="profile-value">{{ patientProfile.gender || '—' }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Blood Group</span>
+            <span class="profile-value">{{ patientProfile.bloodGroup || '—' }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Allergies</span>
+            <span class="profile-value">{{ patientProfile.allergies || '—' }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Chronic Conditions</span>
+            <span class="profile-value">{{ patientProfile.chronicConditions || patientProfile.knownConditions || '—' }}</span>
+          </div>
+          <div class="profile-row" *ngIf="patientProfile.ongoingTreatments">
+            <span class="profile-label">Ongoing Treatments</span>
+            <span class="profile-value">{{ patientProfile.ongoingTreatments }}</span>
+          </div>
+          <div class="profile-row" *ngIf="patientProfile.pastIllnesses">
+            <span class="profile-label">Past Illnesses</span>
+            <span class="profile-value">{{ patientProfile.pastIllnesses }}</span>
+          </div>
+        </ng-container>
+
+        <!-- Uploaded Documents -->
+        <div class="profile-docs-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Documents
+        </div>
+        <div *ngIf="patientDocuments.length === 0" class="no-docs">No documents uploaded.</div>
+        <div *ngFor="let doc of patientDocuments" class="doc-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <a [href]="doc.url || doc.fileUrl" target="_blank" class="doc-link">{{ doc.fileName || doc.name || 'Document' }}</a>
         </div>
       </div>
     </div>

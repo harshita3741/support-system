@@ -259,3 +259,21 @@
 .send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
 .join-video-btn { display: flex; align-items: center; gap: 8px; background: #2563eb; color: white; border: none; padding: 13px 28px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
 .join-video-btn:hover { background: #1d4ed8; }
+.end-consult-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 0 14px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.end-consult-btn:hover { background: #fecaca; }
