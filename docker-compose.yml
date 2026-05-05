@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+
+  backend:
+    image: harshitaa123/healthcare-backend:latest
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://host.docker.internal:1433;databaseName=healthcare_support;encrypt=false;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: "sa"
+      SPRING_DATASOURCE_PASSWORD: "Admin@Secure123!"
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+  patient-app:
+    image: harshitaa123/healthcare-patient:latest
+    environment:
+      API_URL: "http://localhost:8080"
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  doctor-app:
+    image: enigma905/healthcare-doctor:latest
+    environment:
+      API_URL: "http://localhost:8080"
+    ports:
+      - "4300:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
