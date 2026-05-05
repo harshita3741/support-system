@@ -26,23 +26,32 @@ public class MedicalCaseController {
     return "Multiple cases created";
   }
 
-  /** Create case with consultation type (VIDEO or CHAT) */
   @PostMapping("/create-with-type")
   public ResponseEntity<Map<String, Object>> createWithType(@RequestBody Map<String, String> body) {
-    MedicalCase mc = new MedicalCase();
-    // Use full millisecond timestamp — avoids duplicate-key collisions (modulo wrapped every ~11 days)
-    mc.setCaseId(System.currentTimeMillis());
-    mc.setPatientName(body.getOrDefault("patientName", "Patient"));
-    mc.setPatientId(body.getOrDefault("patientId", ""));
-    mc.setSymptoms(body.getOrDefault("symptoms", ""));
-    mc.setDepartment(body.getOrDefault("department", "GENERAL"));
-    mc.setConsultationType(body.getOrDefault("consultationType", "VIDEO").toUpperCase());
-    medicalCaseService.createCase(mc);
+    try {
+      MedicalCase mc = new MedicalCase();
+      mc.setCaseId(System.currentTimeMillis());
+      mc.setPatientName(body.getOrDefault("patientName", "Patient"));
+      mc.setPatientId(body.getOrDefault("patientId", ""));
+      mc.setSymptoms(body.getOrDefault("symptoms", ""));
+      mc.setDepartment(body.getOrDefault("department", "GENERAL"));
+      mc.setConsultationType(body.getOrDefault("consultationType", "VIDEO").toUpperCase());
+      medicalCaseService.createCase(mc);
 
-    Map<String, Object> res = new HashMap<>();
-    res.put("caseId", mc.getCaseId());
-    res.put("status", "OPEN");
-    return ResponseEntity.ok(res);
+      Map<String, Object> res = new HashMap<>();
+      res.put("caseId", mc.getCaseId());
+      res.put("status", "OPEN");
+      return ResponseEntity.ok(res);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      // Return the actual error so you can see it in DevTools → Network → Response
+      Map<String, Object> err = new HashMap<>();
+      err.put("error", e.getMessage());
+      err.put("cause", e.getCause() != null ? e.getCause().getMessage() : "no cause");
+      err.put("type", e.getClass().getSimpleName());
+      return ResponseEntity.status(500).body(err);
+    }
   }
 
   @GetMapping("/doctor/{doctorId}")
@@ -93,10 +102,6 @@ public class MedicalCaseController {
     return medicalCaseService.upgradeToVideo(caseId);
   }
 
-  /**
-   * Append quick details (duration, severity, notes) to the case.
-   * Called from the chatbot "Add Details" mini-form.
-   */
   @PatchMapping("/{caseId}/add-details")
   public ResponseEntity<String> addDetails(
     @PathVariable Long caseId,
