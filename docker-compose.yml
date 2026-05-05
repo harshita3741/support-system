@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+
+  # ── SQL Server ──────────────────────────────────────────────────────────────
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./mssql-init.sh:/mssql-init.sh
+      - ./mssql-init.sql:/mssql-init.sql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd",
+             "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}",
+             "-Q", "SELECT 1", "-C"]
+      interval: 15s
+      retries: 10
+      start_period: 30s
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /opt/mssql/bin/sqlservr &
+        sleep 30
+        bash /mssql-init.sh
+        wait
+
+  # ── Spring Boot backend ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../support_v8/support-system-main
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://db:1433;databaseName=healthcare_support;encrypt=false;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: "appuser"
+      SPRING_DATASOURCE_PASSWORD: "${DB_APP_PASSWORD}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  # ── Patient dashboard (Angular) ─────────────────────────────────────────────
+  patient-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      API_URL: "${API_URL}"
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Doctor dashboard (Angular) ──────────────────────────────────────────────
+  doctor-app:
+    build:
+      context: ./doctor-dashboard
+      dockerfile: Dockerfile
+    environment:
+      API_URL: "${API_URL}"
+    ports:
+      - "4300:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mssql_data:

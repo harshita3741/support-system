@@ -84,6 +84,17 @@ export class ChatbotComponent implements OnInit, OnDestroy {
       try { this.quickDetailsState = JSON.parse(savedQD); } catch {}
     }
 
+    // ── Resume polling for any cases still pending (survives page refresh / navigation) ──
+    this.messages.forEach((msg, idx) => {
+      if (msg.showVideoCallPending && msg.caseId && !this.pollingIntervals.has(msg.caseId)) {
+        if ('showChatConsultation' in msg) {
+          this.pollForChatApproval(idx, msg.caseId);
+        } else if ('showVideoCall' in msg) {
+          this.pollForApproval(idx, msg.caseId);
+        }
+      }
+    });
+
     // Handle redirect from symptoms page
     this.route.queryParams.subscribe(params => {
       // ── New flow: symptoms form → chatbot shows consultation-type picker ──
@@ -350,6 +361,9 @@ export class ChatbotComponent implements OnInit, OnDestroy {
   // ─── Poll for video call acceptance ──────────────────────────
 
   pollForApproval(msgIndex: number, caseId: string) {
+    const existing = this.pollingIntervals.get(caseId);
+    if (existing) clearInterval(existing);
+
     const interval = setInterval(() => {
       this.http.get<any>(`http://localhost:8080/cases/${caseId}/status`).subscribe({
         next: (res) => {
@@ -400,6 +414,9 @@ export class ChatbotComponent implements OnInit, OnDestroy {
   // ─── Poll for CHAT acceptance (shows Join Chat button) ───────
 
   pollForChatApproval(msgIndex: number, caseId: string) {
+    const existing = this.pollingIntervals.get(caseId);
+    if (existing) clearInterval(existing);
+
     const interval = setInterval(() => {
       this.http.get<any>(`http://localhost:8080/cases/${caseId}/status`).subscribe({
         next: (res) => {

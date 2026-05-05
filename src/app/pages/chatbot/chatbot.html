@@ -213,8 +213,8 @@
       </div>
     </div>
 
-    <!-- SUGGESTIONS -->
-    <div class="suggestions">
+    <!-- SUGGESTIONS — only shown on initial state, disappear once user has interacted -->
+    <div class="suggestions" *ngIf="messages.length <= 1">
       <div class="suggestion" *ngFor="let s of suggestions" (click)="sendSuggestion(s)">
         {{ s }}
       </div>
