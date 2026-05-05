@@ -38,26 +38,19 @@ type AppointmentItem = {
   raw?: Appointment;
 };
 
-type ScheduleBlock = {
-  id: number;
-  patientId: string;
-  patientName: string;
-  time: string;
-  note: string;
-  left: string;
-  width: string;
-  bg: string;
-  color: string;
-  date: string;
-  raw?: Appointment;
-};
-
 type CalendarDay = {
   date: number | null;
   isToday: boolean;
   isSelected: boolean;
   hasAppointment: boolean;
   isPending: boolean;
+};
+
+type BreakdownCard = {
+  label: string;
+  value: number;
+  tone: 'video' | 'chat' | 'inperson' | 'completed' | 'pending';
+  icon: string;
 };
 
 @Component({
@@ -76,11 +69,9 @@ export class Dashboard implements OnInit, OnDestroy {
 
   patientRows: PatientRow[] = [];
   allAppointments: AppointmentItem[] = [];
-  allScheduleBlocks: ScheduleBlock[] = [];
   sourceAppointments: Appointment[] = [];
 
   todayAppointments: AppointmentItem[] = [];
-  todaySchedule: ScheduleBlock[] = [];
 
   calendarViewYear = new Date().getFullYear();
   calendarViewMonth = new Date().getMonth();
@@ -89,6 +80,8 @@ export class Dashboard implements OnInit, OnDestroy {
 
   sortAsc = true;
   private refreshTimer: any;
+
+  breakdownCards: BreakdownCard[] = [];
 
   constructor(
     private router: Router,
@@ -117,7 +110,7 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   get calendarMonth(): string {
-    const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     return `${names[this.calendarViewMonth]} ${this.calendarViewYear}`;
   }
 
@@ -136,12 +129,28 @@ export class Dashboard implements OnInit, OnDestroy {
     return this.patientRows.filter(p => this.priorityClass(String(p.priority)) === 'high').length;
   }
 
-  get avgResponse(): string {
-    return 'Live';
+  get todayAppointmentsCount(): number {
+    return this.todayAppointments.length;
+  }
+
+  get pendingCount(): number {
+    return this.todayAppointments.filter(a => a.status === 'pending').length;
+  }
+
+  get completedCount(): number {
+    return this.todayAppointments.filter(a => a.status === 'completed').length;
   }
 
   get inQueue(): number {
     return this.sourceAppointments.filter(a => this.isQueueVisible(a)).length;
+  }
+
+  get thisMonthAppointments(): number {
+    const [selectedYear, selectedMonth] = this.selectedDate.split('-').map(Number);
+    return this.allAppointments.filter(a => {
+      const [y, m] = a.date.split('-').map(Number);
+      return y === selectedYear && m === selectedMonth;
+    }).length;
   }
 
   get sortLabel(): string {
@@ -150,7 +159,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   get formattedSelectedDate(): string {
     const [y, m, d] = this.selectedDate.split('-');
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
   }
 
@@ -167,10 +176,10 @@ export class Dashboard implements OnInit, OnDestroy {
     if (!doctorId) {
       this.patientRows = [];
       this.allAppointments = [];
-      this.allScheduleBlocks = [];
+      this.sourceAppointments = [];
       this.todayAppointments = [];
-      this.todaySchedule = [];
       this.calendarDays = [];
+      this.breakdownCards = [];
       return;
     }
 
@@ -183,11 +192,11 @@ export class Dashboard implements OnInit, OnDestroy {
 
         this.sourceAppointments = visible;
         this.allAppointments = visible.map((appt, index) => this.mapAppointmentItem(appt, index));
-        this.allScheduleBlocks = visible.map((appt, index) => this.mapScheduleBlock(appt, index));
         this.patientRows = this.buildPatientRows(visible);
 
         this.buildCalendarDays();
         this.filterByDate(this.selectedDate);
+        this.buildBreakdownCards();
         this.isLoading = false;
       },
       error: (error) => {
@@ -195,10 +204,9 @@ export class Dashboard implements OnInit, OnDestroy {
         this.sourceAppointments = [];
         this.patientRows = [];
         this.allAppointments = [];
-        this.allScheduleBlocks = [];
         this.todayAppointments = [];
-        this.todaySchedule = [];
-        this.buildCalendarDays();
+        this.calendarDays = [];
+        this.breakdownCards = [];
         this.isLoading = false;
       }
     });
@@ -220,8 +228,8 @@ export class Dashboard implements OnInit, OnDestroy {
             caseId: `CASE-${appt.id ?? index + 1}`,
             priority: this.mapPriority(appt.status),
             startDate: this.extractDate(appt) === this.toYMD(new Date())
-              ? 'Today'
-              : this.formatShortDate(this.extractDate(appt)),
+              ? `Today · ${this.normalizeDisplayTime(appt)}`
+              : `${this.formatShortDate(this.extractDate(appt))} · ${this.normalizeDisplayTime(appt)}`,
             endDate: '—',
             age: '--',
             gender: '--',
@@ -254,24 +262,6 @@ export class Dashboard implements OnInit, OnDestroy {
       date: this.extractDate(appt),
       department: appt.department,
       consultationType: this.resolveConsultationType(appt),
-      raw: appt
-    };
-  }
-
-  mapScheduleBlock(appt: Appointment, index: number): ScheduleBlock {
-    const hour = this.extractHour(appt);
-
-    return {
-      id: appt.id ?? index + 1,
-      patientId: String(appt.patientId || appt.id || index + 1),
-      patientName: appt.patientName || 'Patient',
-      time: this.normalizeDisplayTime(appt),
-      note: appt.reason || 'Consultation',
-      left: this.getTimelineLeft(hour),
-      width: '13%',
-      bg: this.getStatusBg(appt.status),
-      color: this.getStatusColor(appt.status),
-      date: this.extractDate(appt),
       raw: appt
     };
   }
@@ -352,11 +342,30 @@ export class Dashboard implements OnInit, OnDestroy {
 
     this.buildCalendarDays();
     this.filterByDate(this.selectedDate);
+    this.buildBreakdownCards();
   }
 
   filterByDate(dateStr: string): void {
     this.todayAppointments = this.allAppointments.filter(a => a.date === dateStr);
-    this.todaySchedule = this.allScheduleBlocks.filter(b => b.date === dateStr);
+  }
+
+  buildBreakdownCards(): void {
+    const video = this.todayAppointments.filter(a => a.consultationType === 'VIDEO').length;
+    const chat = this.todayAppointments.filter(a => a.consultationType === 'CHAT').length;
+    const inPerson = this.todayAppointments.filter(a => a.consultationType === 'IN_PERSON').length;
+    const completed = this.todayAppointments.filter(a => a.status === 'completed').length;
+    const pending = this.todayAppointments.filter(a => a.status === 'pending').length;
+
+    this.breakdownCards = [
+      { label: 'Video', value: video, tone: 'video', icon: '🎥' },
+      { label: 'Chat', value: chat, tone: 'chat', icon: '💬' },
+      { label: 'Completed', value: completed, tone: 'completed', icon: '✓' },
+      { label: 'Pending', value: pending, tone: 'pending', icon: '⏳' }
+    ];
+
+    if (inPerson > 0) {
+      this.breakdownCards.splice(2, 0, { label: 'In-person', value: inPerson, tone: 'inperson', icon: '👤' });
+    }
   }
 
   priorityClass(priority: string): 'high' | 'medium' | 'low' {
@@ -379,6 +388,20 @@ export class Dashboard implements OnInit, OnDestroy {
 
   goToSchedule(): void {
     this.router.navigate(['/schedule']);
+  }
+
+  goToPatientMonitor(): void {
+    if (this.patientRows.length > 0) {
+      this.router.navigate(['/monitor', this.patientRows[0].id]);
+      return;
+    }
+
+    if (this.todayAppointments.length > 0) {
+      this.router.navigate(['/monitor', this.todayAppointments[0].patientId]);
+      return;
+    }
+
+    this.router.navigate(['/queue']);
   }
 
   openPatient(patientId: string): void {
@@ -458,7 +481,7 @@ export class Dashboard implements OnInit, OnDestroy {
   private mapPriority(status?: string): PriorityLevel | string {
     const s = (status || '').toLowerCase();
     if (s === 'pending') return 'HIGH';
-    if (s === 'scheduled') return 'MEDIUM';
+    if (s === 'scheduled') return 'LOW';
     return 'LOW';
   }
 
@@ -475,15 +498,6 @@ export class Dashboard implements OnInit, OnDestroy {
     return this.toYMD(new Date());
   }
 
-  private extractHour(appt: Appointment): number {
-    if (appt.appointmentTime) {
-      const d = new Date(appt.appointmentTime);
-      if (!isNaN(d.getTime())) return d.getHours() + d.getMinutes() / 60;
-    }
-
-    return this.parseTimeSlotToHour(appt.timeSlot || '09:00 AM');
-  }
-
   private extractAppointmentDateTimeISO(appt: Appointment): string {
     const dt = this.getAppointmentDateTime(appt);
     return dt ? dt.toISOString() : new Date().toISOString();
@@ -493,7 +507,7 @@ export class Dashboard implements OnInit, OnDestroy {
     const dt = this.getAppointmentDateTime(appt);
     if (dt) {
       return dt.toLocaleTimeString('en-US', {
-        hour: '2-digit',
+        hour: 'numeric',
         minute: '2-digit',
         hour12: true
       });
@@ -516,27 +530,32 @@ export class Dashboard implements OnInit, OnDestroy {
     return null;
   }
 
-  private parseTimeSlotToHour(value: string): number {
-    const t = (value || '').trim().toUpperCase();
-    const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+  private getStatusColor(status?: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') return '#f59e0b';
+    if (s === 'completed') return '#16a34a';
+    if (s === 'cancelled') return '#ef4444';
+    return '#8b5cf6';
+  }
 
-    if (ampm) {
-      let h = Number(ampm[1]);
-      const m = Number(ampm[2]);
-      const suffix = ampm[3];
+  private getInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
 
-      if (suffix === 'PM' && h !== 12) h += 12;
-      if (suffix === 'AM' && h === 12) h = 0;
+  private formatShortDate(dateStr: string): string {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
-      return h + m / 60;
-    }
-
-    const plain = t.match(/(\d{1,2}):(\d{2})/);
-    if (plain) {
-      return Number(plain[1]) + Number(plain[2]) / 60;
-    }
-
-    return 9;
+  private toYMD(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private to24Hour(value: string): string {
@@ -560,50 +579,5 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     return '09:00:00';
-  }
-
-  private getTimelineLeft(hour: number): string {
-    const start = 8;
-    const end = 18;
-    const usable = end - start;
-    const safeHour = Math.max(start, Math.min(hour, end));
-    const pct = ((safeHour - start) / usable) * 84;
-    return `${11 + pct}%`;
-  }
-
-  private getStatusColor(status?: string): string {
-    const s = (status || '').toLowerCase();
-    if (s === 'pending') return '#d97706';
-    if (s === 'completed') return '#64748b';
-    if (s === 'cancelled') return '#dc2626';
-    return '#16a34a';
-  }
-
-  private getStatusBg(status?: string): string {
-    const s = (status || '').toLowerCase();
-    if (s === 'pending') return '#fef3c7';
-    if (s === 'completed') return '#f1f5f9';
-    if (s === 'cancelled') return '#fee2e2';
-    return '#dcfce7';
-  }
-
-  private getInitials(name: string): string {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map(part => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  }
-
-  private formatShortDate(dateStr: string): string {
-    const d = new Date(`${dateStr}T00:00:00`);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  private toYMD(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }

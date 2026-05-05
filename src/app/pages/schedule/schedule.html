@@ -5,7 +5,6 @@
       <div class="sch-header-left">
         <div>
           <h2 class="sch-title">Doctor Schedule</h2>
-          <div class="sch-subtitle">Click a date to see only that day’s appointments</div>
         </div>
       </div>
 
@@ -24,9 +23,7 @@
     @if (viewMode === 'week') {
       <div class="grid-wrap">
         <div class="grid-head">
-          <div class="time-gutter-head">
-            <span class="week-num">{{ weekNumber }}</span>
-          </div>
+          <div class="time-gutter-head"></div>
 
           @for (day of days; track day.fullDate) {
             <button
@@ -47,66 +44,94 @@
             }
           </div>
 
-          <div class="grid-events-area">
-            @for (h of hours; track h; let i = $index) {
-              <div class="hour-line" [style.top.px]="i * rowHeight"></div>
-            }
+          <!-- Single day view when a date is selected -->
+          @if (selectedDate) {
+            <div class="single-day-area">
+              @for (h of hours; track h; let i = $index) {
+                <div class="hour-line" [style.top.px]="i * rowHeight"></div>
+              }
 
-            @if (showTimeLine) {
-              <div class="time-now-line" [style.top.%]="currentTimePct">
-                <span class="time-now-label">{{ currentTimeLabel }}</span>
-              </div>
-            }
+              @if (showTimeLine && isSelectedToday()) {
+                <div class="time-now-line" [style.top.px]="currentTimePx">
+                  <span class="time-now-label">{{ currentTimeLabel }}</span>
+                </div>
+              }
 
-            @for (day of days; track day.fullDate; let di = $index) {
-              <div
-                class="event-col"
-                [class.today-col]="day.isToday"
-                [class.selected-col]="day.isSelected"
-                [class.weekend-col]="di >= 5"
-                (dblclick)="addLeave(day.fullDate)"
-              >
-                @for (event of day.events; track event.id) {
-                  <div
-                    class="event-card"
-                    [class.leave-card]="event.type === 'leave'"
-                    [class.backend-card]="event.source === 'backend'"
-                    [style.top]="getEventTop(event)"
-                    [style.height]="getEventHeight(event)"
-                    [style.background]="getEventBg(event.type)"
-                    [style.color]="getEventColor(event.type)"
-                    [style.border-color]="getEventBorder(event.type)"
-                  >
-                    @if (canDeleteEvent(event)) {
-                      <button
-                        class="delete-evt"
-                        type="button"
-                        title="Delete leave block"
-                        (click)="deleteEvent(event.id, $event)">
-                        ×
-                      </button>
-                    }
+              @for (event of selectedDayEvents; track event.id) {
+                <div
+                  class="event-card"
+                  [style.top]="getEventTop(event)"
+                  [style.height]="getEventHeight(event)"
+                  [style.background]="getEventBg(event.type)"
+                  [style.color]="getEventColor(event.type)"
+                  [style.border-color]="getEventBorder(event.type)"
+                  (click)="openPatient(event.id.toString())"
+                >
+                  @if (canDeleteEvent(event)) {
+                    <button
+                      class="delete-evt"
+                      type="button"
+                      title="Delete leave block"
+                      (click)="deleteEvent(event.id, $event)">
+                      ×
+                    </button>
+                  }
+                  <div class="event-time">{{ formatHour(event.startHour) }}</div>
+                  <div class="event-title">{{ event.patientName || event.title }}</div>
+                </div>
+              }
 
-                    <div class="event-time">{{ formatHour(event.startHour) }}</div>
-                    <div class="event-title">{{ event.title }}</div>
+              @if (selectedDayEvents.length === 0) {
+                <div class="no-events-msg">No appointments for this day</div>
+              }
+            </div>
+          } @else {
+            <!-- Full week view when no date selected -->
+            <div class="grid-events-area">
+              @for (h of hours; track h; let i = $index) {
+                <div class="hour-line" [style.top.px]="i * rowHeight"></div>
+              }
 
-                    @if (event.patientName) {
-                      <div class="event-patient">{{ event.patientName }}</div>
-                    }
+              @if (showTimeLine) {
+                <div class="time-now-line" [style.top.px]="currentTimePx">
+                  <span class="time-now-label">{{ currentTimeLabel }}</span>
+                </div>
+              }
 
-                    <div class="event-badge">
-                      <span>{{ getEventIcon(event.type) }}</span>
-                      <span>{{ event.type }}</span>
+              @for (day of days; track day.fullDate; let di = $index) {
+                <div
+                  class="event-col"
+                  [class.today-col]="day.isToday"
+                  [class.weekend-col]="di >= 5"
+                  (dblclick)="addLeave(day.fullDate)"
+                >
+                  @for (event of day.events; track event.id) {
+                    <div
+                      class="event-card"
+                      [style.top]="getEventTop(event)"
+                      [style.height]="getEventHeight(event)"
+                      [style.background]="getEventBg(event.type)"
+                      [style.color]="getEventColor(event.type)"
+                      [style.border-color]="getEventBorder(event.type)"
+                      (click)="openPatient(event.id.toString())"
+                    >
+                      @if (canDeleteEvent(event)) {
+                        <button
+                          class="delete-evt"
+                          type="button"
+                          title="Delete leave block"
+                          (click)="deleteEvent(event.id, $event)">
+                          ×
+                        </button>
+                      }
+                      <div class="event-time">{{ formatHour(event.startHour) }}</div>
+                      <div class="event-title">{{ event.patientName || event.title }}</div>
                     </div>
-
-                    <div class="event-source" [class.leave-source]="event.source === 'leave'">
-                      {{ event.source === 'leave' ? 'Doctor block' : 'Booked from patient side' }}
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
     }
@@ -142,41 +167,6 @@
         </div>
       </div>
     }
-
-    <div class="selected-day-panel">
-      <div class="selected-day-head">
-        <div>
-          <div class="selected-day-title">{{ getSelectedDateLabel() }}</div>
-          <div class="selected-day-sub">Showing only appointments for the selected date</div>
-        </div>
-        <div class="selected-day-count">{{ selectedDayEvents.length }} item(s)</div>
-      </div>
-
-      @if (selectedDayEvents.length === 0) {
-        <div class="selected-empty">No appointments for this selected date</div>
-      } @else {
-        <div class="selected-list">
-          @for (event of selectedDayEvents; track event.id) {
-            <div
-              class="selected-item"
-              [style.background]="getEventBg(event.type)"
-              [style.border-color]="getEventBorder(event.type)">
-              <div class="selected-item-time" [style.color]="getEventColor(event.type)">
-                {{ formatHour(event.startHour) }} - {{ formatHour(event.endHour) }}
-              </div>
-              <div class="selected-item-main">
-                <div class="selected-item-title">{{ event.title }}</div>
-                <div class="selected-item-sub">
-                  {{ event.patientName || 'No patient name' }} · {{ event.department || 'General' }}
-                </div>
-                <div class="selected-item-note">{{ event.note || 'No notes available' }}</div>
-              </div>
-              <div class="selected-item-badge">{{ getEventIcon(event.type) }} {{ event.type }}</div>
-            </div>
-          }
-        </div>
-      }
-    </div>
 
   </div>
 </div>

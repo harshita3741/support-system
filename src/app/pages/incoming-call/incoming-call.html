@@ -24,6 +24,12 @@
         </div>
       </div>
 
+      <!-- Reason for Visit -->
+      <div class="section" *ngIf="patient?.reason">
+        <div class="section-title">Reason for Visit</div>
+        <div class="reason-box">{{ patient.reason }}</div>
+      </div>
+
       <div class="section">
         <div class="section-title">Current Symptoms</div>
         <div class="symptoms-box">
@@ -50,6 +56,120 @@
         <div class="section-title">Previous Visits</div>
         <div class="summary-box">
           {{ parseVisits().join(', ') }}
+        </div>
+      </div>
+
+      <!-- Patient Profile Toggle Button -->
+      <button
+        *ngIf="patientProfile"
+        class="profile-toggle-btn"
+        (click)="togglePatientProfile()">
+        {{ showPatientProfile ? '▲ Hide Patient Profile' : '▼ View Full Patient Profile' }}
+      </button>
+
+      <!-- Full Patient Profile Panel -->
+      <div *ngIf="showPatientProfile && patientProfile" class="patient-profile-panel">
+        <div class="profile-section-title">Patient Profile</div>
+
+        <div class="profile-row">
+          <span class="profile-label">Patient ID</span>
+          <span class="profile-value">{{ patientProfile.patientId || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Full Name</span>
+          <span class="profile-value">{{ patientProfile.fullName || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Age</span>
+          <span class="profile-value">{{ calcAge(patientProfile.dob) }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Date of Birth</span>
+          <span class="profile-value">{{ patientProfile.dob || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Gender</span>
+          <span class="profile-value">{{ patientProfile.gender || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Blood Group</span>
+          <span class="profile-value">{{ patientProfile.bloodGroup || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Email</span>
+          <span class="profile-value">{{ patientProfile.email || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Phone</span>
+          <span class="profile-value">{{ patientProfile.phone || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Emergency Contact</span>
+          <span class="profile-value">{{ patientProfile.emergencyContact || '—' }}</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Height / Weight</span>
+          <span class="profile-value">{{ patientProfile.height || '—' }} cm / {{ patientProfile.weight || '—' }} kg</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.bmi">
+          <span class="profile-label">BMI</span>
+          <span class="profile-value">{{ patientProfile.bmi }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.allergies">
+          <span class="profile-label">Allergies</span>
+          <span class="profile-value">{{ patientProfile.allergies }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.chronicConditions">
+          <span class="profile-label">Chronic Conditions</span>
+          <span class="profile-value">{{ patientProfile.chronicConditions }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.pastIllness">
+          <span class="profile-label">Past Illness</span>
+          <span class="profile-value">{{ patientProfile.pastIllness }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.previousSurgeries">
+          <span class="profile-label">Previous Surgeries</span>
+          <span class="profile-value">{{ patientProfile.previousSurgeries }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.familyHistory">
+          <span class="profile-label">Family History</span>
+          <span class="profile-value">{{ patientProfile.familyHistory }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.ongoingTreatments">
+          <span class="profile-label">Ongoing Treatments</span>
+          <span class="profile-value">{{ patientProfile.ongoingTreatments }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.hospitalizations">
+          <span class="profile-label">Hospitalizations</span>
+          <span class="profile-value">{{ patientProfile.hospitalizations }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.smokingHabit">
+          <span class="profile-label">Smoking</span>
+          <span class="profile-value">{{ patientProfile.smokingHabit }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.alcoholConsumption">
+          <span class="profile-label">Alcohol</span>
+          <span class="profile-value">{{ patientProfile.alcoholConsumption }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.activityLevel">
+          <span class="profile-label">Activity Level</span>
+          <span class="profile-value">{{ patientProfile.activityLevel }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.dietType">
+          <span class="profile-label">Diet</span>
+          <span class="profile-value">{{ patientProfile.dietType }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.sleepHours">
+          <span class="profile-label">Sleep</span>
+          <span class="profile-value">{{ patientProfile.sleepHours }} hrs/night</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.waterIntake">
+          <span class="profile-label">Water Intake</span>
+          <span class="profile-value">{{ patientProfile.waterIntake }}</span>
+        </div>
+        <div class="profile-row" *ngIf="patientProfile.city || patientProfile.state">
+          <span class="profile-label">Location</span>
+          <span class="profile-value">{{ patientProfile.city }}{{ patientProfile.city && patientProfile.state ? ', ' : '' }}{{ patientProfile.state }} {{ patientProfile.pinCode }}</span>
         </div>
       </div>
     </div>

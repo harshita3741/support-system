@@ -16,73 +16,48 @@
         </span>
       </p>
     </div>
-    <div class="hero-date">{{ selectedDate | date: 'EEEE, MMMM d' }}</div>
+    <div class="hero-date">{{ selectedDate | date: 'EEE, MMM d' }}</div>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card stat-cases">
-      <div class="stat-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-      </div>
-      <div class="stat-body">
-        <div class="stat-title">TODAY'S CASES</div>
-        <div class="stat-value">{{ totalCases }}</div>
-        <div class="stat-sub">{{ resolvedCases }} resolved today</div>
-      </div>
-      <div class="stat-sparkline cases-bar"></div>
+      <div class="stat-title">TODAY'S CASES</div>
+      <div class="stat-value">{{ totalCases }}</div>
+      <div class="stat-sub">{{ resolvedCases }} resolved today</div>
+      <div class="stat-glow"></div>
     </div>
 
-    <div class="stat-card stat-queue" (click)="goToQueue()" style="cursor:pointer;">
-      <div class="stat-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-      </div>
-      <div class="stat-body">
-        <div class="stat-title">LIVE QUEUE</div>
-        <div class="stat-value">{{ inQueue }}</div>
-        <div class="stat-sub">{{ urgentCount }} urgent priority</div>
-      </div>
-      <div class="stat-sparkline queue-bar"></div>
+    <div class="stat-card stat-queue" (click)="goToQueue()">
+      <div class="stat-title">LIVE QUEUE</div>
+      <div class="stat-value">{{ inQueue }}</div>
+      <div class="stat-sub">{{ urgentCount }} urgent priority</div>
+      <div class="stat-glow"></div>
     </div>
 
     <div class="stat-card stat-response">
-      <div class="stat-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-      </div>
-      <div class="stat-body">
-        <div class="stat-title">AVG. RESPONSE</div>
-        <div class="stat-value">{{ avgResponse }}</div>
-        <div class="stat-sub">Backend-driven live view</div>
-      </div>
-      <div class="stat-sparkline response-bar"></div>
+      <div class="stat-title">TODAY'S APPOINTMENTS</div>
+      <div class="stat-value">{{ todayAppointmentsCount }}</div>
+      <div class="stat-sub">{{ completedCount }} completed · {{ pendingCount }} pending</div>
+      <div class="stat-glow"></div>
     </div>
   </div>
 
   <div class="dashboard-main-grid">
     <div class="left-panel">
+
       <div class="card patients-card">
         <div class="card-top">
           <div>
             <div class="card-title">Upcoming Patients</div>
-            <div class="card-sub">Derived only from upcoming backend appointments</div>
           </div>
           <div class="card-actions">
             <button class="sort-label-btn" type="button" (click)="sortPatients()">Sort: {{ sortLabel }}</button>
-            <button class="see-all-btn" type="button" (click)="goToQueue()">Open Queue</button>
           </div>
         </div>
 
         @if (patientRows.length === 0 && !isLoading) {
           <div class="empty-state">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.5">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
             </svg>
@@ -91,95 +66,87 @@
         }
 
         @if (patientRows.length > 0) {
-          <table class="patients-table">
-            <thead>
-              <tr>
-                <th>NAME</th>
-                <th>CASE ID</th>
-                <th>TYPE</th>
-                <th>PRIORITY</th>
-                <th>START DATE</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (patient of patientRows; track patient.id) {
-                <tr class="patient-row" (click)="openPatient(patient.id)">
-                  <td>
-                    <div class="patient-cell">
-                      <div class="avatar" [class]="'avatar-' + priorityClass(patient.priority)">
-                        {{ patient.initials }}
-                      </div>
-                      <div>
-                        <div class="patient-name">{{ patient.name }}</div>
-                        <div class="patient-meta">{{ patient.age }} yrs · {{ patient.gender }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="case-id-cell">{{ patient.caseId }}</td>
-                  <td>{{ patient.consultationType || 'VIDEO' }}</td>
-                  <td>
-                    <span class="priority-badge" [class]="'priority-' + priorityClass(patient.priority)">
-                      {{ patient.priority }}
-                    </span>
-                  </td>
-                  <td>{{ patient.startDate }}</td>
-                  <td>
-                    <button
-                      class="sort-label-btn"
-                      type="button"
-                      (click)="$event.stopPropagation(); acceptFromDashboard(patient)">
-                      Accept
-                    </button>
-                  </td>
+          <div class="patients-table-wrap">
+            <table class="patients-table">
+              <thead>
+                <tr>
+                  <th>NAME</th>
+                  <th>TYPE</th>
+                  <th>PRIORITY</th>
+                  <th>ACTIONS</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (patient of patientRows; track patient.id) {
+                  <tr class="patient-row">
+                    <td>
+                      <div class="patient-cell" (click)="openPatient(patient.id)">
+                        <div class="avatar" [class]="'avatar-' + priorityClass(patient.priority)">
+                          {{ patient.initials }}
+                        </div>
+                        <div>
+                          <div class="patient-name">{{ patient.name }}</div>
+                          <div class="patient-meta">{{ patient.startDate }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="type-cell">{{ patient.consultationType || 'VIDEO' }}</td>
+                    <td>
+                      <span class="priority-badge" [class]="'priority-' + priorityClass(patient.priority)">
+                        {{ priorityClass(patient.priority) === 'high' ? 'High' : priorityClass(patient.priority) === 'medium' ? 'Medium' : 'Low' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="row-actions">
+                        <button
+                          class="row-action-btn row-action-secondary"
+                          type="button"
+                          (click)="openPatient(patient.id)">
+                          View
+                        </button>
+                        <button
+                          class="row-action-btn row-action-primary"
+                          type="button"
+                          (click)="acceptFromDashboard(patient)">
+                          Call
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </div>
 
-      <div class="card schedule-card">
+      <div class="card breakdown-card">
         <div class="card-top">
           <div>
-            <div class="card-title">Today's Schedule</div>
-            <div class="card-sub">{{ formattedSelectedDate }} appointments overview</div>
+            <div class="card-title">Appointments Overview</div>
           </div>
-          <button class="open-schedule-btn" type="button" (click)="goToSchedule()">Open Schedule →</button>
         </div>
 
-        <div class="timeline-wrap">
-          <div class="time-labels">
-            <span>08:00</span>
-            <span>10:00</span>
-            <span>12:00</span>
-            <span>14:00</span>
-            <span>16:00</span>
-            <span>18:00</span>
-          </div>
-
-          <div class="timeline-track">
-            <div class="today-tag">TODAY</div>
-
-            @for (block of todaySchedule; track block.id) {
-              <div
-                class="sched-block"
-                (click)="openPatient(block.patientId)"
-                [style.left]="block.left"
-                [style.background]="block.bg"
-                [style.border-left]="'3px solid ' + block.color">
-                <div class="sched-time" [style.color]="block.color">{{ block.time }}</div>
-                <div class="sched-name">{{ block.patientName }}</div>
-                <div class="sched-note">{{ block.note }}</div>
+        @if (breakdownCards.length > 0) {
+          <div
+            class="breakdown-grid"
+            [class.four-items]="breakdownCards.length === 4"
+            [class.five-items]="breakdownCards.length === 5">
+            @for (item of breakdownCards; track item.label) {
+              <div class="break-item" [class]="'tone-' + item.tone">
+                <div class="break-value">{{ item.value }}</div>
+                <div class="break-label">{{ item.label }}</div>
               </div>
             }
-
-            @if (todaySchedule.length === 0 && !isLoading) {
-              <div class="no-schedule">No upcoming appointments scheduled for this date</div>
-            }
           </div>
+        }
+
+        <div class="action-row">
+          <button class="action-pill" type="button" (click)="goToSchedule()">Open Schedule</button>
+          <button class="action-pill" type="button" (click)="goToQueue()">Open Queue</button>
         </div>
       </div>
+
     </div>
 
     <div class="right-panel">
@@ -192,14 +159,9 @@
           </div>
         </div>
 
-        <div class="cal-legend">
-          <span class="legend-item"><span class="leg-dot green"></span> Scheduled</span>
-          <span class="legend-item"><span class="leg-dot amber"></span> Pending</span>
-        </div>
-
         <div class="cal-grid cal-days-header">
-          <span>MON</span><span>TUE</span><span>WED</span>
-          <span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+          <span>M</span><span>T</span><span>W</span>
+          <span>T</span><span>F</span><span>S</span><span>S</span>
         </div>
 
         <div class="cal-grid cal-dates">
@@ -214,11 +176,9 @@
               [class.is-pending]="day.isPending"
               (click)="selectDate(day)">
               {{ day.date ?? '' }}
-
               @if (day.hasAppointment) {
                 <span class="cal-dot green-dot"></span>
               }
-
               @if (day.isPending) {
                 <span class="cal-dot amber-dot"></span>
               }
@@ -226,26 +186,23 @@
           }
         </div>
 
-        <div class="appts-section">
-          <div class="appts-title">APPOINTMENTS · {{ formattedSelectedDate }}</div>
+        <div class="calendar-stats">
+          <div class="calendar-stat-row">
+            <span>Today</span>
+            <strong>{{ todayAppointmentsCount }} appts</strong>
+          </div>
+          <div class="calendar-stat-row">
+            <span>This month</span>
+            <strong>{{ thisMonthAppointments }} total</strong>
+          </div>
+        </div>
 
-          @if (todayAppointments.length === 0) {
-            <div class="no-appts">No upcoming appointments on this date</div>
-          }
-
-          @for (appt of todayAppointments; track appt.id) {
-            <div class="appt-row" (click)="openPatient(appt.patientId)">
-              <div class="appt-time">{{ appt.time }}</div>
-              <div class="appt-indicator" [style.background]="appt.color"></div>
-              <div class="appt-info">
-                <div class="appt-name">{{ appt.patientName }}</div>
-                <div class="appt-note">{{ appt.note }}</div>
-              </div>
-              <span class="appt-status" [class]="'appt-' + appt.status">{{ appt.status }}</span>
-            </div>
-          }
+        <div class="cal-legend compact-legend">
+          <span class="legend-item"><span class="leg-dot green"></span> Scheduled</span>
+          <span class="legend-item"><span class="leg-dot amber"></span> Pending</span>
         </div>
       </div>
     </div>
+
   </div>
 </div>

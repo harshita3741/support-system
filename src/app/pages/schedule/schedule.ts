@@ -53,7 +53,7 @@ export class Schedule implements OnInit, OnDestroy {
   monthLabel = '';
 
   currentDate = new Date();
-  selectedDate = '';
+  selectedDate = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
 
   startHour = 8;
   endHour = 18;
@@ -63,6 +63,7 @@ export class Schedule implements OnInit, OnDestroy {
 
   currentTimeLabel = '';
   currentTimePct = 0;
+  currentTimePx = 0;
   showTimeLine = false;
 
   private timerId: any;
@@ -73,20 +74,22 @@ export class Schedule implements OnInit, OnDestroy {
   days: DayColumn[] = [];
   monthDays: MonthCell[] = [];
 
+  // Events for the selected day — used in single-day view
+  selectedDayEvents: CalendarEvent[] = [];
+
   backendAppointments: CalendarEvent[] = [];
   leaveBlocks: CalendarEvent[] = [];
   allEvents: CalendarEvent[] = [];
-  selectedDayEvents: CalendarEvent[] = [];
 
   typeConfig: Record<string, { icon: string; bg: string; color: string; border: string }> = {
-    video: { icon: '📹', bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
-    hospital: { icon: '🏥', bg: '#dcfce7', color: '#166534', border: '#86efac' },
-    home: { icon: '🏠', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
-    audio: { icon: '📞', bg: '#fce7f3', color: '#be185d', border: '#f9a8d4' },
-    'in-person': { icon: '👤', bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
-    break: { icon: '☕', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
-    meeting: { icon: '📋', bg: '#ecfeff', color: '#0f766e', border: '#99f6e4' },
-    leave: { icon: '🚫', bg: '#fff7ed', color: '#c2410c', border: '#fdba74' }
+    video:      { icon: '📹', bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
+    hospital:   { icon: '🏥', bg: '#dcfce7', color: '#166534', border: '#86efac' },
+    home:       { icon: '🏠', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+    audio:      { icon: '📞', bg: '#fce7f3', color: '#be185d', border: '#f9a8d4' },
+    'in-person':{ icon: '👤', bg: '#e0f2f1', color: '#00695c', border: '#80cbc4' },
+    break:      { icon: '☕', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+    meeting:    { icon: '📋', bg: '#ecfeff', color: '#0f766e', border: '#99f6e4' },
+    leave:      { icon: '🚫', bg: '#fff7ed', color: '#c2410c', border: '#fdba74' }
   };
 
   constructor(
@@ -97,23 +100,14 @@ export class Schedule implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.buildHours();
-    this.selectedDate = this.toYMD(new Date());
     this.loadAppointments();
     this.refreshView();
     this.updateCurrentTime();
     this.requestNotificationPermission();
 
-    this.timerId = setInterval(() => {
-      this.updateCurrentTime();
-    }, 60000);
-
-    this.pollTimer = setInterval(() => {
-      this.loadAppointments();
-    }, 30000);
-
-    this.reminderTimer = setInterval(() => {
-      this.checkUpcomingReminders();
-    }, 60000);
+    this.timerId = setInterval(() => this.updateCurrentTime(), 60000);
+    this.pollTimer = setInterval(() => this.loadAppointments(), 30000);
+    this.reminderTimer = setInterval(() => this.checkUpcomingReminders(), 60000);
   }
 
   ngOnDestroy() {
@@ -130,21 +124,16 @@ export class Schedule implements OnInit, OnDestroy {
 
   checkUpcomingReminders() {
     const now = new Date();
-
     for (const event of this.backendAppointments) {
       if (!event.appointmentTime || !event.id) continue;
-
       const apptTime = new Date(event.appointmentTime);
       if (isNaN(apptTime.getTime())) continue;
-
-      const diffMs = apptTime.getTime() - now.getTime();
-      const diffMins = diffMs / 60000;
+      const diffMins = (apptTime.getTime() - now.getTime()) / 60000;
 
       if (diffMins >= 14 && diffMins <= 16 && !this.notifiedAppointments.has(event.id)) {
         this.notifiedAppointments.add(event.id);
         this.sendReminderNotification(event, 15);
       }
-
       if (diffMins >= 4 && diffMins <= 6 && !this.notifiedAppointments.has(event.id + 100000)) {
         this.notifiedAppointments.add(event.id + 100000);
         this.sendReminderNotification(event, 5);
@@ -154,15 +143,9 @@ export class Schedule implements OnInit, OnDestroy {
 
   sendReminderNotification(event: CalendarEvent, minutesBefore: number) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
     const time = event.appointmentTime
-      ? new Date(event.appointmentTime).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
+      ? new Date(event.appointmentTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
       : '';
-
     new Notification(`⏰ Appointment in ${minutesBefore} minutes`, {
       body: `${event.patientName || 'Patient'} — ${time}`,
       icon: '/favicon.ico'
@@ -181,7 +164,6 @@ export class Schedule implements OnInit, OnDestroy {
       next: (appointments: Appointment[]) => {
         this.backendAppointments = (appointments || []).map((appt: Appointment, index: number) => {
           const parsed = this.parseAppointment(appt);
-
           return {
             id: appt.id ?? index + 1,
             title: appt.patientName || 'Patient Appointment',
@@ -191,13 +173,12 @@ export class Schedule implements OnInit, OnDestroy {
             date: parsed.date,
             appointmentTime: parsed.isoDateTime,
             patientName: appt.patientName,
-            source: 'backend',
+            source: 'backend' as const,
             department: appt.department,
             status: appt.status,
             note: appt.reason
           };
         });
-
         this.mergeAllEvents();
         this.checkUpcomingReminders();
       },
@@ -213,35 +194,20 @@ export class Schedule implements OnInit, OnDestroy {
     if ((appt as any).appointmentTime) {
       const d = new Date((appt as any).appointmentTime);
       if (!isNaN(d.getTime())) {
-        return {
-          date: this.toYMD(d),
-          hour: d.getHours() + d.getMinutes() / 60,
-          isoDateTime: d.toISOString()
-        };
+        return { date: this.toYMD(d), hour: d.getHours() + d.getMinutes() / 60, isoDateTime: d.toISOString() };
       }
     }
-
-    const normalizedDate = appt.date && /^\d{4}-\d{2}-\d{2}$/.test(appt.date)
-      ? appt.date
-      : this.toYMD(new Date());
-
+    const normalizedDate = appt.date && /^\d{4}-\d{2}-\d{2}$/.test(appt.date) ? appt.date : this.toYMD(new Date());
     const hour = this.parseTimeSlotToHour(appt.timeSlot || '09:00 AM');
     const isoDateTime = new Date(`${normalizedDate}T${this.to24Hour(appt.timeSlot || '09:00 AM')}`).toISOString();
-
-    return {
-      date: normalizedDate,
-      hour,
-      isoDateTime
-    };
+    return { date: normalizedDate, hour, isoDateTime };
   }
 
   private resolveAppointmentType(appt: Appointment): CalendarEvent['type'] {
     const dept = (appt.department || '').toLowerCase();
-    const slot = (appt.timeSlot || '').toLowerCase();
     const consult = (appt.consultationType || '').toLowerCase();
-
     if (consult.includes('chat') || consult.includes('audio')) return 'audio';
-    if (consult.includes('video') || dept.includes('cardio') || slot.includes('video')) return 'video';
+    if (consult.includes('video') || dept.includes('cardio')) return 'video';
     if (dept.includes('ortho')) return 'hospital';
     if (dept.includes('neuro')) return 'in-person';
     if (dept.includes('general')) return 'meeting';
@@ -251,55 +217,28 @@ export class Schedule implements OnInit, OnDestroy {
   private mergeAllEvents() {
     this.allEvents = [...this.backendAppointments, ...this.leaveBlocks];
     this.refreshView();
-    this.updateSelectedDayEvents();
   }
 
   addLeave(fullDate: string) {
     const reason = window.prompt('Enter Leave/Block Reason', 'Doctor Unavailable');
     if (!reason) return;
-
     const startStr = window.prompt('Start Time (HH:MM)', '13:00');
     const endStr = window.prompt('End Time (HH:MM)', '14:00');
-
     if (!startStr || !endStr) return;
-
     const startHour = this.parseTimeToDecimal(startStr);
     const endHour = this.parseTimeToDecimal(endStr);
+    if (isNaN(startHour) || isNaN(endHour)) { alert('Invalid time format. Use HH:MM'); return; }
+    if (startHour >= endHour) { alert('End time must be greater than start time'); return; }
 
-    if (isNaN(startHour) || isNaN(endHour)) {
-      alert('Invalid time format. Use HH:MM');
-      return;
-    }
-
-    if (startHour >= endHour) {
-      alert('End time must be greater than start time');
-      return;
-    }
-
-    this.leaveBlocks.push({
-      id: Date.now(),
-      title: reason,
-      type: 'leave',
-      startHour,
-      endHour,
-      date: fullDate,
-      source: 'leave'
-    });
-
+    this.leaveBlocks.push({ id: Date.now(), title: reason, type: 'leave', startHour, endHour, date: fullDate, source: 'leave' });
     this.mergeAllEvents();
   }
 
   deleteEvent(id: number, mouseEvent: MouseEvent) {
     mouseEvent.stopPropagation();
-
     const target = this.allEvents.find(e => e.id === id);
     if (!target) return;
-
-    if (target.source === 'backend') {
-      alert('Patient appointments come from backend. Cancel them from backend flow.');
-      return;
-    }
-
+    if (target.source === 'backend') { alert('Patient appointments come from backend. Cancel them from the backend flow.'); return; }
     if (confirm('Remove this leave block?')) {
       this.leaveBlocks = this.leaveBlocks.filter(e => e.id !== id);
       this.mergeAllEvents();
@@ -320,53 +259,35 @@ export class Schedule implements OnInit, OnDestroy {
   private parseTimeSlotToHour(value: string): number {
     const t = (value || '').trim().toUpperCase();
     const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-
     if (ampm) {
       let h = Number(ampm[1]);
       const m = Number(ampm[2]);
-      const suffix = ampm[3];
-
-      if (suffix === 'PM' && h !== 12) h += 12;
-      if (suffix === 'AM' && h === 12) h = 0;
-
+      if (ampm[3] === 'PM' && h !== 12) h += 12;
+      if (ampm[3] === 'AM' && h === 12) h = 0;
       return h + m / 60;
     }
-
     const plain = t.match(/(\d{1,2}):(\d{2})/);
-    if (plain) {
-      return Number(plain[1]) + Number(plain[2]) / 60;
-    }
-
+    if (plain) return Number(plain[1]) + Number(plain[2]) / 60;
     return this.startHour;
   }
 
   private to24Hour(value: string): string {
     const t = (value || '').trim().toUpperCase();
     const ampm = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-
     if (ampm) {
       let h = Number(ampm[1]);
-      const m = ampm[2];
-      const suffix = ampm[3];
-
-      if (suffix === 'PM' && h !== 12) h += 12;
-      if (suffix === 'AM' && h === 12) h = 0;
-
-      return `${String(h).padStart(2, '0')}:${m}:00`;
+      if (ampm[3] === 'PM' && h !== 12) h += 12;
+      if (ampm[3] === 'AM' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${ampm[2]}:00`;
     }
-
     const plain = t.match(/(\d{1,2}):(\d{2})/);
-    if (plain) {
-      return `${String(Number(plain[1])).padStart(2, '0')}:${plain[2]}:00`;
-    }
-
+    if (plain) return `${String(Number(plain[1])).padStart(2, '0')}:${plain[2]}:00`;
     return '09:00:00';
   }
 
   buildHours() {
     this.hours = [];
     this.hourCount = this.endHour - this.startHour;
-
     for (let h = this.startHour; h <= this.endHour; h++) {
       const suffix = h < 12 ? 'AM' : 'PM';
       const display = h <= 12 ? h : h - 12;
@@ -380,6 +301,18 @@ export class Schedule implements OnInit, OnDestroy {
     } else {
       this.buildMonth(this.currentDate);
     }
+    this.updateSelectedDayEvents();
+  }
+
+  /** Keep selectedDayEvents in sync whenever allEvents or selectedDate changes */
+  private updateSelectedDayEvents() {
+    if (this.selectedDate) {
+      this.selectedDayEvents = this.allEvents
+        .filter(e => e.date === this.selectedDate)
+        .sort((a, b) => a.startHour - b.startHour);
+    } else {
+      this.selectedDayEvents = [];
+    }
   }
 
   buildWeek(baseDate: Date) {
@@ -388,10 +321,8 @@ export class Schedule implements OnInit, OnDestroy {
     const monday = new Date(baseDate);
     monday.setHours(0, 0, 0, 0);
     monday.setDate(baseDate.getDate() - (dow === 0 ? 6 : dow - 1));
-
     const end = new Date(monday);
     end.setDate(monday.getDate() + 6);
-
     this.weekLabel = `${this.fmt(monday)} – ${this.fmt(end)}`;
     this.weekNumber = `W${this.getWeekNumber(monday)}`;
 
@@ -402,32 +333,20 @@ export class Schedule implements OnInit, OnDestroy {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const fullDate = this.toYMD(d);
-
       return {
-        name: fullNames[i],
-        short,
-        date: d.getDate(),
-        fullDate,
+        name: fullNames[i], short, date: d.getDate(), fullDate,
         isToday: this.isSameDay(d, today),
         isSelected: this.selectedDate === fullDate,
-        events: this.allEvents
-          .filter(e => e.date === fullDate)
-          .sort((a, b) => a.startHour - b.startHour)
+        events: this.allEvents.filter(e => e.date === fullDate).sort((a, b) => a.startHour - b.startHour)
       };
     });
-
-    this.updateSelectedDayEvents();
   }
 
   buildMonth(baseDate: Date) {
     const today = new Date();
     const year = baseDate.getFullYear();
     const month = baseDate.getMonth();
-
-    this.monthLabel = baseDate.toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric'
-    });
+    this.monthLabel = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const firstDay = new Date(year, month, 1);
     const firstGridDay = new Date(firstDay);
@@ -435,77 +354,58 @@ export class Schedule implements OnInit, OnDestroy {
     firstGridDay.setDate(firstDay.getDate() - startDay);
 
     this.monthDays = [];
-
     for (let i = 0; i < 42; i++) {
       const d = new Date(firstGridDay);
       d.setDate(firstGridDay.getDate() + i);
       const fullDate = this.toYMD(d);
-
       this.monthDays.push({
-        date: d,
-        day: d.getDate(),
-        fullDate,
+        date: d, day: d.getDate(), fullDate,
         isCurrentMonth: d.getMonth() === month,
         isToday: this.isSameDay(d, today),
         isSelected: this.selectedDate === fullDate,
         eventCount: this.allEvents.filter(e => e.date === fullDate).length
       });
     }
-
-    this.updateSelectedDayEvents();
   }
 
   selectDay(fullDate: string) {
-    this.selectedDate = fullDate;
-
     if (this.viewMode === 'month') {
-      const d = new Date(fullDate);
-      if (!isNaN(d.getTime())) {
-        this.currentDate = d;
-      }
+      // From month: jump to week view with this day selected & expanded
+      const d = new Date(fullDate + 'T00:00:00');
+      if (!isNaN(d.getTime())) this.currentDate = d;
+      this.selectedDate = fullDate;
+      this.viewMode = 'week';
+      this.buildWeek(this.currentDate);
+      this.updateSelectedDayEvents();
+      this.updateCurrentTime();
+      return;
     }
 
-    if (this.viewMode === 'week') {
-      this.days = this.days.map(day => ({
-        ...day,
-        isSelected: day.fullDate === fullDate,
-        events: this.allEvents
-          .filter(e => e.date === day.fullDate)
-          .sort((a, b) => a.startHour - b.startHour)
-      }));
-    } else {
-      this.monthDays = this.monthDays.map(day => ({
-        ...day,
-        isSelected: day.fullDate === fullDate
-      }));
-    }
-
+    // Week view: toggle off if clicking the already-selected day
+    this.selectedDate = this.selectedDate === fullDate ? '' : fullDate;
+    this.days = this.days.map(day => ({ ...day, isSelected: day.fullDate === this.selectedDate }));
     this.updateSelectedDayEvents();
+    this.updateCurrentTime();
   }
 
-  updateSelectedDayEvents() {
-    this.selectedDayEvents = this.allEvents
-      .filter(e => e.date === this.selectedDate)
-      .sort((a, b) => a.startHour - b.startHour);
+  /** Returns true if the selected date is today */
+  isSelectedToday(): boolean {
+    return this.selectedDate === this.toYMD(new Date());
   }
 
   setView(v: 'week' | 'month') {
     this.viewMode = v;
     this.refreshView();
     this.updateCurrentTime();
-    this.updateSelectedDayEvents();
   }
 
   prevWeek() {
     if (this.viewMode === 'week') {
       this.currentDate = new Date(this.currentDate);
       this.currentDate.setDate(this.currentDate.getDate() - 7);
+      this._keepOrAutoSelectDay();
     } else {
-      this.currentDate = new Date(
-        this.currentDate.getFullYear(),
-        this.currentDate.getMonth() - 1,
-        1
-      );
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
     }
     this.refreshView();
   }
@@ -514,12 +414,10 @@ export class Schedule implements OnInit, OnDestroy {
     if (this.viewMode === 'week') {
       this.currentDate = new Date(this.currentDate);
       this.currentDate.setDate(this.currentDate.getDate() + 7);
+      this._keepOrAutoSelectDay();
+      // navigated
     } else {
-      this.currentDate = new Date(
-        this.currentDate.getFullYear(),
-        this.currentDate.getMonth() + 1,
-        1
-      );
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
     }
     this.refreshView();
   }
@@ -527,13 +425,10 @@ export class Schedule implements OnInit, OnDestroy {
   updateCurrentTime() {
     const now = new Date();
     const h = now.getHours() + now.getMinutes() / 60;
-
-    this.showTimeLine = this.viewMode === 'week' && h >= this.startHour && h <= this.endHour;
+    this.showTimeLine = h >= this.startHour && h <= this.endHour;
+    this.currentTimePx = (h - this.startHour) * this.rowHeight;
     this.currentTimePct = ((h - this.startHour) / this.hourCount) * 100;
-    this.currentTimeLabel = now.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    this.currentTimeLabel = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   }
 
   getEventTop(event: CalendarEvent): string {
@@ -544,21 +439,10 @@ export class Schedule implements OnInit, OnDestroy {
     return `${Math.max((event.endHour - event.startHour) * this.rowHeight - 8, 42)}px`;
   }
 
-  getEventBg(type: string): string {
-    return this.typeConfig[type]?.bg || '#f3f4f6';
-  }
-
-  getEventColor(type: string): string {
-    return this.typeConfig[type]?.color || '#374151';
-  }
-
-  getEventBorder(type: string): string {
-    return this.typeConfig[type]?.border || '#e5e7eb';
-  }
-
-  getEventIcon(type: string): string {
-    return this.typeConfig[type]?.icon || '📅';
-  }
+  getEventBg(type: string): string { return this.typeConfig[type]?.bg || '#f3f4f6'; }
+  getEventColor(type: string): string { return this.typeConfig[type]?.color || '#374151'; }
+  getEventBorder(type: string): string { return this.typeConfig[type]?.border || '#e5e7eb'; }
+  getEventIcon(type: string): string { return this.typeConfig[type]?.icon || '📅'; }
 
   formatHour(h: number): string {
     const hour = Math.floor(h);
@@ -569,12 +453,10 @@ export class Schedule implements OnInit, OnDestroy {
   }
 
   openPatient(patientId: string): void {
-    const event = this.allEvents.find(e => e.id.toString() === patientId) || this.backendAppointments.find(e => e.id.toString() === patientId);
+    const event = this.allEvents.find(e => e.id.toString() === patientId);
     if (!event) return;
-
     const activePatient = {
-      id: event.id,
-      patientId: patientId,
+      id: event.id, patientId,
       name: event.patientName || event.title || 'Patient',
       patientName: event.patientName || event.title || 'Patient',
       reason: event.note || event.title || 'Consultation',
@@ -586,23 +468,27 @@ export class Schedule implements OnInit, OnDestroy {
       date: event.date,
       appointmentTime: event.appointmentTime
     };
-
     localStorage.setItem('activePatient', JSON.stringify(activePatient));
     this.router.navigate(['/call']);
   }
 
-  getSelectedDateLabel(): string {
-    if (!this.selectedDate) return 'Selected Day';
-    const d = new Date(this.selectedDate);
-    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  /** After week navigation, keep same weekday selected or default to Monday */
+  private _keepOrAutoSelectDay() {
+    if (!this.selectedDate) return;
+    // Find which day-of-week was selected (0=Mon..6=Sun)
+    const prev = new Date(this.selectedDate + 'T00:00:00');
+    const dow = prev.getDay(); // 0=Sun,1=Mon..6=Sat
+    const offset = dow === 0 ? 6 : dow - 1; // convert to Mon=0 base
+    const monday = new Date(this.currentDate);
+    const curDow = monday.getDay();
+    monday.setDate(monday.getDate() - (curDow === 0 ? 6 : curDow - 1));
+    const target = new Date(monday);
+    target.setDate(monday.getDate() + offset);
+    this.selectedDate = this.toYMD(target);
   }
 
   private fmt(d: Date): string {
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   private toYMD(d: Date): string {
@@ -610,11 +496,7 @@ export class Schedule implements OnInit, OnDestroy {
   }
 
   private isSameDay(a: Date, b: Date): boolean {
-    return (
-      a.getDate() === b.getDate() &&
-      a.getMonth() === b.getMonth() &&
-      a.getFullYear() === b.getFullYear()
-    );
+    return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
   }
 
   private getWeekNumber(date: Date): number {
@@ -624,4 +506,4 @@ export class Schedule implements OnInit, OnDestroy {
     const yearStart = new Date(Date.UTC(temp.getUTCFullYear(), 0, 1));
     return Math.ceil((((temp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   }
-}
+}   

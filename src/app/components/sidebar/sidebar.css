@@ -1,23 +1,25 @@
 .sidebar {
   width: 210px;
-  background: #fff;
+  background: #1a1a3e;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e8ecf0;
+  border-right: none;
   height: 100vh;
 }
+
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 18px 16px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid #2d2d5e;
 }
+
 .logo {
   width: 36px;
   height: 36px;
-  background: #0d6e6e;
+  background: #7c6df0;
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -26,11 +28,13 @@
   font-weight: 800;
   font-size: 16px;
 }
+
 .brand-name {
   font-size: 15px;
   font-weight: 700;
-  color: #1a1d23;
+  color: #ffffff;
 }
+
 .nav {
   flex: 1;
   padding: 10px 0;
@@ -38,34 +42,40 @@
   flex-direction: column;
   gap: 2px;
 }
+
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
   font-size: 13px;
-  color: #7b8494;
+  color: #9090b8;
   text-decoration: none;
   margin: 0 8px;
   border-radius: 9px;
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .nav-item:hover {
-  background: #f4f6fb;
-  color: #1a1d23;
+  background: #2d2d5e;
+  color: #ffffff;
 }
+
 .nav-item.active {
-  background: #0d6e6e;
+  background: #7c6df0;
   color: #fff;
   font-weight: 500;
 }
+
 .nav-icon {
   width: 18px;
   text-align: center;
   font-size: 14px;
 }
+
 .nav-label { flex: 1; }
+
 .badge {
   background: #ef4444;
   color: #fff;
@@ -73,10 +83,12 @@
   padding: 1px 6px;
   border-radius: 8px;
 }
+
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid #2d2d5e;
 }
+
 .status-row {
   display: flex;
   align-items: center;
@@ -85,38 +97,48 @@
   border-radius: 8px;
   cursor: pointer;
 }
-.status-row:hover { background: #f4f6fb; }
+
+.status-row:hover { background: #2d2d5e; }
+
 .status-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.status-dot.online { background: #16a34a; }
+
+.status-dot.online { background: #4ade80; }
 .status-dot.offline { background: #9ca3af; }
+
 .doc-info { flex: 1; }
+
 .doc-name {
   font-size: 12px;
   font-weight: 500;
-  color: #1a1d23;
+  color: #ffffff;
 }
+
 .doc-dept {
   font-size: 10px;
-  color: #9ca3af;
+  color: #9090b8;
 }
+
 .status-badge {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 500;
 }
-.status-badge.on { background: #f0fdf4; color: #166534; }
-.status-badge.off { background: #f3f4f6; color: #6b7280; }
+
+.status-badge.on { background: #1a3a2a; color: #4ade80; }
+.status-badge.off { background: #2d2d3e; color: #9ca3af; }
+
 .logout-row {
   font-size: 12px;
-  color: #9ca3af;
+  color: #9090b8;
   cursor: pointer;
   padding: 8px 6px 0;
   text-align: center;
 }
+
 .logout-row:hover { color: #ef4444; }

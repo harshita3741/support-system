@@ -49,6 +49,10 @@ export class IncomingCall implements OnInit, OnDestroy {
   isRemoteVideoOff = false;   // patient camera state
   videoUpgradeReady = false;  // patient switched to video during chat
 
+  // Patient profile
+  patientProfile: any = null;
+  showPatientProfile = false;
+
   get consultationType(): string {
     return (this.patient?.consultationType || 'VIDEO').toUpperCase();
   }
@@ -111,10 +115,42 @@ export class IncomingCall implements OnInit, OnDestroy {
     if (data) {
       this.patient = JSON.parse(data);
     }
+
+    // Fetch full patient profile if patientId is available
+    const patientId = this.patient?.patientId;
+    if (patientId) {
+      this.http.get<any>(`${this.baseUrl}/patients/${patientId}`).subscribe({
+        next: (profile) => {
+          this.patientProfile = profile;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          // Profile fetch failed — silently ignore, profile panel will just be hidden
+        }
+      });
+    }
   }
 
   ngOnDestroy() {
     this.cleanup();
+  }
+
+  togglePatientProfile() {
+    this.showPatientProfile = !this.showPatientProfile;
+  }
+
+  calcAge(dob: string): string {
+    if (!dob) return '—';
+    try {
+      const birth = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      return age > 0 ? `${age} yrs` : '—';
+    } catch {
+      return '—';
+    }
   }
 
   async startVideoCall() {
