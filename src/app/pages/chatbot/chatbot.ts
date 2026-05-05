@@ -377,12 +377,11 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             clearInterval(interval);
             this.pollingIntervals.delete(caseId);
             this.ngZone.run(() => {
+              // Find by caseId — robust against index shifts when new messages are added
+              const idx = this.messages.findIndex(m => m.caseId === caseId);
+              if (idx === -1) return;
               const updated = [...this.messages];
-              updated[msgIndex] = {
-                ...updated[msgIndex],
-                showVideoCall: true,
-                showVideoCallPending: false
-              };
+              updated[idx] = { ...updated[idx], showVideoCall: true, showVideoCallPending: false };
               this.messages = updated;
               this.saveMessages();
               this.cdr.detectChanges();
@@ -391,12 +390,14 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             clearInterval(interval);
             this.pollingIntervals.delete(caseId);
             this.ngZone.run(() => {
+              const idx = this.messages.findIndex(m => m.caseId === caseId);
+              if (idx === -1) return;
               const updated = [...this.messages];
-              updated[msgIndex] = {
-                ...updated[msgIndex],
+              updated[idx] = {
+                ...updated[idx],
                 showVideoCallPending: false,
                 showVideoCall: false,
-                text: updated[msgIndex].text + "\n\n⚠️ No doctors are available in this department right now. Please try again later or describe different symptoms.",
+                text: "⚠️ No doctors are available in this department right now. Please try again later.",
                 caseBadge: "Request Declined"
               };
               this.messages = updated;
@@ -407,7 +408,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
         },
         error: () => {}
       });
-    }, 4000);
+    }, 2000);
     this.pollingIntervals.set(caseId, interval);
   }
 
@@ -420,14 +421,21 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     const interval = setInterval(() => {
       this.http.get<any>(`http://localhost:8080/cases/${caseId}/status`).subscribe({
         next: (res) => {
-          const status = (res?.status || "").toUpperCase();
+          let parsed: any = res;
+          if (typeof res === "string") {
+            try { parsed = JSON.parse(res); } catch { parsed = {}; }
+          }
+          const status = (parsed.status || "").toUpperCase();
+
           if (status === "ACCEPTED") {
             clearInterval(interval);
             this.pollingIntervals.delete(caseId);
             this.ngZone.run(() => {
+              const idx = this.messages.findIndex(m => m.caseId === caseId);
+              if (idx === -1) return;
               const updated = [...this.messages];
-              updated[msgIndex] = {
-                ...updated[msgIndex],
+              updated[idx] = {
+                ...updated[idx],
                 showVideoCallPending: false,
                 showChatConsultation: true,
                 text: "✅ A doctor has accepted your chat request. Click below to join the chat."
@@ -440,11 +448,13 @@ export class ChatbotComponent implements OnInit, OnDestroy {
             clearInterval(interval);
             this.pollingIntervals.delete(caseId);
             this.ngZone.run(() => {
+              const idx = this.messages.findIndex(m => m.caseId === caseId);
+              if (idx === -1) return;
               const updated = [...this.messages];
-              updated[msgIndex] = {
-                ...updated[msgIndex],
+              updated[idx] = {
+                ...updated[idx],
                 showVideoCallPending: false,
-                text: updated[msgIndex].text + "\n\n⚠️ No doctors are available right now. Please try again later.",
+                text: "⚠️ No doctors are available right now. Please try again later.",
                 caseBadge: "Request Declined"
               };
               this.messages = updated;
@@ -455,7 +465,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
         },
         error: () => {}
       });
-    }, 4000);
+    }, 2000);
     this.pollingIntervals.set(caseId, interval);
   }
 
