@@ -87,6 +87,8 @@
 .appt-cancel-btn:hover { background: #fee2e2; color: #dc2626; }
 .appt-join-btn { display: flex; align-items: center; gap: 5px; background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
 .appt-join-btn:hover { background: #0284c7; }
+.appt-join-btn.appt-join-disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; }
+.appt-join-btn.appt-join-disabled:hover { background: #cbd5e1; }
 
 /* ── Patient Reminder Popup ───────────────────────────────────── */
 .pt-reminder-backdrop { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: flex-start; justify-content: flex-end; padding: 24px; pointer-events: none; }

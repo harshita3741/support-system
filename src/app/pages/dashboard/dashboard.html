@@ -159,9 +159,14 @@
             <div class="appt-reason">{{ appt.reason || appt.department || 'Appointment' }}</div>
           </div>
           <div class="appt-status-badge">{{ appt.status || 'BOOKED' }}</div>
-          <button class="appt-join-btn" (click)="joinCall(appt)" title="Join video call">
+          <button
+            class="appt-join-btn"
+            [class.appt-join-disabled]="!isJoinable(appt)"
+            [disabled]="!isJoinable(appt)"
+            (click)="joinCall(appt)"
+            [title]="isJoinable(appt) ? 'Join video call' : 'Available ' + timeUntil(appt)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            Join
+            {{ isJoinable(appt) ? 'Join' : timeUntil(appt) }}
           </button>
           <button class="appt-cancel-btn" (click)="cancelAppointment(appt.id)" title="Cancel appointment">✕</button>
         </div>

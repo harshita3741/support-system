@@ -221,6 +221,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } catch { return dt; }
   }
 
+  /** Returns true only within 10 minutes of or after the appointment start time. */
+  isJoinable(appt: any): boolean {
+    if (!appt.appointmentTime) return false;
+    const apptMs = new Date(appt.appointmentTime).getTime();
+    const now = Date.now();
+    return now >= apptMs - 10 * 60 * 1000; // allow joining 10 min before
+  }
+
+  /** Human-readable countdown shown on the disabled button. */
+  timeUntil(appt: any): string {
+    if (!appt.appointmentTime) return '';
+    const diff = new Date(appt.appointmentTime).getTime() - Date.now();
+    if (diff <= 0) return 'Now';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `in ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem > 0 ? `in ${hrs}h ${rem}m` : `in ${hrs}h`;
+  }
+
   toggleNewMenu() { this.showNewMenu = !this.showNewMenu; this.showAvatarMenu = false; }
   toggleAvatarMenu() { this.showAvatarMenu = !this.showAvatarMenu; this.showNewMenu = false; }
   closeMenus() { this.showNewMenu = false; this.showAvatarMenu = false; }

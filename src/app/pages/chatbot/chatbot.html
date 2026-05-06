@@ -136,56 +136,48 @@
               </button>
             </div>
 
-            <!-- QUICK ADD DETAILS -->
-            <div
-  class="quick-details-box"
-  *ngIf="
-    msg.showQuickDetails &&
-    msg.quickDetailsCaseId &&
-    !getQD(msg.quickDetailsCaseId!).submitted
-  "
->
-              
-                  <div class="qd-actions">
-                    <button class="qd-open-btn" (click)="openQuickDetails(msg.quickDetailsCaseId!)">Add Details</button>
+            <!-- QUICK ADD DETAILS — hidden entirely once symptoms have been submitted -->
+            <div class="quick-details-box" *ngIf="msg.showQuickDetails && msg.quickDetailsCaseId && !getQD(msg.quickDetailsCaseId!).submitted">
+              <div class="qd-header">
+                📝 Help your doctor with a few quick details
+              </div>
+              <ng-container *ngIf="!getQD(msg.quickDetailsCaseId!).open">
+                <div class="qd-actions">
+                  <button class="qd-open-btn" (click)="openQuickDetails(msg.quickDetailsCaseId!)">Add Details</button>
+                  <a class="qd-symptoms-link" (click)="goToSymptoms()">
+                    Open full symptom form →
+                  </a>
+                </div>
+              </ng-container>
+              <ng-container *ngIf="getQD(msg.quickDetailsCaseId!).open">
+                <div class="qd-form">
+                  <div class="qd-field">
+                    <label>Duration</label>
+                    <input type="text" class="qd-input" [(ngModel)]="quickDetailsState[msg.quickDetailsCaseId!].duration"
+                           placeholder="e.g. 2 days" [name]="'dur_' + msg.quickDetailsCaseId" />
+                  </div>
+                  <div class="qd-field">
+                    <label>Severity</label>
+                    <div class="qd-severity-chips">
+                      <div *ngFor="let s of ['Mild','Moderate','Severe']"
+                           class="qd-chip"
+                           [class.qd-chip-selected]="quickDetailsState[msg.quickDetailsCaseId!].severity === s"
+                           (click)="quickDetailsState[msg.quickDetailsCaseId!].severity = s">{{ s }}</div>
+                    </div>
+                  </div>
+                  <div class="qd-field">
+                    <label>Notes</label>
+                    <textarea class="qd-textarea" [(ngModel)]="quickDetailsState[msg.quickDetailsCaseId!].notes"
+                              placeholder="e.g. worse at night..." rows="2"
+                              [name]="'notes_' + msg.quickDetailsCaseId"></textarea>
+                  </div>
+                  <div class="qd-form-actions">
+                    <button class="qd-submit-btn" (click)="submitQuickDetails(msg.quickDetailsCaseId!)">Submit</button>
                     <a class="qd-symptoms-link" (click)="goToSymptoms()">
-                      Open full symptom form →
+                      Need full details? Open Symptom Form →
                     </a>
                   </div>
-                </ng-container>
-                <ng-container *ngIf="getQD(msg.quickDetailsCaseId!).open">
-                  <div class="qd-form">
-                    <div class="qd-field">
-                      <label>Duration</label>
-                      <input type="text" class="qd-input" [(ngModel)]="quickDetailsState[msg.quickDetailsCaseId!].duration"
-                             placeholder="e.g. 2 days" [name]="'dur_' + msg.quickDetailsCaseId" />
-                    </div>
-                    <div class="qd-field">
-                      <label>Severity</label>
-                      <div class="qd-severity-chips">
-                        <div *ngFor="let s of ['Mild','Moderate','Severe']"
-                             class="qd-chip"
-                             [class.qd-chip-selected]="quickDetailsState[msg.quickDetailsCaseId!].severity === s"
-                             (click)="quickDetailsState[msg.quickDetailsCaseId!].severity = s">{{ s }}</div>
-                      </div>
-                    </div>
-                    <div class="qd-field">
-                      <label>Notes</label>
-                      <textarea class="qd-textarea" [(ngModel)]="quickDetailsState[msg.quickDetailsCaseId!].notes"
-                                placeholder="e.g. worse at night..." rows="2"
-                                [name]="'notes_' + msg.quickDetailsCaseId"></textarea>
-                    </div>
-                    <div class="qd-form-actions">
-                      <button class="qd-submit-btn" (click)="submitQuickDetails(msg.quickDetailsCaseId!)">Submit</button>
-                      <a class="qd-symptoms-link" (click)="goToSymptoms()">
-                        Need full details? Open Symptom Form →
-                      </a>
-                    </div>
-                  </div>
-                </ng-container>
-              </ng-container>
-              <ng-container *ngIf="getQD(msg.quickDetailsCaseId!).submitted">
-                <div class="qd-done">✅ Details saved — the doctor can see them.</div>
+                </div>
               </ng-container>
             </div>
 
@@ -234,4 +226,4 @@
       <button class="send-btn" (click)="send()" [disabled]="isTyping">Send</button>
     </div>
   </div>
-</div>
+</div>                                                                                                                                                                                                  
