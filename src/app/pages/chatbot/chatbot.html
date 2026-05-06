@@ -137,12 +137,15 @@
             </div>
 
             <!-- QUICK ADD DETAILS -->
-            <div class="quick-details-box" *ngIf="msg.showQuickDetails && msg.quickDetailsCaseId">
-              <ng-container *ngIf="!getQD(msg.quickDetailsCaseId!).submitted">
-                <div class="qd-header">
-                  📝 Help your doctor with a few quick details
-                </div>
-                <ng-container *ngIf="!getQD(msg.quickDetailsCaseId!).open">
+            <div
+  class="quick-details-box"
+  *ngIf="
+    msg.showQuickDetails &&
+    msg.quickDetailsCaseId &&
+    !getQD(msg.quickDetailsCaseId!).submitted
+  "
+>
+              
                   <div class="qd-actions">
                     <button class="qd-open-btn" (click)="openQuickDetails(msg.quickDetailsCaseId!)">Add Details</button>
                     <a class="qd-symptoms-link" (click)="goToSymptoms()">
@@ -213,8 +216,8 @@
       </div>
     </div>
 
-    <!-- SUGGESTIONS — only shown on initial state, disappear once user has interacted -->
-    <div class="suggestions" *ngIf="messages.length <= 1">
+    <!-- SUGGESTIONS -->
+    <div class="suggestions">
       <div class="suggestion" *ngFor="let s of suggestions" (click)="sendSuggestion(s)">
         {{ s }}
       </div>

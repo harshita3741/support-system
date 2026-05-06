@@ -280,14 +280,48 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     const symptoms   = msg.pendingSymptoms || "";
     const deptLabel  = this.getDeptLabel(department);
 
-    // Hide the choice buttons
+    // Hide the choice buttons immediately
     const updated = [...this.messages];
     updated[msgIndex] = { ...updated[msgIndex], showConsultationChoice: false };
     this.messages = updated;
     this.saveMessages();
+    this.isTyping = true;
     this.cdr.detectChanges();
 
-    // Create case immediately
+    // ── Step 1: Check doctor availability BEFORE creating a case ────────
+    this.http.get<any>(`http://localhost:8080/availability/check-department?department=${department}`)
+      .subscribe({
+        next: (avail: any) => {
+          this.ngZone.run(() => {
+            // Doctor is unavailable — show a contextual message and abort
+            if (avail?.available === false) {
+              this.isTyping = false;
+              this.messages = [...this.messages, {
+                text: avail.message || "The doctor in this department is currently unavailable. Please try again later or book an appointment.",
+                sender: "bot",
+                time: this.getTime(),
+                caseBadge: "Doctor Unavailable"
+              }];
+              this.saveMessages();
+              this.cdr.detectChanges();
+              return;
+            }
+
+            // ── Step 2: Doctor is available — create the case ────────────
+            this.createConsultationCase(department, symptoms, type, deptLabel);
+          });
+        },
+        error: () => {
+          // Availability endpoint unreachable — proceed anyway (fail-open for availability)
+          this.ngZone.run(() => {
+            this.createConsultationCase(department, symptoms, type, deptLabel);
+          });
+        }
+      });
+  }
+
+  /** Creates the consultation case and starts polling. Called after availability is confirmed. */
+  private createConsultationCase(department: string, symptoms: string, type: "VIDEO" | "CHAT", deptLabel: string) {
     this.http.post<any>("http://localhost:8080/cases/create-with-type", {
       patientName: this.patientName || "Patient",
       patientId:   this.patientId || "",
@@ -297,6 +331,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (res: any) => {
         this.ngZone.run(() => {
+          this.isTyping = false;
           const caseId = String(res?.caseId || "");
           const newIdx = this.messages.length;
 
@@ -336,6 +371,7 @@ export class ChatbotComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.ngZone.run(() => {
+          this.isTyping = false;
           this.messages = [...this.messages, {
             text: "Sorry, could not create your case. Please try again.",
             sender: "bot",
@@ -470,6 +506,16 @@ export class ChatbotComponent implements OnInit, OnDestroy {
   }
 
   goToSymptoms() {
+    // User is going to fill the full symptom form — mark any existing
+    // quick-details card as submitted RIGHT NOW so it does not re-appear
+    // when they are redirected back to the chatbot after submission.
+    this.messages.forEach(m => {
+      if (m.quickDetailsCaseId) {
+        this.initQuickDetails(m.quickDetailsCaseId);
+        this.quickDetailsState[m.quickDetailsCaseId].submitted = true;
+      }
+    });
+    this.saveMessages();   // persist submitted=true before we navigate away
     this.router.navigate(["/symptoms"]);
   }
 

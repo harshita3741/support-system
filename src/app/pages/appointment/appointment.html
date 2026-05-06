@@ -76,9 +76,11 @@
       </div>
     </div>
 
-    <!-- Booking confirmation toast -->
-    <div class="booking-toast" *ngIf="showToast">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+    <!-- Booking confirmation / error toast -->
+    <div class="booking-toast" *ngIf="showToast"
+         [class.booking-toast-error]="toastType === 'error'">
+      <svg *ngIf="toastType === 'success'" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg *ngIf="toastType === 'error'" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>{{ toastMsg }}</span>
     </div>
 
@@ -140,11 +142,19 @@
               }
               <div class="doctor-card" *ngFor="let doc of doctors; let i = index"
                    [class.selected]="selectedDoctor === i"
+                   [class.doc-unavailable]="getDoctorStatus(i) !== 'AVAILABLE'"
                    (click)="selectDoctor(i)">
                 <div class="doc-avatar" [style.background]="doc.color">{{ doc.initials }}</div>
                 <div class="doc-info">
                   <div class="doc-name">{{ doc.name }}</div>
                   <div class="doc-spec">{{ doc.spec }}</div>
+                  <div class="doc-status-badge"
+                       [class.status-available]="getDoctorStatus(i) === 'AVAILABLE'"
+                       [class.status-unavailable]="getDoctorStatus(i) === 'UNAVAILABLE'"
+                       [class.status-leave]="getDoctorStatus(i) === 'ON_LEAVE'"
+                       [class.status-busy]="getDoctorStatus(i) === 'IN_CONSULTATION'">
+                    {{ getDoctorStatusLabel(i) }}
+                  </div>
                 </div>
                 <div class="doc-check" *ngIf="selectedDoctor === i">
                   <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg>
@@ -192,6 +202,12 @@
           <div class="section-card">
             <div class="section-label">Select Time Slot</div>
 
+            <!-- Date / doctor unavailability banner -->
+            <div class="unavail-banner" *ngIf="isSelectedDateBlocked">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ selectedDateBlockReason }}
+            </div>
+
             @if (slotsLoading) {
               <div style="color:#9ca3af; font-size:13px; padding:8px 0;">Loading slots...</div>
             } @else if (slots.length === 0) {
@@ -203,12 +219,18 @@
                      [class.selected]="selectedSlot === slot.time"
                      [class.taken]="slot.taken || slot.past"
                      [class.past]="slot.past"
-                     [title]="slot.past ? 'This time has already passed' : (slot.taken ? 'Already booked' : '')"
+                     [class.blocked]="slot.blocked"
+                     [title]="slot.past ? 'This time has already passed'
+                              : slot.taken ? 'Already booked'
+                              : slot.blocked ? 'Blocked by doctor'
+                              : ''"
                      (click)="selectSlot(slot)">{{ slot.time }}</div>
               </div>
             }
 
-            <button class="confirm-btn" (click)="confirm()">Confirm Appointment</button>
+            <button class="confirm-btn" (click)="confirm()" [disabled]="isSelectedDateBlocked">
+              Confirm Appointment
+            </button>
           </div>
         </div>
 

@@ -23,6 +23,11 @@ export class AppointmentComponent implements OnInit, OnDestroy {
   slotsLoading = false;
   showToast = false;
   toastMsg = '';
+  toastType: 'success' | 'error' = 'success';
+
+  // ─── Doctor availability (set when a doctor is selected + date changes) ──
+  doctorAvailability: any = null;      // summary from GET /availability/{id}/summary
+  doctorStatusMap: Map<number, any> = new Map(); // doctorId → availability record
 
   // ─── Upcoming appointments ─────────────────────────────────────
   upcomingAppts: any[] = [];
@@ -278,6 +283,8 @@ export class AppointmentComponent implements OnInit, OnDestroy {
             this.selectedDoctor = 0;
             this.loadSlots(0);
           }
+          // Pre-fetch availability for all doctors so we can show status badges
+          this.loadAllDoctorAvailability();
         });
       },
       error: (err) => {
@@ -292,9 +299,41 @@ export class AppointmentComponent implements OnInit, OnDestroy {
           ];
           this.cdr.detectChanges();
           this.loadSlots(0);
+          this.loadAllDoctorAvailability();
         });
       }
     });
+  }
+
+  /** Fetch availability for all doctors so we can show status badges */
+  loadAllDoctorAvailability() {
+    this.http.get<any[]>('http://localhost:8080/availability').subscribe({
+      next: (avList) => {
+        this.ngZone.run(() => {
+          (avList || []).forEach(av => this.doctorStatusMap.set(av.doctorId, av));
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {} // non-critical — badges just won't show
+    });
+  }
+
+  /** Returns the status string for the doctor at index i (for badge display) */
+  getDoctorStatus(i: number): string {
+    const doc = this.doctors[i];
+    if (!doc) return '';
+    const av = this.doctorStatusMap.get(doc.id);
+    return av?.status || 'AVAILABLE';
+  }
+
+  getDoctorStatusLabel(i: number): string {
+    const map: any = {
+      'AVAILABLE':       'Available',
+      'UNAVAILABLE':     'Unavailable',
+      'ON_LEAVE':        'On Leave',
+      'IN_CONSULTATION': 'In Consultation'
+    };
+    return map[this.getDoctorStatus(i)] || 'Available';
   }
 
   loadSlots(index: number) {
@@ -303,18 +342,58 @@ export class AppointmentComponent implements OnInit, OnDestroy {
     const dateStr = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}-${String(this.selectedDay).padStart(2, '0')}`;
     this.slotsLoading = true;
     this.slots = [];
+    this.doctorAvailability = null;
     this.cdr.detectChanges();
 
     const defaults = this.generateDefaultSlots();
 
-    this.http.get<string[]>(`http://localhost:8080/appointments/booked/${doctorId}?date=${dateStr}`).subscribe({
+    // ── Fetch booked slots ─────────────────────────────────────────
+    const booked$ = this.http.get<string[]>(
+      `http://localhost:8080/appointments/booked/${doctorId}?date=${dateStr}`
+    );
+
+    // ── Fetch availability summary ─────────────────────────────────
+    const avail$ = this.http.get<any>(
+      `http://localhost:8080/availability/${doctorId}/summary?date=${dateStr}`
+    );
+
+    booked$.subscribe({
       next: (booked) => {
         this.ngZone.run(() => {
           const bookedSet = new Set<string>((booked || []).map((t: string) => t.toUpperCase().trim()));
+          // Will merge blocked set once availability arrives
           this.slots = defaults.map(s => ({ ...s, taken: bookedSet.has(s.time.toUpperCase()) }));
           this.selectedSlot = '';
           this.slotsLoading = false;
           this.cdr.detectChanges();
+
+          // Now fetch availability to overlay blocked slots
+          avail$.subscribe({
+            next: (avail: any) => {
+              this.ngZone.run(() => {
+                this.doctorAvailability = avail;
+                // Update doctorStatusMap
+                if (avail?.doctorId) {
+                  this.doctorStatusMap.set(avail.doctorId, { status: avail.status });
+                }
+                const blockedSlotSet = new Set<string>(
+                  (avail?.blockedSlots || []).map((t: string) => t.toUpperCase().trim())
+                );
+                const docFullyUnavailable = avail?.isAvailable === false && !avail?.dateBlocked && !avail?.dayBlocked
+                  ? false  // only slot-level blocks — still partly available
+                  : (avail?.isAvailable === false);
+
+                this.slots = this.slots.map(s => ({
+                  ...s,
+                  // blocked by doctor's availability settings (not just "taken" by a booking)
+                  blocked: blockedSlotSet.has(s.time.toUpperCase()) || docFullyUnavailable,
+                  docUnavailable: docFullyUnavailable
+                }));
+                this.cdr.detectChanges();
+              });
+            },
+            error: () => {} // non-critical — slots remain without availability overlay
+          });
         });
       },
       error: () => {
@@ -326,6 +405,35 @@ export class AppointmentComponent implements OnInit, OnDestroy {
         });
       }
     });
+  }
+
+  /** True if the selected date is blocked for the current doctor */
+  get isSelectedDateBlocked(): boolean {
+    return this.doctorAvailability?.isAvailable === false;
+  }
+
+  get selectedDateBlockReason(): string {
+    const av = this.doctorAvailability;
+    if (!av) return '';
+    if (av.dateBlocked) return 'Doctor has blocked this date';
+    if (av.dayBlocked) return 'Doctor does not work on this day';
+    const status = av.status || 'AVAILABLE';
+    if (status === 'UNAVAILABLE') return 'Doctor is currently unavailable';
+    if (status === 'ON_LEAVE') return 'Doctor is on leave';
+    if (status === 'IN_CONSULTATION') return 'Doctor is in an active consultation';
+    return '';
+  }
+
+  /** Check if a calendar day should appear greyed-out (fully blocked date / blocked day-of-week) */
+  isDayUnavailable(day: number | null): boolean {
+    if (!day) return false;
+    if (!this.doctorAvailability) return false;
+    // If entire month date is in blockedDates
+    const dateStr = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // We don't load per-day availability for the full calendar (would be 31 API calls).
+    // Instead, we only grey out the currently selected day based on the loaded summary.
+    // The slot grid itself shows the blocked overlay.
+    return false;
   }
 
   generateDefaultSlots(): any[] {
@@ -368,7 +476,7 @@ export class AppointmentComponent implements OnInit, OnDestroy {
   }
 
   selectSlot(slot: any) {
-    if (!slot.taken && !slot.past) {
+    if (!slot.taken && !slot.past && !slot.blocked) {
       this.selectedSlot = slot.time;
       this.cdr.detectChanges();
     }
@@ -430,9 +538,22 @@ export class AppointmentComponent implements OnInit, OnDestroy {
           this.loadUpcomingAppts(); // refresh upcoming list after new booking
         });
       },
-      error: () => {
-        // Even if backend fails, show confirmation for demo purposes
+      error: (err) => {
         this.ngZone.run(() => {
+          // 409 = doctor blocked this slot via availability settings
+          if (err?.status === 409) {
+            const msg = err?.error?.error || 'This slot is not available. Please choose another.';
+            this.toastMsg = msg;
+            this.toastType = 'error';
+            this.showToast = true;
+            // Mark the slot as blocked so it turns red in the UI
+            selected.blocked = true;
+            this.selectedSlot = '';
+            this.cdr.detectChanges();
+            setTimeout(() => { this.showToast = false; this.cdr.detectChanges(); }, 6000);
+            return;
+          }
+          // For other errors: still show confirmation (demo mode)
           selected.taken = true;
           this.selectedSlot = '';
           this.cdr.detectChanges();
@@ -459,6 +580,7 @@ export class AppointmentComponent implements OnInit, OnDestroy {
     } catch {}
 
     this.toastMsg = `Appointment confirmed with ${doctorName} on ${date} at ${time}`;
+    this.toastType = 'success';
     this.showToast = true;
     this.cdr.detectChanges();
     setTimeout(() => { this.showToast = false; this.cdr.detectChanges(); }, 5000);
