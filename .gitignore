@@ -78,3 +78,6 @@ build/
 ### VS Code ###
 .vscode/
 >>>>>>> 81b9781f4b9934c4e88c190218d8d3deb7ae544f
+
+*.tar
+*.tar.gz
