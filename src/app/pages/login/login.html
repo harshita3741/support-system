@@ -1,8 +1,8 @@
-<div class="login-container">
-  <div class="login-card">
+<div class="login-wrapper">
+  <div class="login-box">
     <div class="logo">
       <div class="logo-dot">C</div>
-      <span class="logo-text">CareNova</span>
+      <span>CareNova</span>
     </div>
 
     <div class="tab-row">
@@ -11,7 +11,9 @@
     </div>
 
     <h2>Welcome back</h2>
-    <p>Sign in with your Patient ID</p>
+    <p class="subtitle">Sign in with your Patient ID</p>
+
+    <div class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</div>
 
     <div class="form-group">
       <label>Patient ID</label>
@@ -21,9 +23,12 @@
       <label>Password</label>
       <input type="password" [(ngModel)]="password" placeholder="Enter password"/>
     </div>
-    <button class="btn-login" (click)="login()">Sign In</button>
+    <button class="btn-login" (click)="login()" [disabled]="loading">
+      <span *ngIf="!loading">Sign In</span>
+      <span *ngIf="loading">Signing in...</span>
+    </button>
 
-    <div class="signup-link">
+    <div class="register-link">
       New patient? <a routerLink="/register">Create your account</a>
     </div>
   </div>

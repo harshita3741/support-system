@@ -1,2 +1,16 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; font-family: Segoe UI, sans-serif; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+app-root {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}

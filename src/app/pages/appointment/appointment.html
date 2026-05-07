@@ -120,7 +120,7 @@
                   } @else {
                     <div class="join-pending" (click)="$event.preventDefault()">
                       <svg viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      Opens at {{ formatApptTimeOnly(appt.appointmentTime) }}
+                      {{ timeUntil(appt) }}
                     </div>
                   }
                 </div>

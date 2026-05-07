@@ -209,11 +209,23 @@ export class AppointmentComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Returns true if appointment time is within 5 minutes or already passed (up to 2h) */
+  /** Returns true if appointment time is within 10 minutes or already passed (up to 2h) */
   canJoin(appt: any): boolean {
+    if (!appt.appointmentTime) return false;
     const apptMs = new Date(appt.appointmentTime).getTime();
-    const nowMs = Date.now();
-    return nowMs >= apptMs - 5 * 60 * 1000;
+    return Date.now() >= apptMs - 10 * 60 * 1000;
+  }
+
+  /** Human-readable countdown until appointment opens */
+  timeUntil(appt: any): string {
+    if (!appt.appointmentTime) return '';
+    const diff = new Date(appt.appointmentTime).getTime() - Date.now();
+    if (diff <= 0) return 'Now';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `in ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem > 0 ? `in ${hrs}h ${rem}m` : `in ${hrs}h`;
   }
 
   joinAppointmentCall(appt: any) {
