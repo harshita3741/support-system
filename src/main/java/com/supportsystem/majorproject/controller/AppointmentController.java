@@ -3,8 +3,11 @@ package com.supportsystem.majorproject.controller;
 import com.supportsystem.majorproject.model.Appointment;
 import com.supportsystem.majorproject.model.AppointmentSlot;
 import com.supportsystem.majorproject.service.AppointmentService;
+import com.supportsystem.majorproject.service.DoctorAvailabilityService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +17,31 @@ import java.util.Map;
 public class AppointmentController {
 
   private final AppointmentService service;
+  private final DoctorAvailabilityService availabilityService;
 
-  public AppointmentController(AppointmentService service) {
+  public AppointmentController(AppointmentService service,
+                               DoctorAvailabilityService availabilityService) {
     this.service = service;
+    this.availabilityService = availabilityService;
   }
 
+  /**
+   * Book an appointment.
+   * Returns 409 CONFLICT if the slot is blocked by the doctor's availability settings.
+   */
   @PostMapping("/book")
-  public Appointment book(@RequestBody Appointment appointment) {
-    return service.bookAppointment(appointment);
+  public ResponseEntity<?> book(@RequestBody Appointment appointment) {
+    try {
+      Appointment saved = service.bookAppointment(appointment);
+      return ResponseEntity.ok(saved);
+    } catch (IllegalStateException e) {
+      // Slot is unavailable / doctor not available
+      return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(Map.of("error", e.getMessage()));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(Map.of("error", "Failed to book appointment: " + e.getMessage()));
+    }
   }
 
   @GetMapping("/doctor/{doctorId}")

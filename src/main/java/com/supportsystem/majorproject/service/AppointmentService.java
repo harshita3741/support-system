@@ -20,11 +20,16 @@ public class AppointmentService {
   private final AppointmentRepository repo;
   private final DoctorService doctorService;
   private final SlotRepository slotRepo;
+  private final DoctorAvailabilityService availabilityService;
 
-  public AppointmentService(AppointmentRepository repo, DoctorService doctorService, SlotRepository slotRepo) {
+  public AppointmentService(AppointmentRepository repo,
+                            DoctorService doctorService,
+                            SlotRepository slotRepo,
+                            DoctorAvailabilityService availabilityService) {
     this.repo = repo;
     this.doctorService = doctorService;
     this.slotRepo = slotRepo;
+    this.availabilityService = availabilityService;
   }
 
   public Appointment bookAppointment(Appointment appt) {
@@ -34,6 +39,21 @@ public class AppointmentService {
       if (doctor != null) {
         appt.setDoctorId(doctor.getDoctorId());
         if (appt.getDoctorName() == null) appt.setDoctorName(doctor.getName());
+      }
+    }
+
+    // ── Availability check ────────────────────────────────────────────
+    if (appt.getDoctorId() != null && appt.getAppointmentTime() != null) {
+      String date = appt.getAppointmentTime().toLocalDate().toString(); // "YYYY-MM-DD"
+      String timeSlot = appt.getAppointmentTime()
+        .toLocalTime()
+        .format(DateTimeFormatter.ofPattern("hh:mm a"))
+        .toUpperCase(); // "09:00 AM"
+
+      if (!availabilityService.isSlotAvailable(appt.getDoctorId(), date, timeSlot)) {
+        throw new IllegalStateException(
+          "Doctor is not available for the selected date/time slot. " +
+            "Please choose a different slot or doctor.");
       }
     }
 
@@ -68,6 +88,24 @@ public class AppointmentService {
       .filter(a -> a.getAppointmentTime() != null)
       .map(a -> a.getAppointmentTime().toLocalTime().format(fmt).toUpperCase())
       .collect(Collectors.toList());
+  }
+
+  /**
+   * Book a follow-up appointment that was explicitly scheduled by the doctor during a prescription.
+   * Bypasses availability check — the doctor is intentionally setting this slot.
+   * Still marks the appointment BOOKED and saves it so it appears on both dashboards.
+   */
+  public Appointment bookFollowUpAppointment(Appointment appt) {
+    // Auto-assign doctor if not already set
+    if (appt.getDoctorId() == null && appt.getDepartment() != null) {
+      Doctor doctor = doctorService.assignDoctorByDepartment(appt.getDepartment());
+      if (doctor != null) {
+        appt.setDoctorId(doctor.getDoctorId());
+        if (appt.getDoctorName() == null) appt.setDoctorName(doctor.getName());
+      }
+    }
+    appt.setStatus("BOOKED");
+    return repo.save(appt);  // no availability check — doctor explicitly chose this slot
   }
 
   public void deleteAppointment(Long id) {
